@@ -2,7 +2,7 @@
 
 <table>
   <tr>
-    <th rowspan="4">참여학생</th>
+    <th rowspan="5">참여학생</th>
     <th>학과</th>
     <th>학번</th>
     <th>이름</th>
