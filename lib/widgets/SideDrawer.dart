@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import '../screens/login_screen.dart';
 
 class SideDrawer extends StatelessWidget {
   const SideDrawer({super.key});
@@ -238,7 +239,13 @@ class SideDrawer extends StatelessWidget {
       child: Column(
         children: [
           _buildFooterItem(Icons.settings_outlined, 'Settings', () {}),
-          _buildFooterItem(Icons.logout, 'Log Out', () {}),
+          _buildFooterItem(Icons.logout, 'Log Out', () {
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(builder: (context) => const LoginScreen()),
+              (route) => false,
+            );
+          }),
           const SizedBox(height: 20),
           Text(
             'Gilbeot v1.0.0',
