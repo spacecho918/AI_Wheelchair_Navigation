@@ -1,0 +1,1 @@
+INSERT INTO "public"."obstacles" ("id", "user_id", "obstacle_type", "geom", "image_url", "created_at", "lat", "lon", "type") VALUES ('2', null, 'pothole', '0101000020E6100000E4141DC9E5C75F40C7293A92CB8F4240', null, '2025-12-29 02:06:30.721397+00', '37.1234', '127.1234', null);
