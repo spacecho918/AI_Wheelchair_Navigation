@@ -1,7 +1,8 @@
 import 'package:camera/camera.dart'; // 카메라 패키지
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'obstacle_check_screen.dart';
+import 'package:image_picker/image_picker.dart'; // 갤러리 접근용
+import 'photo_confirmation_screen.dart';
 
 class CameraScreen extends StatefulWidget {
   const CameraScreen({super.key});
@@ -96,15 +97,28 @@ class _CameraScreenState extends State<CameraScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _buildTopIconBtn(
-                        iconPath: 'assets/x_icon.svg',
+                      // 뒤로가기 버튼 (통일된 디자인)
+                      GestureDetector(
                         onTap: () => Navigator.pop(context),
-                      ),
-                      _buildTopIconBtn(
-                        iconPath: 'assets/flash_icon.svg',
-                        onTap: () {
-                          // 플래시 토글 기능 추가 가능
-                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.1),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.arrow_back,
+                            color: Colors.black87,
+                            size: 24,
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -137,7 +151,7 @@ class _CameraScreenState extends State<CameraScreen> {
                           children: [
                             _buildGalleryButton(),
                             _buildShutterButton(),
-                            _buildRotateButton(),
+                            _buildFlashButton(), // 리셋 버튼 대신 플래시 버튼 배치
                           ],
                         ),
                       ),
@@ -172,38 +186,45 @@ class _CameraScreenState extends State<CameraScreen> {
 
   // --- 아래는 기존 UI 위젯들 (Stateless 때와 동일) ---
 
-  Widget _buildTopIconBtn({
-    required String iconPath,
-    required VoidCallback onTap,
-  }) {
+  Widget _buildGalleryButton() {
     return GestureDetector(
-      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      onTap: () async {
+        debugPrint("Gallery button tapped");
+        try {
+          final ImagePicker picker = ImagePicker();
+          // 갤러리에서 이미지 선택
+          final XFile? image = await picker.pickImage(
+            source: ImageSource.gallery,
+          );
+
+          if (image != null && mounted) {
+            // 선택된 이미지로 확인 화면 이동
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) =>
+                    PhotoConfirmationScreen(imagePath: image.path),
+              ),
+            );
+          }
+        } catch (e) {
+          debugPrint("갤러리 접근 오류: $e");
+        }
+      },
       child: Container(
-        padding: const EdgeInsets.all(8),
-        color: Colors.transparent,
+        width: 48,
+        height: 48,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1E2939).withValues(alpha: 0.8),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white, width: 1.5),
+        ),
         child: SvgPicture.asset(
-          iconPath,
-          width: 24,
-          height: 24,
+          'assets/gallery_icon.svg',
           colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
         ),
-      ),
-    );
-  }
-
-  Widget _buildGalleryButton() {
-    return Container(
-      width: 48,
-      height: 48,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1E2939).withValues(alpha: 0.8),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white, width: 1.5),
-      ),
-      child: SvgPicture.asset(
-        'assets/gallery_icon.svg',
-        colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
       ),
     );
   }
@@ -219,14 +240,12 @@ class _CameraScreenState extends State<CameraScreen> {
 
             if (!mounted) return;
 
-            // 2. 촬영된 사진을 확인하는 화면으로 이동
+            // 2. 촬영된 사진 확인 화면으로 이동
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => ObstacleCheckScreen(
-                  imagePath: image.path,
-                  initialObstacle: 'stairs', // 나중에 AI 연동 시 변경
-                ),
+                builder: (context) =>
+                    PhotoConfirmationScreen(imagePath: image.path),
               ),
             );
           }
@@ -259,23 +278,40 @@ class _CameraScreenState extends State<CameraScreen> {
     );
   }
 
-  Widget _buildRotateButton() {
-    return SizedBox(
-      width: 48,
-      height: 48,
-      child: Center(
-        child: Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.1),
-            shape: BoxShape.circle,
-          ),
-          child: SvgPicture.asset(
-            'assets/return_icon.svg',
-            width: 24,
-            height: 24,
-            colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
-          ),
+  // 플래시 버튼 (새로 추가) - 기존 리셋 버튼 자리에 위치
+  Widget _buildFlashButton() {
+    return GestureDetector(
+      onTap: () async {
+        if (_controller == null) return;
+
+        // 플래시 모드 토글 (off -> torch -> off)
+        final currentMode = _controller!.value.flashMode;
+        final newMode = currentMode == FlashMode.torch
+            ? FlashMode.off
+            : FlashMode.torch;
+
+        try {
+          await _controller!.setFlashMode(newMode);
+          setState(() {}); // 아이콘 변경을 위해 상태 업데이트
+        } catch (e) {
+          debugPrint("플래시 모드 변경 오류: $e");
+        }
+      },
+      child: Container(
+        width: 48,
+        height: 48,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1E2939).withValues(alpha: 0.8),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white, width: 1.5),
+        ),
+        child: Icon(
+          _controller?.value.flashMode == FlashMode.torch
+              ? Icons.flash_on
+              : Icons.flash_off,
+          color: Colors.white,
+          size: 24,
         ),
       ),
     );

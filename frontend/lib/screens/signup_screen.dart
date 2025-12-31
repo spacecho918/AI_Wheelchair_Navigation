@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'map_screen.dart';
 
 class SignupScreen extends StatelessWidget {
   // 컨트롤러들
@@ -224,7 +225,13 @@ class SignupScreen extends StatelessWidget {
             TextButton(
               onPressed: () {
                 Navigator.pop(context); // 1. 팝업창 닫기
-                Navigator.pop(context); // 2. 로그인 화면(이전 화면)으로 돌아가기
+
+                // 2. 메인 지도 화면으로 이동 (이전 화면 스택 모두 제거)
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (context) => const MapScreen()),
+                  (route) => false,
+                );
               },
               child: const Text(
                 '확인',

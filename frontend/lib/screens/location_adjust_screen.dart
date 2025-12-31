@@ -1,7 +1,9 @@
-import 'dart:async';
+import 'dart:convert'; // JSON 파싱
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart'; // OSM 지도 패키지
 import 'package:latlong2/latlong.dart'; // 좌표 패키지
+import 'package:http/http.dart' as http; // HTTP 요청
+import 'package:geolocator/geolocator.dart'; // 위치 정보
 import 'report_confirm_screen.dart';
 
 class LocationAdjustScreen extends StatefulWidget {
@@ -29,6 +31,7 @@ class _LocationAdjustScreenState extends State<LocationAdjustScreen> {
 
   // 현재 주소 텍스트
   String _currentAddress = "위치 확인 중...";
+  bool _isLocationLoading = false;
 
   @override
   void initState() {
@@ -36,30 +39,200 @@ class _LocationAdjustScreenState extends State<LocationAdjustScreen> {
     _getCurrentLocation();
   }
 
+  // 현위치 가져오기 로직
   Future<void> _getCurrentLocation() async {
-    // 실제 앱에서는 Geolocator 패키지로 현위치를 가져오세요.
-    // 여기서는 시뮬레이션으로 서울 시청 좌표로 이동합니다.
-    await Future.delayed(const Duration(milliseconds: 500));
+    setState(() {
+      _isLocationLoading = true;
+    });
 
-    if (mounted) {
-      setState(() {
-        _center = const LatLng(37.5665, 126.9780);
-        _currentAddress = "서울시 중구 세종대로 110";
-      });
-      // 지도가 로드된 후 이동
-      _mapController.move(_center, 18.0);
+    try {
+      Position position = await _determinePosition();
+
+      if (mounted) {
+        final newCenter = LatLng(position.latitude, position.longitude);
+        setState(() {
+          _center = newCenter;
+          _isLocationLoading = false;
+        });
+
+        // 지도가 로드된 후 이동
+        _mapController.move(_center, 18.0);
+        // 초기 위치 주소 가져오기
+        _getAddressFromLatLng(_center);
+      }
+    } catch (e) {
+      debugPrint("Location error: $e");
+      if (mounted) {
+        setState(() {
+          _isLocationLoading = false;
+          _currentAddress = "현재 위치를 가져올 수 없습니다.";
+        });
+
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("위치 정보를 가져오는 데 실패했습니다: $e")));
+      }
+    }
+  }
+
+  // 위치 권한 확인 및 위치 가져오기
+  Future<Position> _determinePosition() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    // 1. 위치 서비스 활성화 여부 확인
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      return Future.error('위치 서비스가 비활성화되어 있습니다.');
+    }
+
+    // 2. 권한 확인
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        return Future.error('위치 권한이 거부되었습니다.');
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      return Future.error('위치 권한이 영구적으로 거부되었습니다. 설정에서 권한을 허용해주세요.');
+    }
+
+    // 3. 현재 위치 가져오기
+    return await Geolocator.getCurrentPosition();
+  }
+
+  // 좌표로 주소 가져오기 (Nominatim API)
+  Future<void> _getAddressFromLatLng(LatLng latlng) async {
+    try {
+      final url = Uri.parse(
+        'https://nominatim.openstreetmap.org/reverse?format=json&lat=${latlng.latitude}&lon=${latlng.longitude}&zoom=18&addressdetails=1&accept-language=ko',
+      );
+
+      final response = await http.get(
+        url,
+        headers: {'User-Agent': 'GilBeot/1.0 (contact@example.com)'},
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final address = data['address'];
+
+        if (address != null) {
+          String displayAddress = "";
+          String subInfo = "";
+
+          // 1순위: 도로명 추출
+          String road = address['road'] ?? "";
+          String houseNumber = address['house_number'] ?? "";
+
+          if (road.isNotEmpty) {
+            // 도로명 주소 구성 (예: 세종대로 110)
+            displayAddress = "$road $houseNumber".trim();
+          } else {
+            // 도로명이 없으면 지번 주소 사용
+            // 행정구역 순서대로 키 확인하여 존재하는 값 수집
+            List<String> validKeys = [
+              'province', 'city', // 광역 자치단체
+              'borough', 'district', 'county', // 기초 자치단체
+              'town', 'suburb', // 읍/면
+              'quarter', 'neighbourhood', 'village', 'hamlet', // 동/리
+            ];
+
+            List<String> parts = [];
+            Set<String> addedParts = {}; // 중복 제거용
+
+            for (String key in validKeys) {
+              String? value = address[key];
+              if (value != null &&
+                  value.isNotEmpty &&
+                  !addedParts.contains(value)) {
+                parts.add(value);
+                addedParts.add(value);
+              }
+            }
+
+            displayAddress = parts.join(" ").trim();
+          }
+
+          // 건물명/장소명 추출 (placemark.name 대응)
+          // Nominatim 결과에서 장소명은 보통 data['name']에 있거나, address[type]에 있음.
+          // 편의상 address 안의 주요 건물 키를 찾아보거나 로직 단순화
+          // 여기서는 display_name의 첫 부분이 보통 장소명인 점을 이용하거나,
+          // address 내의 특정 키(building, amenity 등)를 확인합니다.
+
+          String placeName = "";
+          // 대표적인 POI 키 확인
+          List<String> poiKeys = [
+            'building',
+            'amenity',
+            'office',
+            'shop',
+            'leisure',
+            'tourism',
+            'historic',
+            'city_hall',
+            'library',
+          ];
+          for (var key in poiKeys) {
+            if (address.containsKey(key)) {
+              placeName = address[key];
+              break;
+            }
+          }
+
+          // 사용자가 요청한 로직: 건물명이나 장소명이 도로명과 다를 때만 괄호 안에 표기
+          if (placeName.isNotEmpty && placeName != road) {
+            subInfo = "($placeName)";
+          }
+
+          // 최종 포맷팅: "$displayAddress $subInfo"
+          String formattedAddress = "$displayAddress $subInfo".trim();
+
+          // 국가명 ("대한민국") 제거
+          if (formattedAddress.startsWith('대한민국')) {
+            formattedAddress = formattedAddress.replaceFirst('대한민국', '').trim();
+          }
+
+          // 혹시라도 값이 비었다면 display_name 사용
+          if (formattedAddress.isEmpty) {
+            formattedAddress = data['display_name'] ?? "주소 없음";
+            // 여기도 국가명 제거 적용
+            if (formattedAddress.startsWith('대한민국')) {
+              formattedAddress = formattedAddress
+                  .replaceFirst('대한민국', '')
+                  .trim();
+            }
+          }
+
+          if (mounted) {
+            setState(() {
+              _currentAddress = formattedAddress;
+            });
+          }
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            _currentAddress = "주소 정보를 불러올 수 없습니다.";
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint("Address fetch error: $e");
+      if (mounted) {
+        setState(() {
+          _currentAddress = "주소 변환 오류: ${e.toString()}"; // 디버깅용 에러 표시
+        });
+      }
     }
   }
 
   // 지도가 멈췄을 때 호출 (주소 갱신 로직)
   void _onMapIdle() {
-    // OSM의 경우 'Nominatim' API를 사용해 무료로 주소 변환(Reverse Geocoding)이 가능합니다.
-    // 여기서는 UI 테스트를 위해 좌표만 갱신합니다.
     debugPrint("현재 중심 좌표: ${_center.latitude}, ${_center.longitude}");
-    setState(() {
-      _currentAddress =
-          "조정된 위치 (${_center.latitude.toStringAsFixed(4)}, ${_center.longitude.toStringAsFixed(4)})";
-    });
+    _getAddressFromLatLng(_center);
   }
 
   @override
@@ -144,17 +317,19 @@ class _LocationAdjustScreenState extends State<LocationAdjustScreen> {
             bottom: 240, // 하단 패널 높이 고려
             child: FloatingActionButton(
               onPressed: () {
-                // 현위치로 이동 (여기선 서울 시청으로 고정)
-                const myLocation = LatLng(37.5665, 126.9780);
-                _mapController.move(myLocation, 18.0);
-
-                setState(() {
-                  _center = myLocation;
-                  _currentAddress = "현위치로 이동됨";
-                });
+                _getCurrentLocation(); // 현위치 재탐색
               },
               backgroundColor: Colors.white,
-              child: const Icon(Icons.my_location, color: Colors.black87),
+              child: _isLocationLoading
+                  ? const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Color(0xFF00C853),
+                      ),
+                    )
+                  : const Icon(Icons.my_location, color: Colors.black87),
             ),
           ),
 
@@ -212,8 +387,6 @@ class _LocationAdjustScreenState extends State<LocationAdjustScreen> {
                             const SizedBox(height: 4),
                             Text(
                               _currentAddress, // 동적으로 바뀌는 주소
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
                                 color: Color(0xFF101727),
                                 fontSize: 16,

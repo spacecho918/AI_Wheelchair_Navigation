@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:geolocator/geolocator.dart'; // 위치 정보 패키지 추가
 import '../widgets/side_drawer.dart';
 import 'camera_screen.dart';
+import 'search_screen.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -14,12 +16,45 @@ class MapScreen extends StatefulWidget {
 
 class _MapScreenState extends State<MapScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  final TextEditingController _searchController = TextEditingController();
+  final MapController _mapController = MapController();
 
   @override
   void dispose() {
-    _searchController.dispose();
     super.dispose();
+  }
+
+  // 현재 위치로 이동하는 함수
+  Future<void> _moveToCurrentLocation() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    // 1. 위치 서비스 활성화 여부 확인
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      debugPrint('Location services are disabled.');
+      return;
+    }
+
+    // 2. 권한 확인
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        debugPrint('Location permissions are denied');
+        return;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      debugPrint(
+        'Location permissions are permanently denied, we cannot request permissions.',
+      );
+      return;
+    }
+
+    // 3. 현재 위치 가져오기 및 지도 이동
+    Position position = await Geolocator.getCurrentPosition();
+    _mapController.move(LatLng(position.latitude, position.longitude), 16.0);
   }
 
   @override
@@ -34,6 +69,7 @@ class _MapScreenState extends State<MapScreen> {
           // 1. 배경 지도
           // ---------------------------------------------------------
           FlutterMap(
+            mapController: _mapController,
             options: const MapOptions(
               initialCenter: LatLng(37.5445, 127.0560), // 성수역
               initialZoom: 15.0,
@@ -223,9 +259,9 @@ class _MapScreenState extends State<MapScreen> {
                     ),
                   ),
 
-                  // (2) 신고 버튼 (대시보드 머리 위 + 클릭 가능)
+                  // (2) 신고 버튼 (왼쪽으로 이동)
                   Positioned(
-                    right: 20,
+                    left: 20,
                     top: 0,
                     child: Container(
                       decoration: BoxDecoration(
@@ -240,7 +276,6 @@ class _MapScreenState extends State<MapScreen> {
                         ],
                       ),
                       child: Material(
-                        // [수정 3] 클릭 효과 추가
                         color: Colors.transparent,
                         child: InkWell(
                           onTap: () {
@@ -268,8 +303,8 @@ class _MapScreenState extends State<MapScreen> {
                                   ),
                                   width: 20,
                                 ),
-                                SizedBox(width: 6),
-                                Text(
+                                const SizedBox(width: 6),
+                                const Text(
                                   '장애물 신고',
                                   style: TextStyle(
                                     color: Colors.white,
@@ -279,6 +314,39 @@ class _MapScreenState extends State<MapScreen> {
                                 ),
                               ],
                             ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // (3) 현재 위치 버튼 (오른쪽으로 신규 추가)
+                  Positioned(
+                    right: 20,
+                    top: 0,
+                    child: Container(
+                      width: 44, // 버튼 크기
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.15),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          customBorder: const CircleBorder(),
+                          onTap: _moveToCurrentLocation, // 현재 위치 이동 연결
+                          child: const Icon(
+                            Icons.my_location,
+                            color: Color(0xFF101727),
+                            size: 22,
                           ),
                         ),
                       ),
@@ -337,54 +405,58 @@ class _MapScreenState extends State<MapScreen> {
 
                 // 검색창
                 Expanded(
-                  child: Container(
-                    height: 50,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(24),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.1),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
+                  child: GestureDetector(
+                    onTap: () async {
+                      // 검색 화면으로 이동
+                      final result = await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const SearchScreen(),
                         ),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        const SizedBox(width: 15),
-                        SvgPicture.asset(
-                          'assets/search_icon.svg',
-                          width: 20,
-                          colorFilter: const ColorFilter.mode(
-                            Colors.grey,
-                            BlendMode.srcIn,
+                      );
+
+                      // 결과(LatLng)가 있으면 지도 이동
+                      if (result != null && result is LatLng) {
+                        _mapController.move(result, 16.0);
+                      }
+                    },
+                    child: Container(
+                      height: 50,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.1),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
                           ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: TextField(
-                            controller: _searchController,
-                            decoration: const InputDecoration(
-                              hintText: '주변 장소 검색...',
-                              hintStyle: TextStyle(
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          const SizedBox(width: 15),
+                          SvgPicture.asset(
+                            'assets/search_icon.svg',
+                            width: 20,
+                            colorFilter: const ColorFilter.mode(
+                              Colors.grey,
+                              BlendMode.srcIn,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          const Expanded(
+                            child: Text(
+                              '주변 장소 검색...',
+                              style: TextStyle(
                                 color: Color(0xFF717182),
                                 fontSize: 14,
                               ),
-                              border: InputBorder.none,
-                              contentPadding: EdgeInsets.symmetric(
-                                vertical: 14,
-                              ),
-                              isDense: true,
-                            ),
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: Colors.black,
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 15),
-                      ],
+                          const SizedBox(width: 15),
+                        ],
+                      ),
                     ),
                   ),
                 ),

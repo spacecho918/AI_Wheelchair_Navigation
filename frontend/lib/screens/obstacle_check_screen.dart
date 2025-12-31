@@ -74,8 +74,8 @@ class _ObstacleCheckScreenState extends State<ObstacleCheckScreen> {
 
           // 3. 위아래로 움직이는 대시보드 (DraggableSheet)
           DraggableScrollableSheet(
-            initialChildSize: 0.65, // 처음 보여질 높이 비율 (65%)
-            minChildSize: 0.4, // 최소 높이
+            initialChildSize: 0.75, // 처음 보여질 높이 비율 (75% - 버튼까지 보이도록)
+            minChildSize: 0.2, // 최소 높이 (더 아래로 내려가도록 수정)
             maxChildSize: 0.95, // 최대 높이
             builder: (BuildContext context, ScrollController scrollController) {
               return Container(
@@ -290,6 +290,39 @@ class _ObstacleCheckScreenState extends State<ObstacleCheckScreen> {
                 ),
               );
             },
+          ),
+
+          // 4. 뒤로가기 버튼 (상단 왼쪽)
+          Positioned(
+            left: 0,
+            top: 0,
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.only(top: 20, left: 20),
+                child: GestureDetector(
+                  onTap: () => Navigator.pop(context),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.1),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.arrow_back,
+                      color: Colors.black87,
+                      size: 24,
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ),
         ],
       ),

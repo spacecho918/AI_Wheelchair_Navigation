@@ -97,7 +97,7 @@ class _ReportConfirmScreenState extends State<ReportConfirmScreen> {
                     const Padding(
                       padding: EdgeInsets.symmetric(horizontal: 10),
                       child: Text(
-                        'By submitting this report, you agree to share this information with the community to help improve accessibility.',
+                        '신고를 제출함으로써, 지역 사회의 이동 편의성을 개선하기 위해 해당 정보를 공유하는 것에 동의하게 됩니다.',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: Color(0xFF697282),
@@ -131,7 +131,7 @@ class _ReportConfirmScreenState extends State<ReportConfirmScreen> {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -150,7 +150,7 @@ class _ReportConfirmScreenState extends State<ReportConfirmScreen> {
             child: Column(
               children: const [
                 Text(
-                  'Confirm Report',
+                  '신고 확인',
                   style: TextStyle(
                     color: Color(0xFF101727),
                     fontSize: 17.5,
@@ -159,7 +159,7 @@ class _ReportConfirmScreenState extends State<ReportConfirmScreen> {
                 ),
                 SizedBox(height: 2),
                 Text(
-                  'Review and submit',
+                  '내용을 확인하고 제출해주세요',
                   style: TextStyle(color: Color(0xFF6A7282), fontSize: 12.25),
                 ),
               ],
@@ -180,7 +180,7 @@ class _ReportConfirmScreenState extends State<ReportConfirmScreen> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 15,
             offset: const Offset(0, 10),
           ),
@@ -215,7 +215,7 @@ class _ReportConfirmScreenState extends State<ReportConfirmScreen> {
                   Icon(Icons.camera_alt, size: 14, color: Colors.black87),
                   SizedBox(width: 6),
                   Text(
-                    'Captured Photo',
+                    '촬영된 사진',
                     style: TextStyle(
                       color: Color(0xFF101727),
                       fontSize: 12,
@@ -256,15 +256,18 @@ class _ReportConfirmScreenState extends State<ReportConfirmScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'Obstacle Type',
-                    style: TextStyle(color: Color(0xFF697282), fontSize: 10.5),
+                    '장애물 종류',
+                    style: TextStyle(
+                      color: Color(0xFF697282),
+                      fontSize: 11,
+                    ), // 폰트 사이즈 조정
                   ),
                   const SizedBox(height: 2),
                   Text(
                     widget.obstacleLabel, // 예: 계단
                     style: const TextStyle(
                       color: Color(0xFF101727),
-                      fontSize: 15.75,
+                      fontSize: 16, // 강조
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -274,10 +277,7 @@ class _ReportConfirmScreenState extends State<ReportConfirmScreen> {
           ),
           // Edit 버튼
           _buildEditButton(() {
-            // 종류 선택 화면으로 돌아가기 (2단계 뒤로)
-            // 주의: 스택 구조에 따라 pop 횟수는 조절이 필요할 수 있습니다.
-            // 보통: Main -> Camera -> ObstacleSelect -> LocationAdjust -> Confirm
-            // 여기서 2번 pop하면 ObstacleSelect 화면이 나옵니다.
+            // 종류 선택 화면으로 돌아가기
             Navigator.of(context).pop();
             Navigator.of(context).pop();
           }),
@@ -315,24 +315,19 @@ class _ReportConfirmScreenState extends State<ReportConfirmScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'Location',
+                        '위치',
                         style: TextStyle(
                           color: Color(0xFF697282),
-                          fontSize: 10.5,
+                          fontSize: 11,
                         ),
                       ),
                       const SizedBox(height: 2),
-                      SizedBox(
-                        width: 200,
-                        child: Text(
-                          widget.address,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: Color(0xFF101727),
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                          ),
+                      Text(
+                        widget.address,
+                        style: const TextStyle(
+                          color: Color(0xFF101727),
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                       Text(
@@ -348,7 +343,7 @@ class _ReportConfirmScreenState extends State<ReportConfirmScreen> {
               ),
               // Edit 버튼
               _buildEditButton(() {
-                // 위치 조정 화면으로 돌아가기 (1단계 뒤로)
+                // 위치 조정 화면으로 돌아가기
                 Navigator.pop(context);
               }),
             ],
@@ -413,17 +408,17 @@ class _ReportConfirmScreenState extends State<ReportConfirmScreen> {
           Row(
             children: const [
               Text(
-                'Additional Description',
+                '추가 설명',
                 style: TextStyle(
                   color: Color(0xFF101727),
                   fontWeight: FontWeight.bold,
-                  fontSize: 12.5,
+                  fontSize: 13,
                 ),
               ),
               SizedBox(width: 8),
               Text(
-                '(Optional)',
-                style: TextStyle(color: Color(0xFF697282), fontSize: 12.5),
+                '(선택 사항)',
+                style: TextStyle(color: Color(0xFF697282), fontSize: 12),
               ),
             ],
           ),
@@ -442,8 +437,7 @@ class _ReportConfirmScreenState extends State<ReportConfirmScreen> {
               style: const TextStyle(fontSize: 14),
               decoration: const InputDecoration(
                 border: InputBorder.none,
-                hintText:
-                    'Add more details about the obstacle... e.g., height, width, alternative routes, etc.',
+                hintText: '장애물에 대한 상세 정보를 입력해주세요.\n예: 높이, 폭, 우회 경로 등',
                 hintStyle: TextStyle(color: Color(0xFF99A1AE), fontSize: 13),
               ),
             ),
@@ -466,7 +460,10 @@ class _ReportConfirmScreenState extends State<ReportConfirmScreen> {
                   child: SvgPicture.asset(
                     'assets/warning_icon.svg',
                     width: 14,
-                    color: const Color(0xFF193BB8),
+                    colorFilter: const ColorFilter.mode(
+                      Color(0xFF193BB8),
+                      BlendMode.srcIn,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -475,12 +472,12 @@ class _ReportConfirmScreenState extends State<ReportConfirmScreen> {
                     TextSpan(
                       children: [
                         TextSpan(
-                          text: 'Tip: ',
+                          text: '팁: ',
                           style: TextStyle(fontWeight: FontWeight.bold),
                         ),
                         TextSpan(
                           text:
-                              'Include helpful details like obstacle dimensions, difficulty level, or nearby landmarks to help others navigate safely.',
+                              '장애물의 크기나 난이도, 혹은 주변의 랜드마크 정보를 포함하면 다른 사용자들에게 큰 도움이 됩니다.',
                         ),
                       ],
                       style: TextStyle(color: Color(0xFF193BB8), fontSize: 11),
@@ -502,10 +499,10 @@ class _ReportConfirmScreenState extends State<ReportConfirmScreen> {
       child: ElevatedButton(
         onPressed: () {
           // TODO: 최종 서버 전송 로직
-          print("--- 최종 신고 데이터 ---");
-          print("종류: ${widget.obstacleType}");
-          print("위치: ${widget.location}");
-          print("설명: ${_descriptionController.text}");
+          debugPrint("--- 최종 신고 데이터 ---");
+          debugPrint("종류: ${widget.obstacleType}");
+          debugPrint("위치: ${widget.location}");
+          debugPrint("설명: ${_descriptionController.text}");
 
           // 완료 후 메인으로 이동
           Navigator.of(context).popUntil((route) => route.isFirst);
@@ -529,11 +526,14 @@ class _ReportConfirmScreenState extends State<ReportConfirmScreen> {
             SvgPicture.asset(
               'assets/send_icon.svg',
               width: 16,
-              color: Colors.white,
+              colorFilter: const ColorFilter.mode(
+                Colors.white,
+                BlendMode.srcIn,
+              ),
             ),
             const SizedBox(width: 8),
             const Text(
-              'Submit Report',
+              '신고 접수하기',
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 16,
@@ -554,10 +554,10 @@ class _ReportConfirmScreenState extends State<ReportConfirmScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey.withOpacity(0.2)),
+          border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
         ),
         child: const Text(
-          'Edit',
+          '수정',
           style: TextStyle(
             color: Color(0xFF00C853),
             fontSize: 12,
@@ -575,7 +575,7 @@ class _ReportConfirmScreenState extends State<ReportConfirmScreen> {
       borderRadius: BorderRadius.circular(20),
       boxShadow: [
         BoxShadow(
-          color: Colors.black.withOpacity(0.05),
+          color: Colors.black.withValues(alpha: 0.05),
           blurRadius: 15,
           offset: const Offset(0, 4),
         ),
