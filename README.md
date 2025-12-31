@@ -47,7 +47,7 @@ wheelchair_algorithm/
 │   └── elevation_calculator.py   ← DEM API로 고도/경사도 계산
 │
 ├── 🚀 메인 서버 모듈
-│   ├── main_algorithm_00.py      ← FastAPI 서버 (진입점)
+│   ├── main_server.py      ← FastAPI 서버 (진입점)
 │   ├── osm_parser.py             ← OSM → 그래프 변환
 │   ├── route_algorithm.py        ← Dijkstra 경로 탐색
 │   ├── obstacle_manager.py       ← 장애물 관리
@@ -132,12 +132,12 @@ Supabase SQL Editor에서 실행
 
 ### 🚀 메인 서버 모듈
 
-#### `main_algorithm_00.py` ⭐ 진입점
+#### `main_server.py` ⭐ 진입점
 ```python
 역할: FastAPI 웹 서버 - 모든 모듈 통합
 
 실행 방법:
-    uvicorn main_algorithm_00:app --host 0.0.0.0 --port 8000 --reload
+    uvicorn main_server:app --host 0.0.0.0 --port 8000 --reload
 
 초기화 순서:
     1. OSM 그래프 생성 (osm_parser)
@@ -274,9 +274,9 @@ Supabase SQL Editor에서 실행
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │ 5️⃣  서버 시작                                                    │
-│     uvicorn main_algorithm_00:app --host 0.0.0.0 --port 8000    │
+│     uvicorn main_server:app --host 0.0.0.0 --port 8000    │
 │     --reload 옵션 추가 시 코드 변경 자동 반영                     |
-|     또는 main_algorithm_00.py 실행해도 가능함                    │
+|     또는 main_server.py 실행해도 가능함                    │
 └─────────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────────┐
@@ -363,7 +363,7 @@ DEM_SAMPLE_INTERVAL=5        # 샘플링 간격 (m) - 샘플링 간격 5m로 미
 - 장애물 제보 시 `POST /obstacle` 호출
 
 ### 🖧 서버 팀
-- `main_algorithm_00.py` 관리
+- `main_server.py` 관리
 - Supabase 연동 및 데이터 관리
 - API 추가/수정
 
