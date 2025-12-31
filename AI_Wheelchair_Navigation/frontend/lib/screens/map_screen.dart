@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import '../widgets/SideDrawer.dart';
+import '../widgets/side_drawer.dart';
 import 'camera_screen.dart';
 
 class MapScreen extends StatefulWidget {
@@ -120,7 +120,7 @@ class _MapScreenState extends State<MapScreen> {
                               ],
                             ),
                             TextButton(
-                              onPressed: () => print("View All 클릭됨"),
+                              onPressed: () => debugPrint("View All 클릭됨"),
                               child: const Text(
                                 '모두 보기',
                                 style: TextStyle(
@@ -141,7 +141,7 @@ class _MapScreenState extends State<MapScreen> {
                           distance: "350m",
                           time: "도보 5분",
                           iconPath: "assets/place_icon.svg",
-                          onTap: () => print("성수역 선택됨"),
+                          onTap: () => debugPrint("성수역 선택됨"),
                         ),
                         const SizedBox(height: 10),
                         _buildDashboardItem(
@@ -150,7 +150,7 @@ class _MapScreenState extends State<MapScreen> {
                           distance: "1.2km",
                           time: "15분",
                           iconPath: "assets/home_icon.svg",
-                          onTap: () => print("집 선택됨"),
+                          onTap: () => debugPrint("집 선택됨"),
                         ),
                         const SizedBox(height: 10),
                         _buildDashboardItem(
@@ -159,7 +159,7 @@ class _MapScreenState extends State<MapScreen> {
                           distance: "580m",
                           time: "도보 8분",
                           iconPath: "assets/cafe_icon.svg",
-                          onTap: () => print("카페 어니언 선택됨"),
+                          onTap: () => debugPrint("카페 어니언 선택됨"),
                         ),
                         const SizedBox(height: 10),
                         _buildDashboardItem(
@@ -168,7 +168,7 @@ class _MapScreenState extends State<MapScreen> {
                           distance: "920m",
                           time: "12분",
                           iconPath: "assets/building_icon.svg",
-                          onTap: () => print("서울숲 선택됨"),
+                          onTap: () => debugPrint("서울숲 선택됨"),
                         ),
 
                         const SizedBox(height: 30),
@@ -192,7 +192,7 @@ class _MapScreenState extends State<MapScreen> {
                             // 클릭 효과를 위해 Material 추가
                             color: Colors.transparent,
                             child: InkWell(
-                              onTap: () => print("목적지 검색 클릭"),
+                              onTap: () => debugPrint("목적지 검색 클릭"),
                               borderRadius: BorderRadius.circular(20),
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
@@ -233,7 +233,7 @@ class _MapScreenState extends State<MapScreen> {
                         borderRadius: BorderRadius.circular(30),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.2),
+                            color: Colors.black.withValues(alpha: 0.2),
                             blurRadius: 8,
                             offset: const Offset(0, 4),
                           ),
@@ -259,11 +259,14 @@ class _MapScreenState extends State<MapScreen> {
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
-                              children: const [
-                                Icon(
-                                  Icons.warning_amber_rounded,
-                                  color: Colors.white,
-                                  size: 20,
+                              children: [
+                                SvgPicture.asset(
+                                  'assets/camera_icon.svg',
+                                  colorFilter: const ColorFilter.mode(
+                                    Colors.white,
+                                    BlendMode.srcIn,
+                                  ),
+                                  width: 20,
                                 ),
                                 SizedBox(width: 6),
                                 Text(
@@ -304,7 +307,7 @@ class _MapScreenState extends State<MapScreen> {
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
+                        color: Colors.black.withValues(alpha: 0.1),
                         blurRadius: 10,
                         offset: const Offset(0, 4),
                       ),
@@ -341,7 +344,7 @@ class _MapScreenState extends State<MapScreen> {
                       borderRadius: BorderRadius.circular(24),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
+                          color: Colors.black.withValues(alpha: 0.1),
                           blurRadius: 10,
                           offset: const Offset(0, 4),
                         ),

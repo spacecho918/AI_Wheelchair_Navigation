@@ -69,7 +69,7 @@ class ResetPasswordScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(24),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
+                      color: Colors.black.withValues(alpha: 0.1),
                       blurRadius: 50,
                       offset: const Offset(0, 25),
                     ),
@@ -114,7 +114,7 @@ class ResetPasswordScreen extends StatelessWidget {
                         onPressed: () {
                           // 이메일 전송 완료 팝업 띄우기
                           _showResetSuccessDialog(context);
-                          print("비밀번호 재설정 이메일: ${_emailController.text}");
+                          debugPrint("비밀번호 재설정 이메일: ${_emailController.text}");
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF00C853),
@@ -151,7 +151,7 @@ class ResetPasswordScreen extends StatelessWidget {
                         },
                         style: OutlinedButton.styleFrom(
                           side: BorderSide(
-                            color: Colors.black.withOpacity(0.1),
+                            color: Colors.black.withValues(alpha: 0.1),
                           ),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),

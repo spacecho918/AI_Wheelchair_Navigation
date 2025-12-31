@@ -1,6 +1,7 @@
 import 'package:camera/camera.dart'; // 카메라 패키지
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'obstacle_check_screen.dart';
 
 class CameraScreen extends StatefulWidget {
   const CameraScreen({super.key});
@@ -43,7 +44,7 @@ class _CameraScreenState extends State<CameraScreen> {
         setState(() {});
       }
     } catch (e) {
-      print('카메라 초기화 오류: $e');
+      debugPrint('카메라 초기화 오류: $e');
     }
   }
 
@@ -120,7 +121,7 @@ class _CameraScreenState extends State<CameraScreen> {
                       begin: Alignment.bottomCenter,
                       end: Alignment.topCenter,
                       colors: [
-                        Colors.black.withOpacity(0.8),
+                        Colors.black.withValues(alpha: 0.8),
                         Colors.transparent,
                       ],
                     ),
@@ -196,7 +197,7 @@ class _CameraScreenState extends State<CameraScreen> {
       height: 48,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E2939).withOpacity(0.8),
+        color: const Color(0xFF1E2939).withValues(alpha: 0.8),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.white, width: 1.5),
       ),
@@ -210,15 +211,27 @@ class _CameraScreenState extends State<CameraScreen> {
   Widget _buildShutterButton() {
     return GestureDetector(
       onTap: () async {
-        // 사진 촬영 로직 예시
         try {
           if (_controller != null && _controller!.value.isInitialized) {
+            // 1. 사진 촬영
             final image = await _controller!.takePicture();
-            print("사진 촬영 완료: ${image.path}");
-            // 여기서 찍은 사진을 처리하는 로직 추가
+            debugPrint("사진 촬영 완료: ${image.path}");
+
+            if (!mounted) return;
+
+            // 2. 촬영된 사진을 확인하는 화면으로 이동
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ObstacleCheckScreen(
+                  imagePath: image.path,
+                  initialObstacle: 'stairs', // 나중에 AI 연동 시 변경
+                ),
+              ),
+            );
           }
         } catch (e) {
-          print(e);
+          debugPrint("카메라 촬영 오류: $e");
         }
       },
       child: Container(
@@ -229,7 +242,7 @@ class _CameraScreenState extends State<CameraScreen> {
           border: Border.all(color: const Color(0xFF00C853), width: 4),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF00C853).withOpacity(0.5),
+              color: const Color(0xFF00C853).withValues(alpha: 0.5),
               blurRadius: 20,
               spreadRadius: 2,
             ),
@@ -254,7 +267,7 @@ class _CameraScreenState extends State<CameraScreen> {
         child: Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.1),
+            color: Colors.white.withValues(alpha: 0.1),
             shape: BoxShape.circle,
           ),
           child: SvgPicture.asset(
@@ -281,13 +294,13 @@ class _GridOverlay extends StatelessWidget {
           children: [
             const Spacer(),
             Divider(
-              color: Colors.white.withOpacity(0.3),
+              color: Colors.white.withValues(alpha: 0.3),
               thickness: 1,
               height: 1,
             ),
             const Spacer(),
             Divider(
-              color: Colors.white.withOpacity(0.3),
+              color: Colors.white.withValues(alpha: 0.3),
               thickness: 1,
               height: 1,
             ),
