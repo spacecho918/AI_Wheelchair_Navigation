@@ -14,7 +14,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # 경로 모드 타입
-RouteMode = Literal["shortest", "safest", "optimal"]
+RouteMode = Literal["short", "safe", "optimal"]
 
 
 @dataclass
@@ -42,13 +42,13 @@ class WeightCalculator:
     # 모드별 패널티 가중치 설정
     # 숫자가 낮을수록 해당 요소에 덜 민감 (허용 범위 넓음)
     MODE_CONFIG = {
-        "shortest": {
+        "short": {
             "grade_multiplier": 0.3,      # 경사도 패널티 낮음 (거리 우선)
             "surface_multiplier": 0.3,    # 노면 패널티 낮음
             "distance_weight": 1.0,       # 거리 가중치 높음
             "safety_weight": 0.1,         # 안전 가중치 낮음
         },
-        "safest": {
+        "safe": {
             "grade_multiplier": 2.0,      # 경사도 패널티 높음 (안전 우선)
             "surface_multiplier": 2.0,    # 노면 패널티 높음
             "distance_weight": 0.3,       # 거리 가중치 낮음
@@ -64,8 +64,8 @@ class WeightCalculator:
     
     # 경사도 임계값 (도)
     GRADE_THRESHOLDS = {
-        "shortest": 12.0,   # 12도까지 허용 (급경사 허용)
-        "safest": 5.0,      # 5도 이상이면 높은 패널티
+        "short": 12.0,   # 12도까지 허용 (급경사 허용)
+        "safe": 5.0,      # 5도 이상이면 높은 패널티
         "optimal": 8.0,     # 8도 기준
     }
     
@@ -80,7 +80,7 @@ class WeightCalculator:
         
         Args:
             edge_data: 엣지 속성 딕셔너리
-            mode: 경로 모드 ("shortest", "safest", "optimal")
+            mode: 경로 모드 ("short", "safe", "optimal")
             
         Returns:
             계산된 가중치 (float)
@@ -335,7 +335,7 @@ class RouteCalculator:
             모드별 RouteResult 딕셔너리
         """
         results = {}
-        for mode in ["shortest", "safest", "optimal"]:
+        for mode in ["short", "safe", "optimal"]:
             results[mode] = self.dijkstra_route(start_node, end_node, mode)
         return results
 
@@ -356,7 +356,7 @@ if __name__ == "__main__":
     
     for i, edge in enumerate(test_edges):
         print(f"\n엣지 {i+1}: {edge}")
-        for mode in ["shortest", "safest", "optimal"]:
+        for mode in ["short", "safe", "optimal"]:
             weight = WeightCalculator.calculate_weight(edge, mode)
             print(f"  {mode}: {weight:.2f}")
     

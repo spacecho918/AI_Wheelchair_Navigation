@@ -50,9 +50,9 @@ class RouteRequest(BaseModel):
     start_lon: float = Field(..., description="출발점 경도", example=126.7315)
     end_lat: float = Field(..., description="도착점 위도", example=37.35166)
     end_lon: float = Field(..., description="도착점 경도", example=126.74279)
-    mode: Literal["shortest", "safest", "optimal"] = Field(
+    mode: Literal["short", "safe", "optimal"] = Field(
         default="optimal",
-        description="경로 모드: shortest(최단), safest(안전), optimal(최적)"
+        description="경로 모드: short(최단), safe(안전), optimal(최적)"
     )
 
 
@@ -205,8 +205,8 @@ async def find_route(request: RouteRequest):
     경로 탐색 API
     
     3가지 모드 지원:
-    - shortest: 최단 거리 (약간의 불편함 허용)
-    - safest: 안전 우선 (경사도/노면 민감)
+    - short: 최단 거리 (약간의 불편함 허용)
+    - safe: 안전 우선 (경사도/노면 민감)
     - optimal: 균형 잡힌 최적 경로
     
     모든 모드에서 장애물 구간은 완전히 회피됩니다.

@@ -9,6 +9,7 @@ pydantic>=2.0.0
 # OSM 데이터 처리
 osmnx>=1.6.0
 networkx>=3.0
+scikit-learn>=1.3.0  # OSMnx nearest_nodes() 함수에 필요
 
 # Supabase 연동
 supabase>=2.0.0
