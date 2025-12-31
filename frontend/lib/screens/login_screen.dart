@@ -30,6 +30,8 @@ class Gilbeot extends StatelessWidget {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
+  Gilbeot({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -47,7 +49,7 @@ class Gilbeot extends StatelessWidget {
             borderRadius: BorderRadius.circular(14),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.25),
+                color: Colors.black.withValues(alpha: 0.25),
                 blurRadius: 50,
                 offset: const Offset(0, 25),
               ),
@@ -103,7 +105,7 @@ class Gilbeot extends StatelessWidget {
             borderRadius: BorderRadius.circular(24),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.1),
+                color: Colors.black.withValues(alpha: 0.1),
                 blurRadius: 50,
                 offset: const Offset(0, 25),
               ),
@@ -121,13 +123,13 @@ class Gilbeot extends StatelessWidget {
               _buildSocialButton(
                 'Google로 계속하기',
                 'assets/google_icon.svg',
-                () => print("구글 로그인 클릭됨"),
+                () => debugPrint("구글 로그인 클릭됨"),
               ),
               const SizedBox(height: 10),
               _buildSocialButton(
                 'Apple로 계속하기',
                 'assets/apple_icon.svg',
-                () => print("애플 로그인 클릭됨"),
+                () => debugPrint("애플 로그인 클릭됨"),
               ),
 
               const SizedBox(height: 20),
