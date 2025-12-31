@@ -121,16 +121,12 @@ class Gilbeot extends StatelessWidget {
 
               // [1, 2] 소셜 로그인 버튼 (누르면 물결 효과 발생)
               _buildSocialButton(
-                'Google로 계속하기',
+                'Google 계정으로 로그인',
                 'assets/google_icon.svg',
                 () => debugPrint("구글 로그인 클릭됨"),
               ),
               const SizedBox(height: 10),
-              _buildSocialButton(
-                'Apple로 계속하기',
-                'assets/apple_icon.svg',
-                () => debugPrint("애플 로그인 클릭됨"),
-              ),
+              _buildKakaoButton(() => debugPrint("카카오 로그인 클릭됨")),
 
               const SizedBox(height: 20),
               const Text('또는', style: TextStyle(color: Color(0xFF697282))),
@@ -231,7 +227,7 @@ class Gilbeot extends StatelessWidget {
     );
   }
 
-  // 소셜 로그인 버튼 스타일 (OutlinedButton 사용)
+  // 구글 로그인 버튼 스타일 (OutlinedButton 사용)
   Widget _buildSocialButton(String text, String iconPath, VoidCallback onTap) {
     return SizedBox(
       width: double.infinity,
@@ -239,29 +235,67 @@ class Gilbeot extends StatelessWidget {
       child: OutlinedButton(
         onPressed: onTap,
         style: OutlinedButton.styleFrom(
-          backgroundColor: Colors.white,
-          foregroundColor: Colors.grey, // 눌렀을 때 회색 물결 효과
-          side: const BorderSide(color: Color(0xFFE5E7EB)), // 테두리 색상
+          backgroundColor: const Color(0xFFF2F2F2), // 채우기: #F2F2F2
+          foregroundColor: const Color(0xFF1F1F1F).withValues(alpha: 0.1),
+          side: BorderSide.none, // 획: 없음
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
+          ),
+          elevation: 0,
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SvgPicture.asset(iconPath, width: 20, height: 20),
+            const SizedBox(width: 10), // 카카오와 동일하게 10
+            Text(
+              text,
+              style: const TextStyle(
+                color: Color(0xFF1F1F1F), // 글꼴 색: #1F1F1F
+                fontFamily: 'Roboto', // 글꼴: Roboto
+                fontWeight: FontWeight.w500, // Medium
+                fontSize: 14, // 14
+                height: 20 / 14, // 20 (line-height)
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // 카카오 로그인 버튼 주입
+  Widget _buildKakaoButton(VoidCallback onTap) {
+    return SizedBox(
+      width: double.infinity,
+      height: 48,
+      child: ElevatedButton(
+        onPressed: onTap,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFFFEE500), // 카카오 노란색
+          foregroundColor: Colors.black.withValues(alpha: 0.1),
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12), // Radius 12px
           ),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            SvgPicture.asset(
-              iconPath,
-              width: 20,
+            Image.asset(
+              'assets/kakao_symbol.png',
+              width: 20, // 심볼 크기 유지 (또는 가이드에 맞게 조정 가능하나 언급 없으므로 유지)
               height: 20,
-              placeholderBuilder: (context) =>
-                  const Icon(Icons.error, size: 20, color: Colors.grey),
             ),
             const SizedBox(width: 10),
             Text(
-              text,
-              style: const TextStyle(
-                color: Colors.black,
-                fontWeight: FontWeight.normal,
+              '카카오 로그인',
+              style: TextStyle(
+                color: Colors.black.withValues(alpha: 0.85),
+                fontSize: 15, // 30px (approx 15sp)
+                height:
+                    1.0, // 컨테이너 높이(48)의 1/3(16)을 넘지 않도록 tight하게 설정 (15 * 1.0 = 15)
+                // OS 별 기본 시스템 서체 사용 (fontFamily 지정 안 함, weight 기본값 사용)
               ),
             ),
           ],

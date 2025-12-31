@@ -105,15 +105,28 @@ class _LocationAdjustScreenState extends State<LocationAdjustScreen> {
 
   // 좌표로 주소 가져오기 (Nominatim API)
   Future<void> _getAddressFromLatLng(LatLng latlng) async {
-    try {
-      final url = Uri.parse(
-        'https://nominatim.openstreetmap.org/reverse?format=json&lat=${latlng.latitude}&lon=${latlng.longitude}&zoom=18&addressdetails=1&accept-language=ko',
-      );
+    final url = Uri.parse(
+      'https://nominatim.openstreetmap.org/reverse?format=json&lat=${latlng.latitude}&lon=${latlng.longitude}&zoom=18&addressdetails=1&accept-language=ko',
+    );
 
-      final response = await http.get(
-        url,
-        headers: {'User-Agent': 'GilBeot/1.0 (contact@example.com)'},
-      );
+    debugPrint("주소 변환 요청 시작: $url");
+
+    try {
+      // 타임아웃 10초 설정
+      final response = await http
+          .get(
+            url,
+            headers: {'User-Agent': 'GilbeotApp/1.0 (com.example.gilbeot)'},
+          )
+          .timeout(
+            const Duration(seconds: 10),
+            onTimeout: () {
+              debugPrint("주소 변환 타임아웃!");
+              throw Exception('요청 시간 초과');
+            },
+          );
+
+      debugPrint("주소 변환 응답 코드: ${response.statusCode}");
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -156,14 +169,8 @@ class _LocationAdjustScreenState extends State<LocationAdjustScreen> {
             displayAddress = parts.join(" ").trim();
           }
 
-          // 건물명/장소명 추출 (placemark.name 대응)
-          // Nominatim 결과에서 장소명은 보통 data['name']에 있거나, address[type]에 있음.
-          // 편의상 address 안의 주요 건물 키를 찾아보거나 로직 단순화
-          // 여기서는 display_name의 첫 부분이 보통 장소명인 점을 이용하거나,
-          // address 내의 특정 키(building, amenity 등)를 확인합니다.
-
+          // 건물명/장소명 추출
           String placeName = "";
-          // 대표적인 POI 키 확인
           List<String> poiKeys = [
             'building',
             'amenity',
@@ -213,17 +220,19 @@ class _LocationAdjustScreenState extends State<LocationAdjustScreen> {
           }
         }
       } else {
+        debugPrint("주소 변환 실패 - 상태 코드: ${response.statusCode}");
         if (mounted) {
           setState(() {
-            _currentAddress = "주소 정보를 불러올 수 없습니다.";
+            _currentAddress = "주소 정보를 불러올 수 없습니다. (${response.statusCode})";
           });
         }
       }
     } catch (e) {
-      debugPrint("Address fetch error: $e");
+      debugPrint("주소 변환 오류: $e");
       if (mounted) {
         setState(() {
-          _currentAddress = "주소 변환 오류: ${e.toString()}"; // 디버깅용 에러 표시
+          // 사용자 친화적인 에러 메시지
+          _currentAddress = "주소를 불러올 수 없습니다. 네트워크를 확인해주세요.";
         });
       }
     }
