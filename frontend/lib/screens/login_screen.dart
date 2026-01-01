@@ -133,7 +133,7 @@ class Gilbeot extends StatelessWidget {
               const SizedBox(height: 20),
 
               // 입력창
-              _buildTextField('이메일 또는 전화번호', '이메일을 입력하세요', _emailController),
+              _buildTextField('이메일', '이메일을 입력하세요', _emailController),
               const SizedBox(height: 14),
               _buildTextField(
                 '비밀번호',
@@ -186,10 +186,7 @@ class Gilbeot extends StatelessWidget {
                 },
                 child: const Text(
                   '비밀번호를 잊으셨나요?',
-                  style: TextStyle(
-                    color: Color(0xFF00C853),
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(color: Color(0xFF00C853)),
                 ),
               ),
 
@@ -292,7 +289,7 @@ class Gilbeot extends StatelessWidget {
               '카카오 로그인',
               style: TextStyle(
                 color: Colors.black.withValues(alpha: 0.85),
-                fontSize: 15, // 30px (approx 15sp)
+                fontSize: 14, // 30px (approx 15sp)
                 height:
                     1.0, // 컨테이너 높이(48)의 1/3(16)을 넘지 않도록 tight하게 설정 (15 * 1.0 = 15)
                 // OS 별 기본 시스템 서체 사용 (fontFamily 지정 안 함, weight 기본값 사용)
