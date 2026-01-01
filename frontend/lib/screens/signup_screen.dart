@@ -152,8 +152,8 @@ class _SignupScreenState extends State<SignupScreen> {
                   borderRadius: BorderRadius.circular(24),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(
-                        0.1,
+                      color: Colors.black.withValues(
+                        alpha: 0.1,
                       ), // changed withValues to withOpacity for compatibility if needed, but withValues is fine in new flutter. Previous code used withValues. I'll stick to withValues(alpha: 0.1).
                       blurRadius: 50,
                       offset: const Offset(0, 25),

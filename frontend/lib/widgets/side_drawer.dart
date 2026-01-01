@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../screens/login_screen.dart';
+import '../screens/wheelchair_settings_screen.dart';
 
 class SideDrawer extends StatelessWidget {
   const SideDrawer({super.key});
@@ -49,14 +50,14 @@ class SideDrawer extends StatelessWidget {
                   ),
                   const SizedBox(height: 7),
                   _buildMenuItem(
-                    iconPath: 'assets/wheelchair_icon.svg',
-                    text: '휠체어 설정',
+                    iconPath: 'assets/community_icon.svg', // New Icon
+                    text: '제보 커뮤니티',
                     onTap: () {},
                   ),
                   const SizedBox(height: 7),
                   _buildMenuItem(
-                    iconPath: 'assets/eye_icon.svg',
-                    text: '접근성',
+                    iconPath: 'assets/bell_icon.svg', // New Icon
+                    text: '공지사항',
                     onTap: () {},
                   ),
                 ],
@@ -129,31 +130,51 @@ class SideDrawer extends StatelessWidget {
           const SizedBox(height: 10),
 
           // 휠체어 정보 칩
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.white,
+          Material(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            child: InkWell(
               borderRadius: BorderRadius.circular(20),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                SvgPicture.asset(
-                  'assets/wheelchair_icon.svg',
-                  width: 16,
-                  height: 16,
-                  colorFilter: ColorFilter.mode(primaryGreen, BlendMode.srcIn),
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  '전동 휠체어',
-                  style: TextStyle(
-                    color: primaryGreen,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const WheelchairSettingsScreen(),
                   ),
+                );
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
                 ),
-              ],
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SvgPicture.asset(
+                      'assets/wheelchair_icon.svg',
+                      width: 16,
+                      height: 16,
+                      colorFilter: ColorFilter.mode(
+                        primaryGreen,
+                        BlendMode.srcIn,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      '전동 휠체어',
+                      style: TextStyle(
+                        color: primaryGreen,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
           const SizedBox(height: 12),
@@ -221,7 +242,7 @@ class SideDrawer extends StatelessWidget {
         text,
         style: TextStyle(
           color: textDark,
-          fontSize: 15,
+          fontSize: 14,
           fontFamily: 'Arial',
           fontWeight: FontWeight.w400,
         ),
@@ -247,7 +268,10 @@ class SideDrawer extends StatelessWidget {
             );
           }),
           const SizedBox(height: 20),
-          Text('길벗 v1.0.0', style: TextStyle(color: textGrey, fontSize: 11)),
+          Text(
+            'Gilbeot v1.0.0',
+            style: TextStyle(color: textGrey, fontSize: 11),
+          ),
         ],
       ),
     );

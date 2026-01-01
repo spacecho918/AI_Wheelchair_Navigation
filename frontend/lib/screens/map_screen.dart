@@ -415,9 +415,14 @@ class _MapScreenState extends State<MapScreen> {
                         ),
                       );
 
-                      // 결과(LatLng)가 있으면 지도 이동
-                      if (result != null && result is LatLng) {
-                        _mapController.move(result, 16.0);
+                      // 결과 처리 (Map or LatLng)
+                      if (result != null) {
+                        if (result is LatLng) {
+                          _mapController.move(result, 16.0);
+                        } else if (result is Map &&
+                            result.containsKey('latlng')) {
+                          _mapController.move(result['latlng'], 16.0);
+                        }
                       }
                     },
                     child: Container(

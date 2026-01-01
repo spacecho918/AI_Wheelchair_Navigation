@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart'; // 좌표 전달용
+import 'package:gilbeot/screens/favorites_edit_screen.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -33,8 +34,15 @@ class _SearchScreenState extends State<SearchScreen> {
     {'name': '강남역', 'address': '서울 강남구 서초대로 396', 'type': 'recent'},
   ];
 
-  Timer? _debounce;
   bool _isLoading = false;
+  Timer? _debounce;
+
+  // Favorites Data
+  String _homeName = '집';
+  String _homeAddress = '서울 성동구 성수동 123';
+  String _workLabel = '회사'; // Can be '회사' or '학교'
+  String _workAddress = '서울 중구 세종대로 110';
+  bool _isWorkLabelCompany = true; // Toggle state
 
   @override
   void initState() {
@@ -229,25 +237,31 @@ class _SearchScreenState extends State<SearchScreen> {
           children: [
             _buildChip(
               icon: Icons.star_border,
-              label: '집',
+              label: _homeName,
               color: const Color(0xFF00C853),
             ),
             const SizedBox(width: 8),
             _buildChip(
               icon: Icons.star_border,
-              label: '회사',
+              label: _workLabel,
               color: const Color(0xFF00C853),
             ),
             const Spacer(),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey[300]!),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                '편집',
-                style: TextStyle(color: Colors.grey[600], fontSize: 12),
+            GestureDetector(
+              onTap: _showEditFavoritesDialog,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey[300]!),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  '편집',
+                  style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                ),
               ),
             ),
           ],
@@ -325,7 +339,11 @@ class _SearchScreenState extends State<SearchScreen> {
             onTap: () {
               final lat = double.parse(place['lat']);
               final lon = double.parse(place['lon']);
-              Navigator.pop(context, LatLng(lat, lon));
+              Navigator.pop(context, {
+                'latlng': LatLng(lat, lon),
+                'name': name,
+                'address': fullAddress,
+              });
             },
             child: Container(
               margin: const EdgeInsets.only(bottom: 12),
@@ -495,5 +513,27 @@ class _SearchScreenState extends State<SearchScreen> {
         ),
       ),
     );
+  }
+
+  void _showEditFavoritesDialog() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => FavoritesEditScreen(
+          homeAddress: _homeAddress,
+          workAddress: _workAddress,
+          workLabel: _workLabel,
+        ),
+      ),
+    );
+
+    if (result != null && result is Map) {
+      setState(() {
+        _homeAddress = result['homeAddress'];
+        _workAddress = result['workAddress'];
+        _workLabel = result['workLabel'];
+        _isWorkLabelCompany = (_workLabel == '회사');
+      });
+    }
   }
 }
