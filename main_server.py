@@ -5,10 +5,13 @@ OSM 기반 경로 탐색 + 실시간 장애물 반영
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from typing import Optional, Literal, List, Tuple
 import logging
 import os
+from pathlib import Path
 
 # 내부 모듈
 from osm_parser import OSMGraphBuilder, KOREA_TECH_LAT, KOREA_TECH_LON, JEONGWANG_STATION_LAT, JEONGWANG_STATION_LON
@@ -174,12 +177,47 @@ async def startup_event():
 
 @app.get("/")
 async def root():
-    """루트 엔드포인트"""
+    """루트 - 카카오맵 경로 뷰어로 리다이렉트"""
+    return FileResponse("route_viewer_kakao.html")
+
+
+@app.get("/viewer")
+async def route_viewer():
+    """경로 뷰어 (Kakao Maps)"""
+    return FileResponse("route_viewer_kakao.html")
+
+
+@app.get("/viewer/osm")
+async def route_viewer_osm():
+    """경로 뷰어 (OSM - 기존)"""
+    return FileResponse("route_viewer.html")
+
+
+@app.get("/graph")
+async def graph_viewer():
+    """전체 그래프 뷰어"""
+    return FileResponse("graph_viewer.html")
+
+
+@app.get("/edges_data.json")
+async def edges_data():
+    """엣지 데이터 JSON (graph_viewer.html용)"""
+    return FileResponse("edges_data.json")
+
+
+@app.get("/api")
+async def api_info():
+    """API 정보"""
     return {
         "service": "길벗 - 휠체어 내비게이션 API",
         "version": "0.1.0",
         "status": "running",
-        "initialized": is_initialized
+        "initialized": is_initialized,
+        "viewers": {
+            "kakao": "/viewer",
+            "osm": "/viewer/osm",
+            "graph": "/graph"
+        }
     }
 
 

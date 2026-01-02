@@ -68,10 +68,11 @@ class OSMGraphBuilder:
             # 이전 버전: north=, south=, east=, west= 키워드 인수
             try:
                 # 최신 버전 (2.0+) 시도
+                # simplify=False로 변경: 모든 교차로 노드 유지 (경로 정확도 향상)
                 self.graph = ox.graph_from_bbox(
                     bbox=(west, south, east, north),  # (left, bottom, right, top)
                     network_type=network_type,
-                    simplify=True
+                    simplify=False
                 )
             except TypeError:
                 # 이전 버전 폴백
@@ -81,7 +82,7 @@ class OSMGraphBuilder:
                     east=east,
                     west=west,
                     network_type=network_type,
-                    simplify=True
+                    simplify=False
                 )
             logger.info(f"그래프 생성 완료: 노드 {self.graph.number_of_nodes()}개, 엣지 {self.graph.number_of_edges()}개")
             return self.graph
