@@ -112,7 +112,7 @@ class OSMGraphBuilder:
             self.graph = ox.graph_from_place(
                 location,
                 network_type=network_type,
-                simplify=True
+                simplify=False
             )
             logger.info(f"그래프 생성 완료: 노드 {self.graph.number_of_nodes()}개, 엣지 {self.graph.number_of_edges()}개")
             return self.graph
@@ -421,3 +421,4 @@ if __name__ == "__main__":
     # 정왕역에서 가장 가까운 노드
     nearest = builder.get_nearest_node(JEONGWANG_STATION_LAT, JEONGWANG_STATION_LON)
     print(f"  - 정왕역 가장 가까운 노드: {nearest}")
+
