@@ -38,11 +38,10 @@ class _SearchScreenState extends State<SearchScreen> {
   Timer? _debounce;
 
   // Favorites Data
-  String _homeName = '집';
+  final String _homeName = '집';
   String _homeAddress = '서울 성동구 성수동 123';
   String _workLabel = '회사'; // Can be '회사' or '학교'
   String _workAddress = '서울 중구 세종대로 110';
-  bool _isWorkLabelCompany = true; // Toggle state
 
   @override
   void initState() {
@@ -532,7 +531,6 @@ class _SearchScreenState extends State<SearchScreen> {
         _homeAddress = result['homeAddress'];
         _workAddress = result['workAddress'];
         _workLabel = result['workLabel'];
-        _isWorkLabelCompany = (_workLabel == '회사');
       });
     }
   }
