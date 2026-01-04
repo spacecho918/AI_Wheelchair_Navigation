@@ -5,8 +5,13 @@ import 'obstacle_check_screen.dart';
 
 class PhotoConfirmationScreen extends StatelessWidget {
   final String imagePath;
+  final bool fromConfirm;
 
-  const PhotoConfirmationScreen({super.key, required this.imagePath});
+  const PhotoConfirmationScreen({
+    super.key,
+    required this.imagePath,
+    this.fromConfirm = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -62,17 +67,27 @@ class PhotoConfirmationScreen extends StatelessWidget {
 
                   // 사용하기 버튼
                   ElevatedButton(
-                    onPressed: () {
+                    onPressed: () async {
+                      if (fromConfirm) {
+                        Navigator.pop(context, {'imagePath': imagePath});
+                        return;
+                      }
+
                       // ObstacleCheckScreen으로 이동
-                      Navigator.push(
+                      final result = await Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (context) => ObstacleCheckScreen(
                             imagePath: imagePath,
                             initialObstacle: 'stairs',
+                            fromConfirm: fromConfirm,
                           ),
                         ),
                       );
+
+                      if (fromConfirm && result != null && context.mounted) {
+                        Navigator.pop(context, result);
+                      }
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF00C853),

@@ -36,6 +36,11 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        
+        <!-- Kakao Map Native Key -->
+        <meta-data
+            android:name="com.kakao.sdk.AppKey"
+            android:value="8dc68452dfea145cccd4d8e4db160ec2"/>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

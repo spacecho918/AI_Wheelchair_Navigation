@@ -3,15 +3,19 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:gilbeot/screens/location_adjust_screen.dart';
+import 'package:gilbeot/screens/report_confirm_screen.dart';
+import 'package:latlong2/latlong.dart' as latlong;
 
 class ObstacleCheckScreen extends StatefulWidget {
   final String imagePath; // 촬영된 사진 경로
   final String initialObstacle; // AI가 예측한 장애물 (예: 'stairs')
+  final bool fromConfirm; // 제보 확인 화면에서 수정하러 왔는지 여부
 
   const ObstacleCheckScreen({
     super.key,
     required this.imagePath,
     this.initialObstacle = 'stairs',
+    this.fromConfirm = false,
   });
 
   @override
@@ -226,7 +230,7 @@ class _ObstacleCheckScreenState extends State<ObstacleCheckScreen> {
                         width: double.infinity,
                         height: 56,
                         child: ElevatedButton(
-                          onPressed: () {
+                          onPressed: () async {
                             if (selectedId == 'other') {
                               final text = _textController.text.trim();
                               if (text.isEmpty) {
@@ -243,19 +247,61 @@ class _ObstacleCheckScreenState extends State<ObstacleCheckScreen> {
                             } else {
                               debugPrint('최종 선택: $selectedId');
                             }
-                            // 공통: 위치 조정 화면으로 이동
-                            Navigator.push(
+                            // 제보 확인 화면에서 왔다면 결과 반환하고 종료
+                            if (widget.fromConfirm) {
+                              final label = obstacles.firstWhere(
+                                (e) => e['id'] == selectedId,
+                                orElse: () => {'label': selectedId},
+                              )['label'];
+                              Navigator.pop(context, {
+                                'imagePath': widget.imagePath,
+                                'obstacleType': selectedId == 'other'
+                                    ? _textController.text.trim()
+                                    : label,
+                                'obstacleId': selectedId,
+                              });
+                              return;
+                            }
+
+                            // 1. 위치 조정 화면으로 이동하여 위치 선택 대기
+                            final result = await Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => LocationAdjustScreen(
-                                  obstacleType: selectedId, // 선택한 장애물 정보 넘겨주기
-                                  imagePath: widget.imagePath,
-                                  obstacleLabel: selectedId == 'other'
-                                      ? _textController.text
-                                      : _getLabel(selectedId),
-                                ),
+                                builder: (context) =>
+                                    const LocationAdjustScreen(
+                                      savedLocation: latlong.LatLng(
+                                        37.5665,
+                                        126.9780,
+                                      ), // Default to Seoul
+                                      savedAddress: '위치를 선택해주세요',
+                                    ),
                               ),
                             );
+
+                            // 2. 위치 선택 완료 시 신고 확인 화면으로 이동
+                            if (result != null && result is Map) {
+                              if (!mounted) return;
+
+                              final label = obstacles.firstWhere(
+                                (e) => e['id'] == selectedId,
+                                orElse: () => {'label': selectedId},
+                              )['label'];
+
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => ReportConfirmScreen(
+                                    location: result['latlng'],
+                                    address: result['address'],
+                                    imagePath: widget.imagePath,
+                                    obstacleType: selectedId == 'other'
+                                        ? _textController.text.trim()
+                                        : label,
+                                    obstacleId: selectedId,
+                                  ),
+                                ),
+                              );
+                            }
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: _mainColor, // Gilbeot Green

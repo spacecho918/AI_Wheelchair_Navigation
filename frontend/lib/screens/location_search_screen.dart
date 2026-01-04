@@ -1,6 +1,5 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+import 'package:gilbeot/services/kakao_service.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -36,7 +35,7 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
     });
   }
 
-  // Search logic (Nominatim) - Reused from SearchScreen
+  // Search logic (Kakao Local API)
   Future<void> _searchPlaces(String query) async {
     if (query.isEmpty) {
       setState(() => _searchResults = []);
@@ -45,22 +44,12 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
 
     setState(() => _isLoading = true);
 
-    final url = Uri.parse(
-      'https://nominatim.openstreetmap.org/search?q=$query&format=json&polygon_geojson=1&addressdetails=1&accept-language=ko',
-    );
-
     try {
-      final response = await http.get(
-        url,
-        headers: {'User-Agent': 'GilbeotApp/1.0 (com.example.gilbeot)'},
-      );
-
-      if (response.statusCode == 200) {
-        setState(() {
-          _searchResults = json.decode(response.body);
-          _isLoading = false;
-        });
-      }
+      final results = await KakaoService.searchKeyword(query);
+      setState(() {
+        _searchResults = results;
+        _isLoading = false;
+      });
     } catch (e) {
       debugPrint("Error: $e");
       setState(() => _isLoading = false);
@@ -83,42 +72,18 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
 
       Position position = await Geolocator.getCurrentPosition();
 
-      // Reverse Geocoding via Nominatim
-      final url = Uri.parse(
-        'https://nominatim.openstreetmap.org/reverse?format=json&lat=${position.latitude}&lon=${position.longitude}&zoom=18&addressdetails=1&accept-language=ko',
+      // Reverse Geocoding via Kakao API
+      String formattedAddress = await KakaoService.coord2Address(
+        position.latitude,
+        position.longitude,
       );
 
-      final response = await http.get(
-        url,
-        headers: {'User-Agent': 'GilbeotApp/1.0'},
-      );
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        final addressObj = data['address'];
-
-        String formattedAddress = data['display_name'] ?? '주소 없음';
-
-        // Parse City Gu Dong
-        if (addressObj != null) {
-          String city = addressObj['city'] ?? addressObj['province'] ?? '';
-          String district =
-              addressObj['borough'] ?? addressObj['district'] ?? '';
-          String dong =
-              addressObj['quarter'] ?? addressObj['neighbourhood'] ?? '';
-
-          if (city.isNotEmpty || district.isNotEmpty || dong.isNotEmpty) {
-            formattedAddress = "$city $district $dong".trim();
-          }
-        }
-
-        if (mounted) {
-          Navigator.pop(context, {
-            'latlng': LatLng(position.latitude, position.longitude),
-            'name': '현위치',
-            'address': formattedAddress,
-          });
-        }
+      if (mounted) {
+        Navigator.pop(context, {
+          'latlng': LatLng(position.latitude, position.longitude),
+          'name': '현위치',
+          'address': formattedAddress,
+        });
       }
     } catch (e) {
       debugPrint("Location Error: $e");
@@ -231,7 +196,11 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
                           context,
                           MaterialPageRoute(
                             builder: (context) => const LocationAdjustScreen(
-                              isSelectionMode: true,
+                              savedLocation: LatLng(
+                                37.5665,
+                                126.9780,
+                              ), // Default to Seoul
+                              savedAddress: '위치를 선택해주세요',
                             ),
                           ),
                         );
@@ -349,13 +318,13 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
       itemCount: _searchResults.length,
       itemBuilder: (context, index) {
         final place = _searchResults[index];
-        final name = place['display_name'].split(',')[0];
-        final address = place['display_name'];
+        final name = place['name'];
+        final address = place['address'];
 
         return InkWell(
           onTap: () {
-            final lat = double.parse(place['lat']);
-            final lon = double.parse(place['lon']);
+            final lat = place['lat'];
+            final lon = place['lng'];
             Navigator.pop(context, {
               'latlng': LatLng(lat, lon),
               'name': name,

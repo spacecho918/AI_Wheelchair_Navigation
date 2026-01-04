@@ -5,7 +5,8 @@ import 'package:image_picker/image_picker.dart'; // 갤러리 접근용
 import 'photo_confirmation_screen.dart';
 
 class CameraScreen extends StatefulWidget {
-  const CameraScreen({super.key});
+  final bool fromConfirm;
+  const CameraScreen({super.key, this.fromConfirm = false});
 
   @override
   State<CameraScreen> createState() => _CameraScreenState();
@@ -200,13 +201,19 @@ class _CameraScreenState extends State<CameraScreen> {
 
           if (image != null && mounted) {
             // 선택된 이미지로 확인 화면 이동
-            Navigator.push(
+            final result = await Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) =>
-                    PhotoConfirmationScreen(imagePath: image.path),
+                builder: (context) => PhotoConfirmationScreen(
+                  imagePath: image.path,
+                  fromConfirm: widget.fromConfirm,
+                ),
               ),
             );
+
+            if (widget.fromConfirm && result != null && mounted) {
+              Navigator.pop(context, result);
+            }
           }
         } catch (e) {
           debugPrint("갤러리 접근 오류: $e");
@@ -241,13 +248,19 @@ class _CameraScreenState extends State<CameraScreen> {
             if (!mounted) return;
 
             // 2. 촬영된 사진 확인 화면으로 이동
-            Navigator.push(
+            final result = await Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) =>
-                    PhotoConfirmationScreen(imagePath: image.path),
+                builder: (context) => PhotoConfirmationScreen(
+                  imagePath: image.path,
+                  fromConfirm: widget.fromConfirm,
+                ),
               ),
             );
+
+            if (widget.fromConfirm && result != null && mounted) {
+              Navigator.pop(context, result);
+            }
           }
         } catch (e) {
           debugPrint("카메라 촬영 오류: $e");

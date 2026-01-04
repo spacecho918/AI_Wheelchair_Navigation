@@ -1,7 +1,7 @@
 import 'dart:async';
-import 'dart:convert';
+
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+import 'package:gilbeot/services/kakao_service.dart';
 import 'package:latlong2/latlong.dart'; // 좌표 전달용
 import 'package:gilbeot/screens/favorites_edit_screen.dart';
 
@@ -52,7 +52,7 @@ class _SearchScreenState extends State<SearchScreen> {
     });
   }
 
-  // 검색 로직 (Nominatim API)
+  // 검색 로직 (Kakao Local API)
   Future<void> _searchPlaces(String query) async {
     if (query.isEmpty) {
       setState(() => _searchResults = []);
@@ -61,22 +61,12 @@ class _SearchScreenState extends State<SearchScreen> {
 
     setState(() => _isLoading = true);
 
-    final url = Uri.parse(
-      'https://nominatim.openstreetmap.org/search?q=$query&format=json&polygon_geojson=1&addressdetails=1&accept-language=ko',
-    );
-
     try {
-      final response = await http.get(
-        url,
-        headers: {'User-Agent': 'GilbeotApp/1.0 (com.example.gilbeot)'},
-      );
-
-      if (response.statusCode == 200) {
-        setState(() {
-          _searchResults = json.decode(response.body);
-          _isLoading = false;
-        });
-      }
+      final results = await KakaoService.searchKeyword(query);
+      setState(() {
+        _searchResults = results;
+        _isLoading = false;
+      });
     } catch (e) {
       debugPrint("Error: $e");
       setState(() => _isLoading = false);
@@ -345,8 +335,8 @@ class _SearchScreenState extends State<SearchScreen> {
 
         // 결과 리스트 (카드 스타일 적용)
         ..._searchResults.map((place) {
-          final name = place['display_name'].split(',')[0]; // 앞부분만
-          final fullAddress = place['display_name'];
+          final name = place['name'];
+          final fullAddress = place['address'];
 
           return Container(
             margin: const EdgeInsets.only(bottom: 12),
@@ -365,8 +355,9 @@ class _SearchScreenState extends State<SearchScreen> {
               child: InkWell(
                 borderRadius: BorderRadius.circular(16),
                 onTap: () {
-                  final lat = double.parse(place['lat']);
-                  final lon = double.parse(place['lon']);
+                  // KakaoService already returns doubles
+                  final lat = place['lat'];
+                  final lon = place['lng'];
                   Navigator.pop(context, {
                     'latlng': LatLng(lat, lon),
                     'name': name,

@@ -53,5 +53,7 @@
 	<string>동영상 촬영을 위해 마이크 권한이 필요합니다.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>장애물 사진 선택을 위해 갤러리 접근 권한이 필요합니다.</string>
+	<key>KAKAO_APP_KEY</key>
+	<string>8dc68452dfea145cccd4d8e4db160ec2</string>
 </dict>
 </plist>
