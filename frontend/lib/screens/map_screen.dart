@@ -6,6 +6,8 @@ import 'package:geolocator/geolocator.dart'; // 위치 정보 패키지 추가
 import '../widgets/side_drawer.dart';
 import 'camera_screen.dart';
 import 'search_screen.dart';
+import 'community_screen.dart';
+import 'community_detail_screen.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -117,12 +119,12 @@ class _MapScreenState extends State<MapScreen> {
                           const ClampingScrollPhysics(), // [수정 2] 탭을 잡아도 창이 딸려오게 하는 물리 효과
                       padding: const EdgeInsets.fromLTRB(21, 10, 21, 30),
                       children: [
-                        // 손잡이 바
+                        // Handle Bar
                         Center(
                           child: Container(
                             width: 42,
                             height: 5,
-                            margin: const EdgeInsets.only(bottom: 21),
+                            margin: const EdgeInsets.only(bottom: 24),
                             decoration: BoxDecoration(
                               color: const Color(0xFFD1D5DC),
                               borderRadius: BorderRadius.circular(100),
@@ -130,124 +132,159 @@ class _MapScreenState extends State<MapScreen> {
                           ),
                         ),
 
-                        // 헤더
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: const [
-                                Text(
-                                  '주변 안심 장소',
-                                  style: TextStyle(
-                                    color: Color(0xFF101727),
-                                    fontSize: 17.5,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                                SizedBox(height: 3.5),
-                                Text(
-                                  '휠체어 접근 가능 장소',
-                                  style: TextStyle(
-                                    color: Color(0xFF697282),
-                                    fontSize: 12.25,
-                                  ),
-                                ),
-                              ],
+                        // 1. Recent Destinations
+                        _buildSectionHeader('최근 목적지', () {}),
+                        const SizedBox(height: 16),
+                        _buildRecentDestinationItem(
+                          '집',
+                          '서울시 강남구 역삼동 123-45',
+                          Icons.home_rounded,
+                        ),
+                        const SizedBox(height: 12),
+                        _buildRecentDestinationItem(
+                          '회사',
+                          '서울시 서초구 서초동 567-89',
+                          Icons.business_rounded,
+                        ),
+                        const SizedBox(height: 12),
+                        _buildRecentDestinationItem(
+                          '서울대학교병원',
+                          '서울시 종로구 연건동 101',
+                          Icons.local_hospital_rounded,
+                        ),
+
+                        const SizedBox(height: 32),
+
+                        // 2. Community Latest Posts
+                        _buildSectionHeader('커뮤니티 최신글', () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const CommunityScreen(),
                             ),
-                            TextButton(
-                              onPressed: () => debugPrint("View All 클릭됨"),
-                              child: const Text(
-                                '모두 보기',
-                                style: TextStyle(
-                                  color: Color(0xFF00C853),
-                                  fontSize: 12.25,
-                                  fontWeight: FontWeight.bold,
+                          );
+                        }),
+                        const SizedBox(height: 16),
+                        _buildCommunityPostItem(
+                          tag: '경사로',
+                          time: '30분 전',
+                          title: '강남역 2번 출구 경사로 너무 가파름',
+                          location: '강남역 2번 출구',
+                          likes: 24,
+                          comments: 8,
+                          author: '김철수',
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => CommunityDetailScreen(
+                                  report: {
+                                    'id': 101, // Dummy ID
+                                    'tag': '경사로',
+                                    'title': '강남역 2번 출구 경사로 너무 가파름',
+                                    'location': '강남역 2번 출구',
+                                    'likes': 24,
+                                    'comments': 8,
+                                    'author': '김철수',
+                                    'timestamp': DateTime.now()
+                                        .subtract(const Duration(minutes: 30))
+                                        .millisecondsSinceEpoch,
+                                    'description':
+                                        '강남역 2번 출구 휠체어 리프트 이용이 어렵습니다. 경사로가 너무 가파릅니다.',
+                                    'image': null,
+                                  },
                                 ),
                               ),
-                            ),
-                          ],
+                            );
+                          },
                         ),
-                        const SizedBox(height: 10),
-
-                        // [수정 3] 리스트 아이템들 (클릭 가능하게 변경)
-                        _buildDashboardItem(
-                          title: "성수역",
-                          type: "대중교통",
-                          distance: "350m",
-                          time: "도보 5분",
-                          iconPath: "assets/place_icon.svg",
-                          onTap: () => debugPrint("성수역 선택됨"),
-                        ),
-                        const SizedBox(height: 10),
-                        _buildDashboardItem(
-                          title: "집",
-                          type: "즐겨찾기",
-                          distance: "1.2km",
-                          time: "15분",
-                          iconPath: "assets/home_icon.svg",
-                          onTap: () => debugPrint("집 선택됨"),
-                        ),
-                        const SizedBox(height: 10),
-                        _buildDashboardItem(
-                          title: "카페 어니언",
-                          type: "음식점",
-                          distance: "580m",
-                          time: "도보 8분",
-                          iconPath: "assets/cafe_icon.svg",
-                          onTap: () => debugPrint("카페 어니언 선택됨"),
-                        ),
-                        const SizedBox(height: 10),
-                        _buildDashboardItem(
-                          title: "서울숲",
-                          type: "공원",
-                          distance: "920m",
-                          time: "12분",
-                          iconPath: "assets/building_icon.svg",
-                          onTap: () => debugPrint("서울숲 선택됨"),
+                        const SizedBox(height: 12),
+                        _buildCommunityPostItem(
+                          tag: '엘리베이터',
+                          time: '2시간 전',
+                          title: '서울숲 입구 엘리베이터 고장',
+                          location: '서울숲',
+                          likes: 18,
+                          comments: 5,
+                          author: '이영희',
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => CommunityDetailScreen(
+                                  report: {
+                                    'id': 102, // Dummy ID
+                                    'tag': '엘리베이터',
+                                    'title': '서울숲 입구 엘리베이터 고장',
+                                    'location': '서울숲',
+                                    'likes': 18,
+                                    'comments': 5,
+                                    'author': '이영희',
+                                    'timestamp': DateTime.now()
+                                        .subtract(const Duration(hours: 2))
+                                        .millisecondsSinceEpoch,
+                                    'description':
+                                        '서울숲 메인 입구 엘리베이터가 점검 중이라 작동하지 않습니다.',
+                                    'image': null,
+                                  },
+                                ),
+                              ),
+                            );
+                          },
                         ),
 
-                        const SizedBox(height: 30),
+                        const SizedBox(height: 32),
 
-                        // 검색 버튼
+                        // Search Button
                         Container(
                           width: double.infinity,
-                          height: 50,
+                          height: 52,
                           decoration: BoxDecoration(
                             color: const Color(0xFF00C853),
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: const [
+                            borderRadius: BorderRadius.circular(26),
+                            boxShadow: [
                               BoxShadow(
-                                color: Color(0x19000000),
-                                blurRadius: 15,
-                                offset: Offset(0, 10),
+                                color: const Color(0xFF00C853).withOpacity(0.3),
+                                blurRadius: 20,
+                                offset: const Offset(0, 8),
                               ),
                             ],
                           ),
                           child: Material(
-                            // 클릭 효과를 위해 Material 추가
                             color: Colors.transparent,
                             child: InkWell(
-                              onTap: () => debugPrint("목적지 검색 클릭"),
-                              borderRadius: BorderRadius.circular(20),
+                              onTap: () async {
+                                final result = await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const SearchScreen(),
+                                  ),
+                                );
+                                if (result != null) {
+                                  if (result is LatLng) {
+                                    _mapController.move(result, 16.0);
+                                  } else if (result is Map &&
+                                      result.containsKey('latlng')) {
+                                    _mapController.move(result['latlng'], 16.0);
+                                  }
+                                }
+                              },
+                              borderRadius: BorderRadius.circular(26),
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  SvgPicture.asset(
-                                    'assets/search_icon.svg',
-                                    width: 14,
-                                    colorFilter: const ColorFilter.mode(
-                                      Colors.white,
-                                      BlendMode.srcIn,
-                                    ),
+                                children: const [
+                                  Icon(
+                                    Icons.search,
+                                    color: Colors.white,
+                                    size: 20,
                                   ),
-                                  const SizedBox(width: 8),
-                                  const Text(
+                                  SizedBox(width: 8),
+                                  Text(
                                     '새로운 목적지 검색',
                                     style: TextStyle(
                                       color: Colors.white,
-                                      fontSize: 12.25,
-                                      fontWeight: FontWeight.w400,
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.bold,
                                     ),
                                   ),
                                 ],
@@ -473,126 +510,213 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
-  // [수정 3] 클릭 기능을 위해 onTap 추가
-  Widget _buildDashboardItem({
-    required String title,
-    required String type,
-    required String distance,
-    required String time,
-    required String iconPath,
-    required VoidCallback onTap, // 클릭 함수 받기
-  }) {
+  Widget _buildSectionHeader(String title, VoidCallback onTap) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            color: Color(0xFF101727),
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        GestureDetector(
+          onTap: onTap,
+          child: Row(
+            children: const [
+              Text(
+                '전체보기',
+                style: TextStyle(color: Color(0xFF6B7280), fontSize: 13),
+              ),
+              Icon(Icons.chevron_right, color: Color(0xFF6B7280), size: 16),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRecentDestinationItem(
+    String title,
+    String address,
+    IconData iconData,
+  ) {
     return Container(
-      width: double.infinity,
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        border: Border.all(width: 1.09, color: const Color(0xFFF2F4F6)),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFF3F4F6)),
       ),
-      // Material & InkWell로 감싸서 클릭 효과 구현
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap, // 클릭 시 실행할 동작 연결
-          borderRadius: BorderRadius.circular(14),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-            child: Row(
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: const Color(0xFF00C853),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Icon(iconData, color: Colors.white, size: 24),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  width: 42,
-                  height: 42,
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF00C853),
-                    borderRadius: BorderRadius.circular(12.75),
-                  ),
-                  child: SvgPicture.asset(
-                    iconPath,
-                    colorFilter: const ColorFilter.mode(
-                      Colors.white,
-                      BlendMode.srcIn,
-                    ),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: Color(0xFF101727),
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: const TextStyle(
-                          color: Color(0xFF101727),
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 3.5),
-                      Row(
-                        children: [
-                          Text(
-                            type,
-                            style: const TextStyle(
-                              color: Color(0xFF697282),
-                              fontSize: 10.5,
-                            ),
-                          ),
-                          const Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 4.4),
-                            child: Text(
-                              '•',
-                              style: TextStyle(
-                                color: Color(0xFF99A1AE),
-                                fontSize: 10.5,
-                              ),
-                            ),
-                          ),
-                          Text(
-                            distance,
-                            style: const TextStyle(
-                              color: Color(0xFF697282),
-                              fontSize: 10.5,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+                const SizedBox(height: 4),
+                Text(
+                  address,
+                  style: const TextStyle(
+                    color: Color(0xFF6B7280),
+                    fontSize: 13,
                   ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10.5,
-                    vertical: 5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF3F4F6),
-                    borderRadius: BorderRadius.circular(100),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 6,
-                        height: 6,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFF495565),
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        time,
-                        style: const TextStyle(
-                          color: Color(0xFF495565),
-                          fontSize: 10.5,
-                        ),
-                      ),
-                    ],
-                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
           ),
+          const Icon(
+            Icons.access_time, // Clock icon
+            color: Color(0xFF9CA3AF),
+            size: 20,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCommunityPostItem({
+    required String tag,
+    required String time,
+    required String title,
+    required String location,
+    required int likes,
+    required int comments,
+    required String author,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFF3F4F6)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF3F4F6),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    tag,
+                    style: const TextStyle(
+                      color: Color(0xFF4B5563),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                Text(
+                  time,
+                  style: const TextStyle(
+                    color: Color(0xFF9CA3AF),
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              title,
+              style: const TextStyle(
+                color: Color(0xFF101727),
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                const Icon(
+                  Icons.location_on_outlined,
+                  size: 14,
+                  color: Color(0xFF6B7280),
+                ),
+                const SizedBox(width: 2),
+                Text(
+                  location,
+                  style: const TextStyle(
+                    color: Color(0xFF6B7280),
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const Icon(
+                  Icons.thumb_up_outlined,
+                  size: 14,
+                  color: Color(0xFF6B7280),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  '$likes',
+                  style: const TextStyle(
+                    color: Color(0xFF6B7280),
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Icon(
+                  Icons.comment_outlined,
+                  size: 14,
+                  color: Color(0xFF6B7280),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  '$comments',
+                  style: const TextStyle(
+                    color: Color(0xFF6B7280),
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '· $author',
+                  style: const TextStyle(
+                    color: Color(0xFF9CA3AF),
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );

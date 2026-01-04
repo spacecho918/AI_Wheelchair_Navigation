@@ -212,7 +212,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                     height: 1.4,
                   ),
                 ),
-                if (item['hasAction'] == true) ...[
+                if (item['hasAction'] == true && !isRead) ...[
                   const SizedBox(height: 8),
                   GestureDetector(
                     onTap: () {},
