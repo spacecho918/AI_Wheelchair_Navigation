@@ -5,17 +5,20 @@ import 'package:latlong2/latlong.dart'; // 좌표 패키지
 import 'package:http/http.dart' as http; // HTTP 요청
 import 'package:geolocator/geolocator.dart'; // 위치 정보
 import 'report_confirm_screen.dart';
+import 'package:gilbeot/widgets/custom_back_button.dart';
 
 class LocationAdjustScreen extends StatefulWidget {
-  final String obstacleType; // 이전 화면에서 선택한 장애물 (예: 'stairs')
-  final String imagePath;
-  final String obstacleLabel;
+  final String? obstacleType;
+  final String? imagePath;
+  final String? obstacleLabel;
+  final bool isSelectionMode;
 
   const LocationAdjustScreen({
     super.key,
-    required this.obstacleType,
-    required this.imagePath,
-    required this.obstacleLabel,
+    this.obstacleType,
+    this.imagePath,
+    this.obstacleLabel,
+    this.isSelectionMode = false,
   });
 
   @override
@@ -298,24 +301,12 @@ class _LocationAdjustScreenState extends State<LocationAdjustScreen> {
 
           // 3. 상단 헤더 (뒤로가기)
           Positioned(
-            top: 50,
+            top: 0,
             left: 20,
-            child: GestureDetector(
-              onTap: () => Navigator.pop(context),
-              child: Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.1),
-                      blurRadius: 10,
-                      offset: const Offset(0, 5),
-                    ),
-                  ],
-                ),
-                child: const Icon(Icons.arrow_back, color: Colors.black87),
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.only(top: 20),
+                child: const CustomBackButton(),
               ),
             ),
           ),
@@ -428,19 +419,26 @@ class _LocationAdjustScreenState extends State<LocationAdjustScreen> {
                     height: 56,
                     child: ElevatedButton(
                       onPressed: () {
-                        debugPrint("신고 위치 확정: $_center");
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => ReportConfirmScreen(
-                              imagePath: widget.imagePath,
-                              obstacleType: widget.obstacleType,
-                              obstacleLabel: widget.obstacleLabel,
-                              location: _center,
-                              address: _currentAddress,
+                        if (widget.isSelectionMode) {
+                          Navigator.pop(context, {
+                            'latlng': _center,
+                            'address': _currentAddress,
+                          });
+                        } else {
+                          debugPrint("신고 위치 확정: $_center");
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ReportConfirmScreen(
+                                imagePath: widget.imagePath!,
+                                obstacleType: widget.obstacleType!,
+                                obstacleLabel: widget.obstacleLabel!,
+                                location: _center,
+                                address: _currentAddress,
+                              ),
                             ),
-                          ),
-                        );
+                          );
+                        }
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF00C853),
@@ -449,9 +447,9 @@ class _LocationAdjustScreenState extends State<LocationAdjustScreen> {
                           borderRadius: BorderRadius.circular(16),
                         ),
                       ),
-                      child: const Text(
-                        "이 위치로 확정하기",
-                        style: TextStyle(
+                      child: Text(
+                        widget.isSelectionMode ? "이 위치로 선택하기" : "이 위치로 확정하기",
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 16,
                           fontWeight: FontWeight.bold,

@@ -126,7 +126,7 @@ class _SearchScreenState extends State<SearchScreen> {
   // 1. 검색바 위젯
   Widget _buildSearchBar() {
     return Container(
-      padding: const EdgeInsets.only(top: 20, left: 20, right: 20, bottom: 10),
+      padding: const EdgeInsets.only(top: 20, left: 20, right: 20, bottom: 5),
       color: Colors.white, // 배경색 유지
       child: Row(
         children: [
@@ -229,7 +229,7 @@ class _SearchScreenState extends State<SearchScreen> {
   // 2. 기본 화면 (최근 검색어)
   Widget _buildDefaultView() {
     return ListView(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+      padding: const EdgeInsets.only(left: 16, right: 16, top: 15, bottom: 20),
       children: [
         // 상단 칩 버튼 (집, 회사, 편집)
         Row(
@@ -246,27 +246,36 @@ class _SearchScreenState extends State<SearchScreen> {
               color: const Color(0xFF00C853),
             ),
             const Spacer(),
-            GestureDetector(
-              onTap: _showEditFavoritesDialog,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey[300]!),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  '편집',
-                  style: TextStyle(color: Colors.grey[600], fontSize: 12),
+            Material(
+              color: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+                side: BorderSide(color: Colors.grey[300]!),
+              ),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(20),
+                onTap: _showEditFavoritesDialog,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    '편집',
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
                 ),
               ),
             ),
           ],
         ),
 
-        const SizedBox(height: 30),
+        const SizedBox(height: 20),
 
         // 최근 검색어 헤더
         Row(
@@ -280,11 +289,16 @@ class _SearchScreenState extends State<SearchScreen> {
                 color: Colors.black87,
               ),
             ),
-            GestureDetector(
-              onTap: () {
+            TextButton(
+              onPressed: () {
                 // 모두 지우기 로직 (여기서는 더미 초기화 안함, 실제 구현 시 리스트 비우기)
                 debugPrint("모두 지우기 클릭");
               },
+              style: TextButton.styleFrom(
+                padding: EdgeInsets.zero,
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
               child: Text(
                 '모두 지우기',
                 style: TextStyle(fontSize: 13, color: Colors.grey[600]),
@@ -334,73 +348,82 @@ class _SearchScreenState extends State<SearchScreen> {
           final name = place['display_name'].split(',')[0]; // 앞부분만
           final fullAddress = place['display_name'];
 
-          return GestureDetector(
-            onTap: () {
-              final lat = double.parse(place['lat']);
-              final lon = double.parse(place['lon']);
-              Navigator.pop(context, {
-                'latlng': LatLng(lat, lon),
-                'name': name,
-                'address': fullAddress,
-              });
-            },
-            child: Container(
-              margin: const EdgeInsets.only(bottom: 12),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white,
+          return Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            decoration: BoxDecoration(
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Material(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              child: InkWell(
                 borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFE8FDF0), // 연두색 배경
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.location_on_outlined,
-                      color: Color(0xFF00C853), // 메인 그린 색상
-                      size: 22,
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          name,
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
-                          ),
+                onTap: () {
+                  final lat = double.parse(place['lat']);
+                  final lon = double.parse(place['lon']);
+                  Navigator.pop(context, {
+                    'latlng': LatLng(lat, lon),
+                    'name': name,
+                    'address': fullAddress,
+                  });
+                },
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFE8FDF0), // 연두색 배경
+                          shape: BoxShape.circle,
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          fullAddress,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[500],
-                          ),
+                        child: const Icon(
+                          Icons.location_on_outlined,
+                          color: Color(0xFF00C853), // 메인 그린 색상
+                          size: 22,
                         ),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              name,
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black87,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              fullAddress,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[500],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(
+                        Icons.chevron_right,
+                        size: 20,
+                        color: Colors.grey[400],
+                      ),
+                    ],
                   ),
-                  Icon(Icons.chevron_right, size: 20, color: Colors.grey[400]),
-                ],
+                ),
               ),
             ),
           );
@@ -416,28 +439,32 @@ class _SearchScreenState extends State<SearchScreen> {
     required String label,
     required Color color,
   }) {
-    return GestureDetector(
-      onTap: () => debugPrint("$label 클릭됨"),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border.all(color: color),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, size: 16, color: color),
-            const SizedBox(width: 4),
-            Text(
-              label,
-              style: TextStyle(
-                color: color,
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
+    return Material(
+      color: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: color),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: () => debugPrint("$label 클릭됨"),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 16, color: color),
+              const SizedBox(width: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -446,69 +473,74 @@ class _SearchScreenState extends State<SearchScreen> {
   Widget _buildRecentItem(Map<String, dynamic> item) {
     bool isSaved = item['type'] == 'saved'; // 저장은 노란별, 최근은 초록핀
 
-    return GestureDetector(
-      onTap: () => debugPrint("${item['name']} 선택됨"),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.white,
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
           borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            // 아이콘 원형 배경
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: isSaved
-                    ? const Color(0xFFFFF9C4)
-                    : const Color(0xFFE8FDF0), // 노랑(집) vs 연두(최근)
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                isSaved ? Icons.star : Icons.location_on_outlined,
-                color: isSaved
-                    ? const Color(0xFFFBC02D)
-                    : const Color(0xFF00C853),
-                size: 22,
-              ),
-            ),
-            const SizedBox(width: 14),
-            // 텍스트 정보
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    item['name'],
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
+          onTap: () => debugPrint("${item['name']} 선택됨"),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                // 아이콘 원형 배경
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: isSaved
+                        ? const Color(0xFFFFF9C4)
+                        : const Color(0xFFE8FDF0), // 노랑(집) vs 연두(최근)
+                    shape: BoxShape.circle,
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    item['address'],
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                  child: Icon(
+                    isSaved ? Icons.star : Icons.location_on_outlined,
+                    color: isSaved
+                        ? const Color(0xFFFBC02D)
+                        : const Color(0xFF00C853),
+                    size: 22,
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(width: 14),
+                // 텍스트 정보
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item['name'],
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        item['address'],
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                      ),
+                    ],
+                  ),
+                ),
+                // 오른쪽 시계 아이콘
+                Icon(Icons.access_time, size: 16, color: Colors.grey[400]),
+              ],
             ),
-            // 오른쪽 시계 아이콘
-            Icon(Icons.access_time, size: 16, color: Colors.grey[400]),
-          ],
+          ),
         ),
       ),
     );

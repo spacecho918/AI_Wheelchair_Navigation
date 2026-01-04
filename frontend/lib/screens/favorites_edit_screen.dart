@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:gilbeot/screens/search_screen.dart';
+import 'package:gilbeot/screens/location_search_screen.dart';
+import 'package:gilbeot/widgets/custom_back_button.dart';
 
 class FavoritesEditScreen extends StatefulWidget {
   final String homeAddress;
@@ -53,41 +54,48 @@ class _FavoritesEditScreenState extends State<FavoritesEditScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB), // Slight off-white background
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.pop(
-            context,
-          ), // Just back without save? Or same as Done? Assuming Done saves.
-        ),
-        title: const Text(
-          '즐겨찾기 편집',
-          style: TextStyle(
-            color: Colors.black,
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        centerTitle: false,
-        actions: [
-          TextButton(
-            onPressed: _saveAndExit,
-            child: const Text(
-              '완료',
-              style: TextStyle(
-                color: Color(0xFF00C853),
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
-      ),
       body: SafeArea(
         child: Column(
           children: [
+            // Custom Header
+            // Custom Header
+            Container(
+              height: 56,
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: CustomBackButton(),
+                  ),
+                  const Text(
+                    '즐겨찾기 편집',
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: _saveAndExit,
+                      child: const Text(
+                        '완료',
+                        style: TextStyle(
+                          color: Color(0xFF00C853),
+                          fontSize: 15,
+                          fontWeight: FontWeight.normal,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Container(color: const Color(0xFFE5E7EB), height: 1.0),
+
             // List Header
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
@@ -121,7 +129,7 @@ class _FavoritesEditScreenState extends State<FavoritesEditScreen> {
                       final result = await Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => const SearchScreen(),
+                          builder: (context) => const LocationSearchScreen(),
                         ),
                       );
                       if (result != null && result is Map) {
@@ -139,7 +147,7 @@ class _FavoritesEditScreenState extends State<FavoritesEditScreen> {
                       final result = await Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => const SearchScreen(),
+                          builder: (context) => const LocationSearchScreen(),
                         ),
                       );
                       if (result != null && result is Map) {

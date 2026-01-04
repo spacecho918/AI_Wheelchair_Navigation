@@ -3,6 +3,8 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../screens/login_screen.dart';
 import '../screens/wheelchair_settings_screen.dart';
 import '../screens/community_screen.dart';
+import '../screens/my_reports_screen.dart';
+import '../screens/notification_screen.dart';
 
 class SideDrawer extends StatelessWidget {
   const SideDrawer({super.key});
@@ -35,7 +37,15 @@ class SideDrawer extends StatelessWidget {
                   _buildMenuItem(
                     iconPath: 'assets/document_icon.svg',
                     text: '나의 제보',
-                    onTap: () {},
+                    onTap: () {
+                      Navigator.pop(context); // Close drawer
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const MyReportsScreen(),
+                        ),
+                      );
+                    },
                   ),
                   const SizedBox(height: 7),
                   _buildMenuItem(
@@ -95,23 +105,59 @@ class SideDrawer extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 닫기 버튼
-          Align(
-            alignment: Alignment.topLeft,
-            child: IconButton(
-              // 터치 영역 확보를 위해 IconButton 사용
-              icon: const Icon(Icons.close, color: Colors.white, size: 24),
-              onPressed: () {
-                if (Navigator.canPop(context)) {
-                  Navigator.pop(context);
-                } else {
-                  // Fallback: ScaffoldState를 통한 닫기 시도 (필요 시)
-                }
-              },
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(), // 아이콘 주위 여백 최소화
-              alignment: Alignment.centerLeft, // 아이콘 정렬 명시
-            ),
+          // 상단 버튼 Row (알림 + 닫기)
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              // 알림 아이콘 (뱃지 포함)
+              GestureDetector(
+                onTap: () {
+                  Navigator.pop(context); // Close drawer
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const NotificationScreen(),
+                    ),
+                  );
+                },
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    const Icon(
+                      Icons.notifications_none_outlined,
+                      color: Colors.white,
+                      size: 24,
+                    ),
+                    Positioned(
+                      right: 0,
+                      top: 0,
+                      child: Container(
+                        width: 8,
+                        height: 8,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFFF3B30), // Red badge color
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 16),
+              // 닫기 버튼
+              IconButton(
+                icon: const Icon(Icons.close, color: Colors.white, size: 24),
+                onPressed: () {
+                  if (Navigator.canPop(context)) {
+                    Navigator.pop(context);
+                  } else {
+                    // Fallback
+                  }
+                },
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
+            ],
           ),
           const SizedBox(height: 10),
 
