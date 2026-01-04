@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../screens/login_screen.dart';
 import '../screens/wheelchair_settings_screen.dart';
+import '../screens/community_screen.dart';
 
 class SideDrawer extends StatelessWidget {
   const SideDrawer({super.key});
@@ -52,7 +53,15 @@ class SideDrawer extends StatelessWidget {
                   _buildMenuItem(
                     iconPath: 'assets/community_icon.svg', // New Icon
                     text: '제보 커뮤니티',
-                    onTap: () {},
+                    onTap: () {
+                      Navigator.pop(context); // Close drawer first
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const CommunityScreen(),
+                        ),
+                      );
+                    },
                   ),
                   const SizedBox(height: 7),
                   _buildMenuItem(
