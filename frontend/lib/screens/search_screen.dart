@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:gilbeot/services/kakao_service.dart';
 import 'package:latlong2/latlong.dart'; // 좌표 전달용
 import 'package:gilbeot/screens/favorites_edit_screen.dart';
@@ -179,11 +180,14 @@ class _SearchScreenState extends State<SearchScreen> {
               child: Row(
                 children: [
                   const SizedBox(width: 15),
-                  const Icon(
-                    Icons.search,
-                    color: Colors.grey,
-                    size: 24,
-                  ), // SvgPicture 대신 Icon 사용 (일관성)
+                  SvgPicture.asset(
+                    'assets/search_icon.svg',
+                    width: 20,
+                    colorFilter: const ColorFilter.mode(
+                      Colors.grey,
+                      BlendMode.srcIn,
+                    ),
+                  ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: TextField(
@@ -237,13 +241,13 @@ class _SearchScreenState extends State<SearchScreen> {
         Row(
           children: [
             _buildChip(
-              icon: Icons.star_border,
+              icon: Icons.home_rounded,
               label: _homeName,
               color: const Color(0xFF00C853),
             ),
             const SizedBox(width: 8),
             _buildChip(
-              icon: Icons.star_border,
+              icon: Icons.business_rounded,
               label: _workLabel,
               color: const Color(0xFF00C853),
             ),
