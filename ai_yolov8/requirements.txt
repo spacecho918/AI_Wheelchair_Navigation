@@ -1,0 +1,11 @@
+# YOLOv8 필수 패키지
+ultralytics>=8.0.0
+opencv-python>=4.8.0
+Pillow>=10.0.0
+numpy>=1.24.0
+
+# 결과 시각화용
+matplotlib>=3.7.0
+
+# Jupyter/IPython 환경용 (선택)
+ipython>=8.0.0
