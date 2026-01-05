@@ -1,3 +1,18 @@
 yolo task=detect mode=predict \
   model=model.pt \
   source=img.jpg
+
+import os
+from IPython.display import Image, display
+
+predict_num = 23
+
+predict_dir = f"runs/detect/predict{predict_num}" if predict_num > 1 else "runs/detect/predict"
+
+# 폴더 안 첫 번째 이미지 자동 선택
+img = next(
+    f for f in os.listdir(predict_dir)
+    if f.endswith(('.jpg', '.png'))
+)
+
+display(Image(filename=os.path.join(predict_dir, img)))
