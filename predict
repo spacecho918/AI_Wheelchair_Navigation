@@ -5,7 +5,7 @@ yolo task=detect mode=predict \
 import os
 from IPython.display import Image, display
 
-predict_num = 23
+predict_num = 23 #predict 디렉토리 넘버
 
 predict_dir = f"runs/detect/predict{predict_num}" if predict_num > 1 else "runs/detect/predict"
 
