@@ -178,6 +178,7 @@
                 }).addTo(map);
 
                 line.bindPopup(`
+                    <b>ID:</b> ${edge.edge_id}<br>
                     <b>경사도:</b> ${(edge.grade || 0).toFixed(1)}°<br>
                     <b>거리:</b> ${(edge.length || 0).toFixed(1)}m<br>
                     <b>노면:</b> ${edge.surface_type || 'unknown'}<br>
@@ -212,6 +213,7 @@
                 }).addTo(map);
 
                 line.bindPopup(`
+                    <b>ID:</b> ${edge.edge_id}<br>
                     <b>경사도:</b> ${(edge.grade || 0).toFixed(1)}°<br>
                     <b>거리:</b> ${(edge.length || 0).toFixed(1)}m<br>
                     <b>노면:</b> ${edge.surface_type || 'unknown'}

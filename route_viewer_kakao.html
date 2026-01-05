@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>길벗 - 경로 미리보기 (Kakao)</title>
     <script type="text/javascript"
-        src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=[키입력]&libraries=services"></script>
+        src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=__KAKAO_KEY__&libraries=services"></script>
     <style>
         * {
             margin: 0;
@@ -396,11 +396,6 @@
         let obstacleOverlays = [];
         let obstaclesVisible = true;
 
-        const sampleObstacles = [
-            { lat: 37.3425, lng: 126.7340, type: '공사중', description: '도로 공사로 인한 통행 불가', icon: '🚧' },
-            { lat: 37.3480, lng: 126.7380, type: '계단', description: '계단 구간 - 휠체어 통행 불가', icon: '🪜' },
-            { lat: 37.3450, lng: 126.7355, type: '급경사', description: '경사도 15° 이상 급경사', icon: '⚠️' }
-        ];
 
         // 장소 검색 이벤트 설정
         const startInput = document.getElementById('startInput');

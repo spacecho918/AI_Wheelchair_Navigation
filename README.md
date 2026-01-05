@@ -137,7 +137,7 @@ Supabase SQL Editor에서 실행
 역할: FastAPI 웹 서버 - 모든 모듈 통합
 
 실행 방법:
-    uvicorn main_server:app --host 0.0.0.0 --port 8000 --reload
+   python -m uvicorn main_server:app --host 0.0.0.0 --port 8000 --reload
 
 초기화 순서:
     1. OSM 그래프 생성 (osm_parser)

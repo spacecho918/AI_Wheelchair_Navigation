@@ -6,17 +6,23 @@ OSM 기반 경로 탐색 + 실시간 장애물 반영
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from pydantic import BaseModel, Field
 from typing import Optional, Literal, List, Tuple
 import logging
 import os
 from pathlib import Path
+from dotenv import load_dotenv
+
+# .env 파일 로드
+load_dotenv()
 
 # 내부 모듈
 from osm_parser import OSMGraphBuilder, KOREA_TECH_LAT, KOREA_TECH_LON, JEONGWANG_STATION_LAT, JEONGWANG_STATION_LON
 from route_algorithm import RouteCalculator, RouteResult
 from obstacle_manager import ObstacleManager, Obstacle
+from edge_data_loader import EdgeDataLoader
+from dataclasses import asdict
 
 # 로깅 설정
 logging.basicConfig(level=logging.INFO)
@@ -178,13 +184,29 @@ async def startup_event():
 @app.get("/")
 async def root():
     """루트 - 카카오맵 경로 뷰어로 리다이렉트"""
-    return FileResponse("route_viewer_kakao.html")
+    """루트 - 카카오맵 경로 뷰어로 리다이렉트"""
+    with open("route_viewer_kakao.html", "r", encoding="utf-8") as f:
+        content = f.read()
+    
+    # API 키 주입
+    kakao_key = os.getenv("KAKAO_JAVASCRIPT_KEY", "")
+    content = content.replace("__KAKAO_KEY__", kakao_key)
+    
+    return HTMLResponse(content=content)
 
 
 @app.get("/viewer")
 async def route_viewer():
     """경로 뷰어 (Kakao Maps)"""
-    return FileResponse("route_viewer_kakao.html")
+    """경로 뷰어 (Kakao Maps)"""
+    with open("route_viewer_kakao.html", "r", encoding="utf-8") as f:
+        content = f.read()
+    
+    # API 키 주입
+    kakao_key = os.getenv("KAKAO_JAVASCRIPT_KEY", "")
+    content = content.replace("__KAKAO_KEY__", kakao_key)
+    
+    return HTMLResponse(content=content)
 
 
 @app.get("/viewer/osm")
@@ -201,8 +223,19 @@ async def graph_viewer():
 
 @app.get("/edges_data.json")
 async def edges_data():
-    """엣지 데이터 JSON (graph_viewer.html용)"""
-    return FileResponse("edges_data.json")
+    """엣지 데이터 JSON (graph_viewer.html용) - DB 연동"""
+    try:
+        # DB에서 데이터 로드 (실패 시 로컬 JSON 폴백)
+        loader = EdgeDataLoader()
+        edges_map = loader.load(prefer_db=True)
+        
+        # 리스트 형태로 변환
+        result = [asdict(edge) for edge in edges_map.values()]
+        return result
+    except Exception as e:
+        logger.error(f"엣지 데이터 로드 실패: {e}")
+        # 오류 발생 시 빈 리스트 또는 에러 메시지
+        return []
 
 
 @app.get("/api")
@@ -449,4 +482,8 @@ if __name__ == "__main__":
 
 
 # 실행 방법:
-# uvicorn main_server:app --host 0.0.0.0 --port 8000 --reload
+# python -m uvicorn main_server:app --host 0.0.0.0 --port 8000 --reload
+# 그래프 확인용 
+# http://localhost:8000/graph
+# 경로 확인용 
+# http://localhost:8000/viewer
