@@ -1,0 +1,3 @@
+yolo task=detect mode=predict \
+  model=model.pt \
+  source=img.jpg
