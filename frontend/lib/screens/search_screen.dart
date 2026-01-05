@@ -4,9 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:gilbeot/services/kakao_service.dart';
 import 'package:latlong2/latlong.dart'; // 좌표 전달용
 import 'package:gilbeot/screens/favorites_edit_screen.dart';
+import 'package:geolocator/geolocator.dart';
 
 class SearchScreen extends StatefulWidget {
-  const SearchScreen({super.key});
+  final LatLng? searchLocation;
+  final LatLng? userLocation;
+
+  const SearchScreen({super.key, this.searchLocation, this.userLocation});
 
   @override
   State<SearchScreen> createState() => _SearchScreenState();
@@ -62,7 +66,15 @@ class _SearchScreenState extends State<SearchScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final results = await KakaoService.searchKeyword(query);
+      // Use searchLocation for sorting if available (center of map)
+      double? lat = widget.searchLocation?.latitude;
+      double? lng = widget.searchLocation?.longitude;
+
+      final results = await KakaoService.searchKeyword(
+        query,
+        lat: lat,
+        lng: lng,
+      );
       setState(() {
         _searchResults = results;
         _isLoading = false;
@@ -375,9 +387,9 @@ class _SearchScreenState extends State<SearchScreen> {
                           color: Color(0xFFE8FDF0), // 연두색 배경
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(
-                          Icons.location_on_outlined,
-                          color: Color(0xFF00C853), // 메인 그린 색상
+                        child: Icon(
+                          _getCategoryIcon(place['category']),
+                          color: const Color(0xFF00C853), // 메인 그린 색상
                           size: 22,
                         ),
                       ),
@@ -407,6 +419,21 @@ class _SearchScreenState extends State<SearchScreen> {
                           ],
                         ),
                       ),
+                      if (widget.userLocation != null) ...[
+                        const SizedBox(width: 8),
+                        Text(
+                          _formatDistance(
+                            widget.userLocation!,
+                            place['lat'],
+                            place['lng'],
+                          ),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF00C853),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
                       Icon(
                         Icons.chevron_right,
                         size: 20,
@@ -555,6 +582,64 @@ class _SearchScreenState extends State<SearchScreen> {
         _workAddress = result['workAddress'];
         _workLabel = result['workLabel'];
       });
+    }
+  }
+
+  String _formatDistance(LatLng start, double endLat, double endLng) {
+    double distanceInMeters = Geolocator.distanceBetween(
+      start.latitude,
+      start.longitude,
+      endLat,
+      endLng,
+    );
+
+    if (distanceInMeters < 1000) {
+      return '${distanceInMeters.toStringAsFixed(0)}m';
+    } else {
+      return '${(distanceInMeters / 1000).toStringAsFixed(1)}km';
+    }
+  }
+
+  IconData _getCategoryIcon(String? categoryCode) {
+    switch (categoryCode) {
+      case 'MT1': // 대형마트
+        return Icons.shopping_cart;
+      case 'CS2': // 편의점
+        return Icons.store;
+      case 'PS3': // 어린이집, 유치원
+        return Icons.child_care;
+      case 'SC4': // 학교
+        return Icons.school;
+      case 'AC5': // 학원
+        return Icons.menu_book;
+      case 'PK6': // 주차장
+        return Icons.local_parking;
+      case 'OL7': // 주유소, 충전소
+        return Icons.local_gas_station;
+      case 'SW8': // 지하철역
+        return Icons.subway;
+      case 'BK9': // 은행
+        return Icons.account_balance;
+      case 'CT1': // 문화시설
+        return Icons.theater_comedy;
+      case 'AG2': // 중개업소
+        return Icons.domain;
+      case 'PO3': // 공공기관
+        return Icons.location_city;
+      case 'AT4': // 관광명소
+        return Icons.attractions;
+      case 'AD5': // 숙박
+        return Icons.hotel;
+      case 'FD6': // 음식점
+        return Icons.restaurant;
+      case 'CE7': // 카페
+        return Icons.local_cafe;
+      case 'HP8': // 병원
+        return Icons.local_hospital;
+      case 'PM9': // 약국
+        return Icons.local_pharmacy;
+      default:
+        return Icons.location_on_outlined;
     }
   }
 }

@@ -24,6 +24,8 @@ class MapScreen extends StatefulWidget {
 class _MapScreenState extends State<MapScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   WebViewController? _mapController;
+  latlong.LatLng? _mapCenter;
+  latlong.LatLng? _currentLocation;
 
   @override
   void initState() {
@@ -40,6 +42,22 @@ class _MapScreenState extends State<MapScreen> {
       if (!kIsWeb) {
         controller.setJavaScriptMode(JavaScriptMode.unrestricted);
         controller.setBackgroundColor(const Color(0x00000000));
+        controller.addJavaScriptChannel(
+          'MapChannel',
+          onMessageReceived: (JavaScriptMessage message) {
+            try {
+              final data = json.decode(message.message);
+              if (data['type'] == 'dragend') {
+                setState(() {
+                  _mapCenter = latlong.LatLng(data['lat'], data['lng']);
+                });
+                debugPrint("Map Center Updated: $_mapCenter");
+              }
+            } catch (e) {
+              debugPrint("Error parsing map message: $e");
+            }
+          },
+        );
       }
 
       _mapController = controller;
@@ -73,6 +91,13 @@ class _MapScreenState extends State<MapScreen> {
       if (permission == LocationPermission.deniedForever) return;
 
       final position = await Geolocator.getCurrentPosition();
+      setState(() {
+        _currentLocation = latlong.LatLng(
+          position.latitude,
+          position.longitude,
+        );
+        _mapCenter = _currentLocation; // Initial map center is current location
+      });
 
       // On Web, passing via URL param in _loadMap won't work if map already loaded.
       // So we must use setCenter here.
@@ -96,7 +121,7 @@ class _MapScreenState extends State<MapScreen> {
 
     if (kIsWeb) {
       _mapController!.loadRequest(
-        Uri.parse(Uri.base.origin + '/kakao_map.html'),
+        Uri.parse('${Uri.base.origin}/kakao_map.html'),
       );
     } else {
       String fileText = await rootBundle.loadString('assets/kakao_map.html');
@@ -169,6 +194,13 @@ class _MapScreenState extends State<MapScreen> {
         position.latitude,
         position.longitude,
       );
+      setState(() {
+        _currentLocation = latlong.LatLng(
+          position.latitude,
+          position.longitude,
+        );
+        _mapCenter = _currentLocation;
+      });
     } catch (e) {
       debugPrint("Error getting location: $e");
     }
@@ -368,8 +400,10 @@ class _MapScreenState extends State<MapScreen> {
                                   final result = await Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (context) =>
-                                          const SearchScreen(),
+                                      builder: (context) => SearchScreen(
+                                        searchLocation: _mapCenter,
+                                        userLocation: _currentLocation,
+                                      ),
                                     ),
                                   );
                                   if (result != null) {
@@ -572,7 +606,10 @@ class _MapScreenState extends State<MapScreen> {
                         final result = await Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const SearchScreen(),
+                            builder: (context) => SearchScreen(
+                              searchLocation: _mapCenter,
+                              userLocation: _currentLocation,
+                            ),
                           ),
                         );
 

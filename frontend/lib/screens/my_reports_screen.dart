@@ -59,6 +59,7 @@ class _MyReportsScreenState extends State<MyReportsScreen>
     );
   }
 
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,

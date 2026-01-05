@@ -8,7 +8,14 @@ import 'package:gilbeot/screens/location_adjust_screen.dart';
 import 'package:gilbeot/widgets/custom_back_button.dart';
 
 class LocationSearchScreen extends StatefulWidget {
-  const LocationSearchScreen({super.key});
+  final LatLng? searchLocation;
+  final LatLng? userLocation;
+
+  const LocationSearchScreen({
+    super.key,
+    this.searchLocation,
+    this.userLocation,
+  });
 
   @override
   State<LocationSearchScreen> createState() => _LocationSearchScreenState();
@@ -45,7 +52,15 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final results = await KakaoService.searchKeyword(query);
+      // Use searchLocation for sorting if available
+      double? lat = widget.searchLocation?.latitude;
+      double? lng = widget.searchLocation?.longitude;
+
+      final results = await KakaoService.searchKeyword(
+        query,
+        lat: lat,
+        lng: lng,
+      );
       setState(() {
         _searchResults = results;
         _isLoading = false;
@@ -66,8 +81,9 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied)
+        if (permission == LocationPermission.denied) {
           throw Exception('Permission denied.');
+        }
       }
 
       Position position = await Geolocator.getCurrentPosition();
@@ -338,7 +354,11 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
             ),
             child: Row(
               children: [
-                const Icon(Icons.location_on, color: Colors.grey, size: 20),
+                Icon(
+                  _getCategoryIcon(place['category']),
+                  color: Colors.grey,
+                  size: 20,
+                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -360,6 +380,21 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
                     ],
                   ),
                 ),
+                if (widget.userLocation != null) ...[
+                  const SizedBox(width: 8),
+                  Text(
+                    _formatDistance(
+                      widget.userLocation!,
+                      place['lat'],
+                      place['lng'],
+                    ),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF00C853),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -412,7 +447,7 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
-                    isSaved ? Icons.star : Icons.location_on_outlined,
+                    isSaved ? Icons.star : _getCategoryIcon(item['category']),
                     color: isSaved
                         ? const Color(0xFFFBC02D)
                         : const Color(0xFF00C853),
@@ -449,5 +484,63 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
         ),
       ),
     );
+  }
+
+  String _formatDistance(LatLng start, double endLat, double endLng) {
+    double distanceInMeters = Geolocator.distanceBetween(
+      start.latitude,
+      start.longitude,
+      endLat,
+      endLng,
+    );
+
+    if (distanceInMeters < 1000) {
+      return '${distanceInMeters.toStringAsFixed(0)}m';
+    } else {
+      return '${(distanceInMeters / 1000).toStringAsFixed(1)}km';
+    }
+  }
+
+  IconData _getCategoryIcon(String? categoryCode) {
+    switch (categoryCode) {
+      case 'MT1': // 대형마트
+        return Icons.shopping_cart;
+      case 'CS2': // 편의점
+        return Icons.store;
+      case 'PS3': // 어린이집, 유치원
+        return Icons.child_care;
+      case 'SC4': // 학교
+        return Icons.school;
+      case 'AC5': // 학원
+        return Icons.menu_book;
+      case 'PK6': // 주차장
+        return Icons.local_parking;
+      case 'OL7': // 주유소, 충전소
+        return Icons.local_gas_station;
+      case 'SW8': // 지하철역
+        return Icons.subway;
+      case 'BK9': // 은행
+        return Icons.account_balance;
+      case 'CT1': // 문화시설
+        return Icons.theater_comedy;
+      case 'AG2': // 중개업소
+        return Icons.domain;
+      case 'PO3': // 공공기관
+        return Icons.location_city;
+      case 'AT4': // 관광명소
+        return Icons.attractions;
+      case 'AD5': // 숙박
+        return Icons.hotel;
+      case 'FD6': // 음식점
+        return Icons.restaurant;
+      case 'CE7': // 카페
+        return Icons.local_cafe;
+      case 'HP8': // 병원
+        return Icons.local_hospital;
+      case 'PM9': // 약국
+        return Icons.local_pharmacy;
+      default:
+        return Icons.location_on_outlined;
+    }
   }
 }
