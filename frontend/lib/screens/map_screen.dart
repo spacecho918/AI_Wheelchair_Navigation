@@ -11,6 +11,7 @@ import 'camera_screen.dart';
 import 'search_screen.dart';
 import 'community_screen.dart';
 import 'community_detail_screen.dart';
+import 'route_search_screen.dart'; // Import user's new screen
 import 'package:latlong2/latlong.dart' as latlong;
 import 'package:gilbeot/helpers/kakao_map_helper.dart';
 
@@ -518,8 +519,8 @@ class _MapScreenState extends State<MapScreen> {
                       right: 20,
                       top: 0,
                       child: Container(
-                        width: 44, // 버튼 크기
-                        height: 44,
+                        width: 40,
+                        height: 40,
                         decoration: BoxDecoration(
                           color: Colors.white,
                           shape: BoxShape.circle,
@@ -535,11 +536,13 @@ class _MapScreenState extends State<MapScreen> {
                           color: Colors.transparent,
                           child: InkWell(
                             customBorder: const CircleBorder(),
-                            onTap: _moveToCurrentLocation, // 현재 위치 이동 연결
-                            child: const Icon(
-                              Icons.my_location,
-                              color: Color(0xFF101727),
-                              size: 22,
+                            onTap: _moveToCurrentLocation,
+                            child: Center(
+                              child: SvgPicture.asset(
+                                'assets/target_icon.svg',
+                                width: 18,
+                                height: 18,
+                              ),
                             ),
                           ),
                         ),
@@ -668,6 +671,46 @@ class _MapScreenState extends State<MapScreen> {
                             ),
                             const SizedBox(width: 15),
                           ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+
+                  // [New] 길찾기 버튼 (오른쪽 추가)
+                  Container(
+                    width: 50,
+                    height: 50,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.1),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        customBorder: const CircleBorder(),
+                        onTap: () {
+                          // 길찾기 화면으로 이동
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => RouteSearchScreen(
+                                userLocation: _currentLocation,
+                              ),
+                            ),
+                          );
+                        },
+                        child: const Icon(
+                          Icons.turn_right_rounded, // 길찾기 아이콘 (화살표 형태)
+                          color: Color(0xFF00C853),
+                          size: 24,
                         ),
                       ),
                     ),

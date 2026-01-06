@@ -10,11 +10,13 @@ import 'package:gilbeot/widgets/custom_back_button.dart';
 class LocationSearchScreen extends StatefulWidget {
   final LatLng? searchLocation;
   final LatLng? userLocation;
+  final bool autofocus;
 
   const LocationSearchScreen({
     super.key,
     this.searchLocation,
     this.userLocation,
+    this.autofocus = false,
   });
 
   @override
@@ -37,9 +39,6 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      FocusScope.of(context).requestFocus(FocusNode());
-    });
   }
 
   // Search logic (Kakao Local API)
@@ -149,6 +148,7 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
                         ],
                       ),
                       child: TextField(
+                        autofocus: widget.autofocus,
                         controller: _searchController,
                         onChanged: _onSearchChanged,
                         decoration: InputDecoration(

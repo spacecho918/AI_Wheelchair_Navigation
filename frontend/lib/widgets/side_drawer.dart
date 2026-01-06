@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:pointer_interceptor/pointer_interceptor.dart';
 import '../screens/login_screen.dart';
 import '../screens/wheelchair_settings_screen.dart';
 import '../screens/community_screen.dart';
@@ -16,76 +17,78 @@ class SideDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Drawer(
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
-      child: SafeArea(
-        // 상하단 시스템 영역 침범 방지
-        child: Column(
-          children: [
-            // 1. 상단 녹색 헤더 영역 (고정)
-            _buildHeader(context),
+    return PointerInterceptor(
+      child: Drawer(
+        backgroundColor: Colors.white,
+        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+        child: SafeArea(
+          // 상하단 시스템 영역 침범 방지
+          child: Column(
+            children: [
+              // 1. 상단 녹색 헤더 영역 (고정)
+              _buildHeader(context),
 
-            // 2. 메뉴 리스트 영역 (유연하게 늘어남)
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 20,
+              // 2. 메뉴 리스트 영역 (유연하게 늘어남)
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 20,
+                  ),
+                  children: [
+                    _buildMenuItem(
+                      iconPath: 'assets/document_icon.svg',
+                      text: '나의 제보',
+                      onTap: () {
+                        Navigator.pop(context); // Close drawer
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const MyReportsScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 7),
+                    _buildMenuItem(
+                      iconPath: 'assets/bookmark_icon.svg',
+                      text: '저장된 장소',
+                      onTap: () {},
+                    ),
+                    const SizedBox(height: 7),
+                    _buildMenuItem(
+                      iconPath: 'assets/clock_icon.svg',
+                      text: '주행 기록',
+                      onTap: () {},
+                    ),
+                    const SizedBox(height: 7),
+                    _buildMenuItem(
+                      iconPath: 'assets/community_icon.svg', // New Icon
+                      text: '제보 커뮤니티',
+                      onTap: () {
+                        Navigator.pop(context); // Close drawer first
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const CommunityScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 7),
+                    _buildMenuItem(
+                      iconPath: 'assets/bell_icon.svg', // New Icon
+                      text: '공지사항',
+                      onTap: () {},
+                    ),
+                  ],
                 ),
-                children: [
-                  _buildMenuItem(
-                    iconPath: 'assets/document_icon.svg',
-                    text: '나의 제보',
-                    onTap: () {
-                      Navigator.pop(context); // Close drawer
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const MyReportsScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 7),
-                  _buildMenuItem(
-                    iconPath: 'assets/bookmark_icon.svg',
-                    text: '저장된 장소',
-                    onTap: () {},
-                  ),
-                  const SizedBox(height: 7),
-                  _buildMenuItem(
-                    iconPath: 'assets/clock_icon.svg',
-                    text: '주행 기록',
-                    onTap: () {},
-                  ),
-                  const SizedBox(height: 7),
-                  _buildMenuItem(
-                    iconPath: 'assets/community_icon.svg', // New Icon
-                    text: '제보 커뮤니티',
-                    onTap: () {
-                      Navigator.pop(context); // Close drawer first
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const CommunityScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 7),
-                  _buildMenuItem(
-                    iconPath: 'assets/bell_icon.svg', // New Icon
-                    text: '공지사항',
-                    onTap: () {},
-                  ),
-                ],
               ),
-            ),
 
-            // 3. 하단 푸터 (고정)
-            _buildFooter(context),
-          ],
+              // 3. 하단 푸터 (고정)
+              _buildFooter(context),
+            ],
+          ),
         ),
       ),
     );

@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:flutter/services.dart';
 import 'package:latlong2/latlong.dart' as latlong;
@@ -293,17 +294,37 @@ class _LocationAdjustScreenState extends State<LocationAdjustScreen> {
                     ),
                   ),
                 ),
-                // Current Location Button
                 Positioned(
                   right: 20,
                   bottom: 20,
                   child: PointerInterceptor(
-                    child: FloatingActionButton(
-                      backgroundColor: Colors.white,
-                      onPressed: _moveToCurrentLocation,
-                      child: const Icon(
-                        Icons.my_location,
-                        color: Colors.black54,
+                    child: Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.15),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          customBorder: const CircleBorder(),
+                          onTap: _moveToCurrentLocation,
+                          child: Center(
+                            child: SvgPicture.asset(
+                              'assets/target_icon.svg',
+                              width: 22,
+                              height: 22,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ),

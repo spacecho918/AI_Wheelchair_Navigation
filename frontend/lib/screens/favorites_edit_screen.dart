@@ -53,7 +53,7 @@ class _FavoritesEditScreenState extends State<FavoritesEditScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB), // Slight off-white background
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: Column(
           children: [
@@ -174,7 +174,7 @@ class _FavoritesEditScreenState extends State<FavoritesEditScreen> {
     VoidCallback? onLabelTap,
   }) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -190,8 +190,8 @@ class _FavoritesEditScreenState extends State<FavoritesEditScreen> {
         children: [
           // Icon Circle
           Container(
-            width: 44,
-            height: 44,
+            width: 40,
+            height: 40,
             decoration: const BoxDecoration(
               color: Color(0xFFFFF9C4), // Light Yellow
               shape: BoxShape.circle,
@@ -199,10 +199,10 @@ class _FavoritesEditScreenState extends State<FavoritesEditScreen> {
             child: const Icon(
               Icons.star,
               color: Color(0xFFFBC02D), // Yellow
-              size: 24,
+              size: 22,
             ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 14),
           // Text Info
           Expanded(
             child: Column(
