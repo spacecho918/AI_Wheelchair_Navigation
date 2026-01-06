@@ -6,7 +6,13 @@ import 'photo_confirmation_screen.dart';
 
 class CameraScreen extends StatefulWidget {
   final bool fromConfirm;
-  const CameraScreen({super.key, this.fromConfirm = false});
+  final bool fromNavigation;
+
+  const CameraScreen({
+    super.key,
+    this.fromConfirm = false,
+    this.fromNavigation = false,
+  });
 
   @override
   State<CameraScreen> createState() => _CameraScreenState();
@@ -116,7 +122,7 @@ class _CameraScreenState extends State<CameraScreen> {
                           ),
                           child: const Icon(
                             Icons.arrow_back,
-                            color: Colors.black87,
+                            color: Color(0xFF354152),
                             size: 24,
                           ),
                         ),
@@ -207,6 +213,7 @@ class _CameraScreenState extends State<CameraScreen> {
                 builder: (context) => PhotoConfirmationScreen(
                   imagePath: image.path,
                   fromConfirm: widget.fromConfirm,
+                  fromNavigation: widget.fromNavigation,
                 ),
               ),
             );
@@ -254,6 +261,7 @@ class _CameraScreenState extends State<CameraScreen> {
                 builder: (context) => PhotoConfirmationScreen(
                   imagePath: image.path,
                   fromConfirm: widget.fromConfirm,
+                  fromNavigation: widget.fromNavigation,
                 ),
               ),
             );

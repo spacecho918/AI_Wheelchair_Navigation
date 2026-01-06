@@ -255,168 +255,210 @@ class _LocationAdjustScreenState extends State<LocationAdjustScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.close, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          '위치 수정',
-          style: TextStyle(
-            color: Colors.black,
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        centerTitle: true,
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: Stack(
-              children: [
-                if (_mapController == null)
-                  const Center(child: CircularProgressIndicator())
-                else
-                  Positioned.fill(
-                    child: WebViewWidget(controller: _mapController!),
-                  ),
-                // Center Pin
-                const Center(
-                  child: Padding(
-                    padding: EdgeInsets.only(bottom: 35), // Adjust for pin tip
-                    child: Icon(
-                      Icons.location_on,
-                      size: 40,
-                      color: Color(0xFF00C853),
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Custom Header
+            Container(
+              height: 56,
+              color: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: IconButton(
+                      icon: const Icon(Icons.close, color: Color(0xFF354152)),
+                      onPressed: () => Navigator.pop(context),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
                     ),
                   ),
-                ),
-                Positioned(
-                  right: 20,
-                  bottom: 20,
-                  child: PointerInterceptor(
-                    child: Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.15),
-                            blurRadius: 8,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
+                  const Text(
+                    '위치 수정',
+                    style: TextStyle(
+                      color: Color(0xFF354152),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Container(color: const Color(0xFFF0F2F5), height: 1.0),
+
+            Expanded(
+              child: Stack(
+                children: [
+                  if (_mapController == null)
+                    const Center(child: CircularProgressIndicator())
+                  else
+                    Positioned.fill(
+                      child: WebViewWidget(controller: _mapController!),
+                    ),
+                  // Center Pin
+                  const Center(
+                    child: Padding(
+                      padding: EdgeInsets.only(
+                        bottom: 35,
+                      ), // Adjust for pin tip
+                      child: Icon(
+                        Icons.location_on,
+                        size: 40,
+                        color: Color(0xFF00C853),
                       ),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          customBorder: const CircleBorder(),
-                          onTap: _moveToCurrentLocation,
-                          child: Center(
-                            child: SvgPicture.asset(
-                              'assets/target_icon.svg',
-                              width: 22,
-                              height: 22,
+                    ),
+                  ),
+                  Positioned(
+                    right: 20,
+                    bottom: 280, // Moved up to avoid floating card
+                    child: PointerInterceptor(
+                      child: Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.15),
+                              blurRadius: 8,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            customBorder: const CircleBorder(),
+                            onTap: _moveToCurrentLocation,
+                            child: Center(
+                              child: SvgPicture.asset(
+                                'assets/target_icon.svg',
+                                width: 18,
+                                height: 18,
+                                colorFilter: const ColorFilter.mode(
+                                  Color(0xFF354152),
+                                  BlendMode.srcIn,
+                                ),
+                              ),
                             ),
                           ),
                         ),
                       ),
                     ),
                   ),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black12,
-                  blurRadius: 10,
-                  offset: Offset(0, -2),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  '이 위치가 맞나요?',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF101727),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF3F4F6),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.location_on_outlined,
-                        color: Color(0xFF6B7280),
-                        size: 20,
+                  // Floating Bottom Card
+                  Align(
+                    alignment: Alignment.bottomCenter,
+                    child: Padding(
+                      padding: const EdgeInsets.only(
+                        bottom: 30,
+                        left: 20,
+                        right: 20,
                       ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          _currentAddress,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: Color(0xFF374151),
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 360),
+                        child: PointerInterceptor(
+                          child: Container(
+                            padding: const EdgeInsets.all(24),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(
+                                24,
+                              ), // Full rounded corners
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.1),
+                                  blurRadius: 20,
+                                  offset: const Offset(0, 10),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Text(
+                                  '이 위치가 맞나요?',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF101727),
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                Container(
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF3F4F6),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const Icon(
+                                        Icons.location_on_outlined,
+                                        color: Color(0xFF9EA6B8),
+                                        size: 20,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Flexible(
+                                        child: Text(
+                                          _currentAddress,
+                                          style: const TextStyle(
+                                            fontSize: 14,
+                                            color: Color(0xFF4A5565),
+                                          ),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 24),
+                                ElevatedButton(
+                                  onPressed: _isLoadingAddress
+                                      ? null
+                                      : () {
+                                          Navigator.pop(context, {
+                                            'latlng': _currentCenter,
+                                            'address': _currentAddress,
+                                          });
+                                        },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF00C853),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 16,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    elevation: 0,
+                                  ),
+                                  child: const Text(
+                                    '위치 설정 완료',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                          textAlign: TextAlign.center,
                         ),
                       ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 24),
-                ElevatedButton(
-                  onPressed: _isLoadingAddress
-                      ? null
-                      : () {
-                          Navigator.pop(context, {
-                            'latlng': _currentCenter,
-                            'address': _currentAddress,
-                          });
-                        },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF00C853),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 0,
-                  ),
-                  child: const Text(
-                    '위치 설정 완료',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

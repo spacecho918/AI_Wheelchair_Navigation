@@ -87,7 +87,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                   const Text(
                     '알림',
                     style: TextStyle(
-                      color: Color(0xFF101727),
+                      color: Color(0xFF354152),
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
@@ -114,7 +114,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                 ],
               ),
             ),
-            Container(color: const Color(0xFFE5E7EB), height: 1.0),
+            Container(color: const Color(0xFFF0F2F5), height: 1.0),
 
             // List
             Expanded(
@@ -145,6 +145,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,

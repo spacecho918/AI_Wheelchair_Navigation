@@ -57,6 +57,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
   ];
 
   final int _currentDirectionIndex = 0;
+  bool _isEndNavPressed = false;
 
   @override
   void initState() {
@@ -237,7 +238,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
                             currentDirection['detail'] as String,
                             style: TextStyle(
                               fontSize: 14,
-                              color: Colors.grey[600],
+                              color: Color(0xFF4A5565),
                             ),
                           ),
                           if (currentDirection['tag'] != null) ...[
@@ -273,9 +274,10 @@ class _NavigationScreenState extends State<NavigationScreen> {
           // 3. 하단 플로팅 버튼들
           Positioned(
             left: 16,
-            bottom: 165,
+            bottom: 150, // 간격 줄임
             child: PointerInterceptor(
               child: Container(
+                height: 50, // 현위치 버튼과 동일
                 decoration: BoxDecoration(
                   color: const Color(0xFF00C853),
                   borderRadius: BorderRadius.circular(30),
@@ -294,7 +296,8 @@ class _NavigationScreenState extends State<NavigationScreen> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => const CameraScreen(),
+                          builder: (context) =>
+                              const CameraScreen(fromNavigation: true),
                         ),
                       );
                     },
@@ -302,7 +305,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16,
-                        vertical: 10,
+                        vertical: 15,
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -313,15 +316,15 @@ class _NavigationScreenState extends State<NavigationScreen> {
                               Colors.white,
                               BlendMode.srcIn,
                             ),
-                            width: 20,
+                            width: 24,
                           ),
                           const SizedBox(width: 6),
                           const Text(
-                            '장애물 신고',
+                            '장애물 제보',
                             style: TextStyle(
                               color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
                             ),
                           ),
                         ],
@@ -336,11 +339,11 @@ class _NavigationScreenState extends State<NavigationScreen> {
           // 현위치 버튼
           Positioned(
             right: 16,
-            bottom: 165,
+            bottom: 150, // 간격 줄임
             child: PointerInterceptor(
               child: Container(
-                width: 40,
-                height: 40,
+                width: 50,
+                height: 50,
                 decoration: BoxDecoration(
                   color: Colors.white,
                   shape: BoxShape.circle,
@@ -362,6 +365,10 @@ class _NavigationScreenState extends State<NavigationScreen> {
                         'assets/target_icon.svg',
                         width: 18,
                         height: 18,
+                        colorFilter: const ColorFilter.mode(
+                          Color(0xFF354152),
+                          BlendMode.srcIn,
+                        ),
                       ),
                     ),
                   ),
@@ -410,26 +417,36 @@ class _NavigationScreenState extends State<NavigationScreen> {
                           widget.totalDistance,
                           style: TextStyle(
                             fontSize: 16,
-                            color: Colors.grey[600],
+                            color: Color(0xFF4A5565),
                           ),
                         ),
                         const Spacer(),
                         // 안내 종료 버튼
                         GestureDetector(
+                          onTapDown: (_) =>
+                              setState(() => _isEndNavPressed = true),
+                          onTapUp: (_) =>
+                              setState(() => _isEndNavPressed = false),
+                          onTapCancel: () =>
+                              setState(() => _isEndNavPressed = false),
                           onTap: _endNavigation,
                           child: Row(
                             children: [
                               Icon(
                                 Icons.close,
                                 size: 16,
-                                color: Colors.grey[500],
+                                color: _isEndNavPressed
+                                    ? const Color(0xFFFF3B30)
+                                    : Colors.grey[500],
                               ),
                               const SizedBox(width: 4),
                               Text(
                                 '안내 종료',
                                 style: TextStyle(
                                   fontSize: 14,
-                                  color: Colors.grey[500],
+                                  color: _isEndNavPressed
+                                      ? const Color(0xFFFF3B30)
+                                      : Colors.grey[500],
                                 ),
                               ),
                             ],
@@ -475,7 +492,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
                           '3번 회전 남음',
                           style: TextStyle(
                             fontSize: 12,
-                            color: Colors.grey[500],
+                            color: Color(0xFF9EA6B8),
                           ),
                         ),
                         const SizedBox(width: 16),
@@ -489,7 +506,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
                           '숲 알뜰 경사로 2개',
                           style: TextStyle(
                             fontSize: 12,
-                            color: Colors.grey[500],
+                            color: Color(0xFF9EA6B8),
                           ),
                         ),
                       ],

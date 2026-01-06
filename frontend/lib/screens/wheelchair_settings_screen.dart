@@ -35,7 +35,7 @@ class _WheelchairSettingsScreenState extends State<WheelchairSettingsScreen> {
                   const Text(
                     '휠체어 설정',
                     style: TextStyle(
-                      color: Color(0xFF101727),
+                      color: Color(0xFF354152), // Community Screen Header Color
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
@@ -66,7 +66,7 @@ class _WheelchairSettingsScreenState extends State<WheelchairSettingsScreen> {
                 ],
               ),
             ),
-            Container(color: Colors.grey.shade200, height: 1.0),
+            Container(color: const Color(0xFFF0F2F5), height: 1.0),
 
             // Content
             Expanded(
@@ -90,7 +90,7 @@ class _WheelchairSettingsScreenState extends State<WheelchairSettingsScreen> {
                     const SizedBox(height: 8),
                     const Text(
                       '더 정확한 경로 추천을 위해 필요합니다',
-                      style: TextStyle(fontSize: 13, color: Color(0xFF697282)),
+                      style: TextStyle(fontSize: 13, color: Color(0xFF4A5565)),
                     ),
                     const SizedBox(height: 24),
 
@@ -243,7 +243,7 @@ class _WheelchairSettingsScreenState extends State<WheelchairSettingsScreen> {
                     (isXIcon ? 22 : 28), // X icon might need size adjustment
                 color: isSelected
                     ? const Color(0xFF00C853)
-                    : const Color(0xFF495565), // Green or Dark Grey
+                    : const Color(0xFF4A5565), // Green or Dark Grey
               ),
             ), // Or specific coloring per icon? Image shows Flash is Yellow/Orange when active?
             // Actually image shows:
@@ -273,7 +273,7 @@ class _WheelchairSettingsScreenState extends State<WheelchairSettingsScreen> {
                     subtitle,
                     style: TextStyle(
                       fontSize: 12,
-                      color: const Color(0xFF697282),
+                      color: const Color(0xFF4A5565),
                     ),
                   ),
                 ],

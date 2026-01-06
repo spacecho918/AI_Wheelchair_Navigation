@@ -14,8 +14,8 @@ class _MyReportsScreenState extends State<MyReportsScreen>
   late TabController _tabController;
 
   final Color primaryGreen = const Color(0xFF00C853);
-  final Color textDark = const Color(0xFF354152);
-  final Color textGrey = const Color(0xFF99A1AE);
+  final Color textDark = const Color(0xFF101727);
+  final Color textGrey = const Color(0xFF4A5565);
   final Color bgLight = Colors.white;
 
   @override
@@ -62,7 +62,7 @@ class _MyReportsScreenState extends State<MyReportsScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: bgLight,
       body: SafeArea(
         child: Column(
           children: [
@@ -81,7 +81,7 @@ class _MyReportsScreenState extends State<MyReportsScreen>
                   Text(
                     '나의 제보',
                     style: TextStyle(
-                      color: textDark,
+                      color: Color(0xFF354152), // Community Screen Header Color
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
@@ -89,7 +89,7 @@ class _MyReportsScreenState extends State<MyReportsScreen>
                 ],
               ),
             ),
-            Container(color: Colors.grey.shade200, height: 1.0),
+            Container(color: const Color(0xFFF0F2F5), height: 1.0),
 
             // 1. Stats Section
             Container(
@@ -234,109 +234,136 @@ class _MyReportsScreenState extends State<MyReportsScreen>
       itemCount: reports.length,
       itemBuilder: (context, index) {
         final report = reports[index];
-        return Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.1),
-                blurRadius: 20,
-                offset: const Offset(0, 5),
-                spreadRadius: 2,
+        return Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.1),
+                    blurRadius: 6,
+                    spreadRadius: -1,
+                    offset: const Offset(0, 4),
+                  ),
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.06),
+                    blurRadius: 4,
+                    spreadRadius: -1,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
-            ],
-          ),
-          child: Material(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(16),
-              onTap: () => _navigateToDetail(report),
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              child: Material(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: () => _navigateToDetail(report),
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              report['title'] as String,
+                              style: TextStyle(
+                                color: textDark,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: report['statusBg'] as Color,
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    width: 6,
+                                    height: 6,
+                                    decoration: BoxDecoration(
+                                      color: report['statusColor'] as Color,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    report['status'] as String,
+                                    style: TextStyle(
+                                      color: report['statusColor'] as Color,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
                         Text(
-                          report['title'] as String,
+                          report['location'] as String,
                           style: TextStyle(
-                            color: textDark,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF9EA6B8),
+                            fontSize: 13,
                           ),
                         ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 4,
+                        const SizedBox(height: 4),
+                        Text(
+                          report['date'] as String,
+                          style: TextStyle(
+                            color: Color(0xFF9EA6B8),
+                            fontSize: 11,
                           ),
-                          decoration: BoxDecoration(
-                            color: report['statusBg'] as Color,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                width: 6,
-                                height: 6,
-                                decoration: BoxDecoration(
-                                  color: report['statusColor'] as Color,
-                                  shape: BoxShape.circle,
-                                ),
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            Icon(
+                              Icons.chat_bubble_outline,
+                              size: 14,
+                              color: textGrey,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${report['comments']}',
+                              style: TextStyle(
+                                color: Color(0xFF9EA6B8),
+                                fontSize: 12,
                               ),
-                              const SizedBox(width: 6),
-                              Text(
-                                report['status'] as String,
-                                style: TextStyle(
-                                  color: report['statusColor'] as Color,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                            ),
+                            const SizedBox(width: 12),
+                            Icon(
+                              Icons.thumb_up_outlined,
+                              size: 14,
+                              color: textGrey,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${report['likes']}',
+                              style: TextStyle(
+                                color: Color(0xFF9EA6B8),
+                                fontSize: 12,
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      report['location'] as String,
-                      style: TextStyle(color: textGrey, fontSize: 13),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      report['date'] as String,
-                      style: TextStyle(color: textGrey, fontSize: 11),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        Icon(
-                          Icons.chat_bubble_outline,
-                          size: 14,
-                          color: textGrey,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${report['comments']}',
-                          style: TextStyle(color: textGrey, fontSize: 12),
-                        ),
-                        const SizedBox(width: 12),
-                        Icon(Icons.favorite, size: 14, color: Colors.red),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${report['likes']}',
-                          style: TextStyle(color: textGrey, fontSize: 12),
-                        ),
-                      ],
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -383,90 +410,115 @@ class _MyReportsScreenState extends State<MyReportsScreen>
       itemCount: comments.length,
       itemBuilder: (context, index) {
         final comment = comments[index];
-        return GestureDetector(
-          onTap: () => _navigateToDetail(comment, isComment: true),
-          child: Container(
-            margin: const EdgeInsets.only(bottom: 12),
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.1),
-                  blurRadius: 20,
-                  offset: const Offset(0, 5),
-                  spreadRadius: 2,
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE8F5E9),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.description_outlined,
-                        color: primaryGreen,
-                        size: 16,
-                      ),
+        return Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: GestureDetector(
+              onTap: () => _navigateToDetail(comment, isComment: true),
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.1),
+                      blurRadius: 6,
+                      spreadRadius: -1,
+                      offset: const Offset(0, 4),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            comment['title'] as String,
-                            style: TextStyle(
-                              color: textDark,
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            comment['location'] as String,
-                            style: TextStyle(color: textGrey, fontSize: 12),
-                          ),
-                        ],
-                      ),
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.06),
+                      blurRadius: 4,
+                      spreadRadius: -1,
+                      offset: const Offset(0, 2),
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
-                Text(
-                  comment['content'] as String,
-                  style: TextStyle(color: textDark, fontSize: 14, height: 1.5),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      comment['date'] as String,
-                      style: TextStyle(color: textGrey, fontSize: 12),
-                    ),
                     Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(Icons.favorite, size: 14, color: Colors.red),
-                        const SizedBox(width: 4),
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE8F5E9),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.description_outlined,
+                            color: primaryGreen,
+                            size: 16,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                comment['title'] as String,
+                                style: TextStyle(
+                                  color: textDark,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                comment['location'] as String,
+                                style: TextStyle(
+                                  color: Color(0xFF9EA6B8),
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      comment['content'] as String,
+                      style: TextStyle(
+                        color: textDark,
+                        fontSize: 14,
+                        height: 1.5,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
                         Text(
-                          '${comment['likes']}',
+                          comment['date'] as String,
                           style: TextStyle(color: textGrey, fontSize: 12),
+                        ),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.thumb_up_outlined,
+                              size: 14,
+                              color: textGrey,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${comment['likes']}',
+                              style: TextStyle(
+                                color: Color(0xFF9EA6B8),
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
                   ],
                 ),
-              ],
+              ),
             ),
           ),
         );

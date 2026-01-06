@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:gilbeot/screens/location_search_screen.dart'; // 장소 검색 화면
 import 'package:gilbeot/screens/navigation_screen.dart';
+import 'package:gilbeot/services/kakao_service.dart';
 import 'package:latlong2/latlong.dart';
 
 class RouteSearchScreen extends StatefulWidget {
@@ -40,6 +41,25 @@ class _RouteSearchScreenState extends State<RouteSearchScreen> {
     super.initState();
     // 1. 출발지 기본 값은 현재위치
     _startPlace = _currentLocationPlace;
+    _fetchCurrentAddress();
+  }
+
+  Future<void> _fetchCurrentAddress() async {
+    if (widget.userLocation != null) {
+      try {
+        String address = await KakaoService.coord2Address(
+          widget.userLocation!.latitude,
+          widget.userLocation!.longitude,
+        );
+        if (mounted) {
+          setState(() {
+            _startPlace!['address'] = address;
+          });
+        }
+      } catch (e) {
+        debugPrint('Error fetching address: $e');
+      }
+    }
   }
 
   // 장소 선택 화면으로 이동
@@ -96,14 +116,14 @@ class _RouteSearchScreenState extends State<RouteSearchScreen> {
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F6F8), // 배경색 (연한 회색)
+      backgroundColor: Colors.white, // 배경색 (흰색)
       body: SafeArea(
         child: Column(
           children: [
             // 상단 입력 카드 영역
             Container(
               color: Colors.white,
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
               child: Column(
                 children: [
                   Row(
@@ -265,7 +285,9 @@ class _RouteSearchScreenState extends State<RouteSearchScreen> {
                                         '휠체어 접근 가능한 경로를 선택하세요',
                                         style: TextStyle(
                                           fontSize: 13,
-                                          color: Colors.grey[600],
+                                          color: Color(
+                                            0xFF4A5565,
+                                          ), // Unified textGrey
                                         ),
                                       ),
                                     ],
@@ -415,6 +437,9 @@ class _RouteSearchScreenState extends State<RouteSearchScreen> {
                                                         _endPlace?['latlng']
                                                             as LatLng?,
                                                   ),
+                                              settings: const RouteSettings(
+                                                name: 'navigation',
+                                              ),
                                             ),
                                           );
                                         },
@@ -457,7 +482,7 @@ class _RouteSearchScreenState extends State<RouteSearchScreen> {
                 child: ListView(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 20,
-                    vertical: 24,
+                    vertical: 12,
                   ),
                   children: [
                     Row(
@@ -467,8 +492,8 @@ class _RouteSearchScreenState extends State<RouteSearchScreen> {
                           '최근 검색',
                           style: TextStyle(
                             fontSize: 14,
-                            color: Color(0xFF717182),
-                            fontWeight: FontWeight.w500,
+                            color: Color(0xFF101727),
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                         TextButton(
@@ -479,10 +504,10 @@ class _RouteSearchScreenState extends State<RouteSearchScreen> {
                             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                           ),
                           child: Text(
-                            '전체 삭제',
+                            '모두 지우기',
                             style: TextStyle(
                               fontSize: 12,
-                              color: Colors.grey[500],
+                              color: Color(0xFF9EA6B8),
                             ),
                           ),
                         ),
@@ -507,11 +532,17 @@ class _RouteSearchScreenState extends State<RouteSearchScreen> {
     Color textColor;
 
     if (place != null) {
-      text = place['name'];
+      if (place['isCurrentLocation'] == true &&
+          place['address'] != null &&
+          place['address'].isNotEmpty) {
+        text = '현위치: ${place['address']}';
+      } else {
+        text = place['name'];
+      }
       textColor = Colors.black87;
     } else {
       text = isStart ? '출발지를 입력하세요' : '도착지를 입력하세요';
-      textColor = Colors.grey[400]!;
+      textColor = const Color(0xFF9EA6B8);
     }
 
     return GestureDetector(
@@ -520,8 +551,15 @@ class _RouteSearchScreenState extends State<RouteSearchScreen> {
         height: 50,
         padding: const EdgeInsets.symmetric(horizontal: 16),
         decoration: BoxDecoration(
-          color: const Color(0xFFF5F6F8),
-          borderRadius: BorderRadius.circular(8),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.1),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Row(
           children: [
@@ -572,50 +610,68 @@ class _RouteSearchScreenState extends State<RouteSearchScreen> {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       margin: const EdgeInsets.symmetric(horizontal: 6),
-      padding: const EdgeInsets.all(12), // 패딩 더 줄임
+      padding: const EdgeInsets.all(16), // 패딩 늘림
       decoration: BoxDecoration(
-        color: isSelected ? themeColor.withValues(alpha: 0.05) : Colors.white,
+        color: isSelected
+            ? Color.lerp(Colors.white, themeColor, 0.05)!
+            : Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isSelected ? themeColor : const Color(0xFFF3F4F6),
           width: 1.5,
         ),
         boxShadow: [
-          if (isSelected)
+          if (isSelected) ...[
             BoxShadow(
-              color: themeColor.withValues(alpha: 0.1),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            )
-          else
-            const BoxShadow(
-              color: Color(0x0C000000),
-              blurRadius: 10,
-              offset: Offset(0, 4),
+              color: themeColor.withValues(alpha: 0.1), // 0.15 -> 0.1
+              blurRadius: 6,
+              spreadRadius: -1,
+              offset: Offset.zero,
             ),
+            BoxShadow(
+              color: themeColor.withValues(alpha: 0.05), // 0.1 -> 0.05
+              blurRadius: 4,
+              spreadRadius: -1,
+              offset: Offset.zero,
+            ),
+          ] else ...[
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.1),
+              blurRadius: 6,
+              spreadRadius: -1,
+              offset: const Offset(0, 4),
+            ),
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 4,
+              spreadRadius: -1,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center, // 수직 중앙 정렬
         children: [
           // Header
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(6),
+                padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   color: themeColor.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(icon, color: themeColor, size: 14),
+                child: Icon(icon, color: themeColor, size: 18),
               ),
               const SizedBox(width: 8),
               Text(
                 title,
                 style: const TextStyle(
                   color: Color(0xFF101727),
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
               const Spacer(),
@@ -630,60 +686,60 @@ class _RouteSearchScreenState extends State<RouteSearchScreen> {
                 ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10), // 간격 통일 (8 -> 10)
           // Info Info
           Row(
             children: [
-              const Icon(Icons.access_time, size: 11, color: Color(0xFF4B5563)),
-              const SizedBox(width: 3),
+              const Icon(Icons.access_time, size: 14, color: Color(0xFF4A5565)),
+              const SizedBox(width: 4),
               Text(
                 time,
                 style: const TextStyle(
-                  color: Color(0xFF4B5563),
-                  fontSize: 11,
+                  color: Color(0xFF4A5565), // Unified textGrey
+                  fontSize: 13,
                   fontWeight: FontWeight.w500,
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 10),
               const Icon(
                 Icons.route_outlined,
-                size: 11,
-                color: Color(0xFF4B5563),
+                size: 14,
+                color: Color(0xFF4A5565),
               ),
-              const SizedBox(width: 3),
+              const SizedBox(width: 4),
               Text(
                 distance,
                 style: const TextStyle(
-                  color: Color(0xFF4B5563),
-                  fontSize: 11,
+                  color: Color(0xFF4A5565), // Unified textGrey
+                  fontSize: 13,
                   fontWeight: FontWeight.w500,
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 10),
               const Icon(
                 Icons.warning_amber_rounded,
-                size: 11,
+                size: 14,
                 color: Color(0xFFFF9800),
               ),
-              const SizedBox(width: 3),
+              const SizedBox(width: 4),
               Text(
                 '$obstacleCount',
                 style: const TextStyle(
                   color: Color(0xFFFF9800),
-                  fontSize: 11,
+                  fontSize: 13,
                   fontWeight: FontWeight.bold,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 10), // 간격 통일 (6 -> 10)
           // Tags
           Wrap(
             spacing: 4,
             runSpacing: 4,
             children: tags.map((tag) {
               return Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: const Color(0xFFF3F4F6),
                   borderRadius: BorderRadius.circular(4),
@@ -692,7 +748,7 @@ class _RouteSearchScreenState extends State<RouteSearchScreen> {
                   tag,
                   style: const TextStyle(
                     color: Color(0xFF6B7280),
-                    fontSize: 9,
+                    fontSize: 11,
                     fontWeight: FontWeight.w500,
                   ),
                 ),

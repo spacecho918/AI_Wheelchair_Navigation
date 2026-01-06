@@ -71,6 +71,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
         child: Column(
           children: [
             // Header
+            // Custom Header
             Container(
               height: 56,
               padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -84,7 +85,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   Text(
                     '주행 기록',
                     style: TextStyle(
-                      color: textDark,
+                      color: Color(0xFF354152), // Community Screen Header Color
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
@@ -92,6 +93,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 ],
               ),
             ),
+            Container(height: 1, color: const Color(0xFFF0F2F5)),
 
             Expanded(
               child: SingleChildScrollView(
@@ -126,7 +128,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                   border: Border.all(
                                     color: isSelected
                                         ? primaryGreen
-                                        : Colors.grey[300]!,
+                                        : const Color(0xFFE5E7EB),
                                   ),
                                 ),
                                 alignment: Alignment.center,
@@ -295,7 +297,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8F9FA), // Slightly grey bg for cards
+        color: Colors.white, // Same as summary cards
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           // Shadow 1

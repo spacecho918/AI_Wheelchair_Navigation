@@ -11,6 +11,7 @@ import 'camera_screen.dart';
 import 'search_screen.dart';
 import 'community_screen.dart';
 import 'community_detail_screen.dart';
+import 'history_screen.dart';
 import 'route_search_screen.dart'; // Import user's new screen
 import 'package:latlong2/latlong.dart' as latlong;
 import 'package:gilbeot/helpers/kakao_map_helper.dart';
@@ -238,7 +239,7 @@ class _MapScreenState extends State<MapScreen> {
                   children: [
                     // (1) 흰색 대시보드
                     Container(
-                      margin: const EdgeInsets.only(top: 50), // 버튼 자리 확보
+                      margin: const EdgeInsets.only(top: 65), // 버튼과 대시보드 간격
                       decoration: const ShapeDecoration(
                         color: Colors.white,
                         shape: RoundedRectangleBorder(
@@ -275,16 +276,17 @@ class _MapScreenState extends State<MapScreen> {
                           ),
 
                           // 1. Recent Destinations
-                          _buildSectionHeader('최근 목적지', () {}),
+                          _buildSectionHeader('최근 목적지', () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const HistoryScreen(),
+                              ),
+                            );
+                          }),
                           const SizedBox(height: 16),
                           _buildRecentDestinationItem(
                             '집',
-                            '서울시 강남구 역삼동 123-45',
-                            Icons.home_rounded,
-                          ),
-                          const SizedBox(height: 12),
-                          _buildRecentDestinationItem(
-                            '회사',
                             '서울시 서초구 서초동 567-89',
                             Icons.business_rounded,
                           ),
@@ -458,6 +460,7 @@ class _MapScreenState extends State<MapScreen> {
                       left: 20,
                       top: 0,
                       child: Container(
+                        height: 50, // 현위치 버튼과 동일
                         decoration: BoxDecoration(
                           color: const Color(0xFF00C853),
                           borderRadius: BorderRadius.circular(30),
@@ -484,7 +487,7 @@ class _MapScreenState extends State<MapScreen> {
                             child: Padding(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 16,
-                                vertical: 10,
+                                vertical: 15,
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
@@ -495,15 +498,15 @@ class _MapScreenState extends State<MapScreen> {
                                       Colors.white,
                                       BlendMode.srcIn,
                                     ),
-                                    width: 20,
+                                    width: 24,
                                   ),
                                   const SizedBox(width: 6),
                                   const Text(
-                                    '장애물 신고',
+                                    '장애물 제보',
                                     style: TextStyle(
                                       color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 14,
                                     ),
                                   ),
                                 ],
@@ -519,8 +522,8 @@ class _MapScreenState extends State<MapScreen> {
                       right: 20,
                       top: 0,
                       child: Container(
-                        width: 40,
-                        height: 40,
+                        width: 50,
+                        height: 50,
                         decoration: BoxDecoration(
                           color: Colors.white,
                           shape: BoxShape.circle,
@@ -542,6 +545,10 @@ class _MapScreenState extends State<MapScreen> {
                                 'assets/target_icon.svg',
                                 width: 18,
                                 height: 18,
+                                colorFilter: const ColorFilter.mode(
+                                  Color(0xFF354152),
+                                  BlendMode.srcIn,
+                                ),
                               ),
                             ),
                           ),
@@ -708,9 +715,9 @@ class _MapScreenState extends State<MapScreen> {
                           );
                         },
                         child: const Icon(
-                          Icons.turn_right_rounded, // 길찾기 아이콘 (화살표 형태)
+                          Icons.directions, // 길찾기 아이콘
                           color: Color(0xFF00C853),
-                          size: 24,
+                          size: 30,
                         ),
                       ),
                     ),
@@ -792,7 +799,7 @@ class _MapScreenState extends State<MapScreen> {
                 Text(
                   address,
                   style: const TextStyle(
-                    color: Color(0xFF6B7280),
+                    color: Color(0xFF4A5565),
                     fontSize: 13,
                   ),
                   maxLines: 1,
@@ -848,7 +855,7 @@ class _MapScreenState extends State<MapScreen> {
                   child: Text(
                     tag,
                     style: const TextStyle(
-                      color: Color(0xFF4B5563),
+                      color: Color(0xFF4A5565),
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
                     ),
@@ -884,7 +891,7 @@ class _MapScreenState extends State<MapScreen> {
                 Text(
                   location,
                   style: const TextStyle(
-                    color: Color(0xFF6B7280),
+                    color: Color(0xFF4A5565),
                     fontSize: 13,
                   ),
                 ),

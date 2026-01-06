@@ -91,7 +91,7 @@ class Gilbeot extends StatelessWidget {
         const Text(
           '모두를 위한 안전한 이동',
           textAlign: TextAlign.center,
-          style: TextStyle(color: Color(0xFF495565), fontSize: 14),
+          style: TextStyle(color: Color(0xFF4A5565), fontSize: 14),
         ),
 
         const SizedBox(height: 40),
@@ -129,7 +129,7 @@ class Gilbeot extends StatelessWidget {
               _buildKakaoButton(() => debugPrint("카카오 로그인 클릭됨")),
 
               const SizedBox(height: 20),
-              const Text('또는', style: TextStyle(color: Color(0xFF697282))),
+              const Text('또는', style: TextStyle(color: Color(0xFF9EA6B8))),
               const SizedBox(height: 20),
 
               // 입력창
@@ -196,7 +196,7 @@ class Gilbeot extends StatelessWidget {
                 children: [
                   const Text(
                     "계정이 없으신가요?",
-                    style: TextStyle(color: Color(0xFF697282)),
+                    style: TextStyle(color: Color(0xFF4A5565)),
                   ),
                   TextButton(
                     // [수정] 화살표(=>)를 지우고 중괄호({ })를 열어서 이동 코드를 넣습니다.
@@ -248,7 +248,7 @@ class Gilbeot extends StatelessWidget {
             Text(
               text,
               style: const TextStyle(
-                color: Color(0xFF1F1F1F), // 글꼴 색: #1F1F1F
+                color: Color(0xFF101727), // Unified Dark Text
                 fontFamily: 'Roboto', // 글꼴: Roboto
                 fontWeight: FontWeight.w500, // Medium
                 fontSize: 14, // 14
@@ -310,14 +310,17 @@ class Gilbeot extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 12, color: Colors.black)),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 12, color: Color(0xFF101727)),
+        ),
         const SizedBox(height: 8),
         TextField(
           controller: controller,
           obscureText: isPassword,
           decoration: InputDecoration(
             hintText: placeholder,
-            hintStyle: const TextStyle(color: Color(0xFF717182)),
+            hintStyle: const TextStyle(color: Color(0xFF9EA6B8)),
             filled: true,
             fillColor: const Color(0xFFF3F3F5),
             contentPadding: const EdgeInsets.symmetric(

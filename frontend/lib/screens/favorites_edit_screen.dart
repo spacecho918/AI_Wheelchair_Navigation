@@ -72,29 +72,35 @@ class _FavoritesEditScreenState extends State<FavoritesEditScreen> {
                   const Text(
                     '즐겨찾기 편집',
                     style: TextStyle(
-                      color: Colors.black,
+                      color: Color(0xFF354152), // Community Screen Header Color
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                   Align(
                     alignment: Alignment.centerRight,
-                    child: TextButton(
+                    child: ElevatedButton(
                       onPressed: _saveAndExit,
-                      child: const Text(
-                        '완료',
-                        style: TextStyle(
-                          color: Color(0xFF00C853),
-                          fontSize: 15,
-                          fontWeight: FontWeight.normal,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF00C853),
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 0,
                         ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        minimumSize: const Size(64, 32),
                       ),
+                      child: const Text('저장'),
                     ),
                   ),
                 ],
               ),
             ),
-            Container(color: const Color(0xFFE5E7EB), height: 1.0),
+            Container(color: const Color(0xFFF0F2F5), height: 1.0),
 
             // List Header
             Padding(
@@ -103,14 +109,14 @@ class _FavoritesEditScreenState extends State<FavoritesEditScreen> {
                 children: [
                   const Text(
                     '즐겨찾기',
-                    style: TextStyle(fontSize: 14, color: Color(0xFF697282)),
+                    style: TextStyle(fontSize: 14, color: Color(0xFF4A5565)),
                   ),
                   const Spacer(),
                   Text(
                     '2개', // Fixed for now as we have Home + Work
                     style: const TextStyle(
                       fontSize: 14,
-                      color: Color(0xFF697282),
+                      color: Color(0xFF4A5565),
                     ),
                   ),
                 ],
@@ -124,6 +130,7 @@ class _FavoritesEditScreenState extends State<FavoritesEditScreen> {
                 children: [
                   _buildFavoriteCard(
                     title: '집',
+                    icon: Icons.home,
                     address: _homeAddress,
                     onEdit: () async {
                       final result = await Navigator.push(
@@ -142,6 +149,7 @@ class _FavoritesEditScreenState extends State<FavoritesEditScreen> {
                   const SizedBox(height: 12),
                   _buildFavoriteCard(
                     title: _workLabel,
+                    icon: _workLabel == '회사' ? Icons.work : Icons.school,
                     address: _workAddress,
                     onEdit: () async {
                       final result = await Navigator.push(
@@ -169,20 +177,30 @@ class _FavoritesEditScreenState extends State<FavoritesEditScreen> {
 
   Widget _buildFavoriteCard({
     required String title,
+    required IconData icon,
     required String address,
     required VoidCallback onEdit,
     VoidCallback? onLabelTap,
   }) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
+          // Shadow 1
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 6,
+            spreadRadius: -1,
             offset: const Offset(0, 4),
+          ),
+          // Shadow 2
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 4,
+            spreadRadius: -1,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -196,9 +214,9 @@ class _FavoritesEditScreenState extends State<FavoritesEditScreen> {
               color: Color(0xFFFFF9C4), // Light Yellow
               shape: BoxShape.circle,
             ),
-            child: const Icon(
-              Icons.star,
-              color: Color(0xFFFBC02D), // Yellow
+            child: Icon(
+              icon,
+              color: const Color(0xFFFBC02D), // Yellow
               size: 22,
             ),
           ),
@@ -216,7 +234,7 @@ class _FavoritesEditScreenState extends State<FavoritesEditScreen> {
                       Text(
                         title,
                         style: const TextStyle(
-                          fontSize: 16,
+                          fontSize: 15,
                           fontWeight: FontWeight.bold,
                           color: Color(0xFF101727),
                         ),
@@ -236,10 +254,10 @@ class _FavoritesEditScreenState extends State<FavoritesEditScreen> {
                 Text(
                   address.isEmpty ? '주소를 등록해주세요' : address,
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 12,
                     color: address.isEmpty
-                        ? Colors.grey[400]
-                        : const Color(0xFF697282),
+                        ? const Color(0xFF9EA6B8)
+                        : const Color(0xFF4A5565),
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,

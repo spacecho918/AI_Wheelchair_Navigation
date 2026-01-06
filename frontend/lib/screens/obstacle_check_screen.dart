@@ -10,12 +10,14 @@ class ObstacleCheckScreen extends StatefulWidget {
   final String imagePath; // 촬영된 사진 경로
   final String initialObstacle; // AI가 예측한 장애물 (예: 'stairs')
   final bool fromConfirm; // 제보 확인 화면에서 수정하러 왔는지 여부
+  final bool fromNavigation;
 
   const ObstacleCheckScreen({
     super.key,
     required this.imagePath,
     this.initialObstacle = 'stairs',
     this.fromConfirm = false,
+    this.fromNavigation = false,
   });
 
   @override
@@ -49,6 +51,13 @@ class _ObstacleCheckScreenState extends State<ObstacleCheckScreen> {
     // 초기 선택값 설정 (목록에 없으면 첫 번째 값)
     final exists = obstacles.any((e) => e['id'] == widget.initialObstacle);
     selectedId = exists ? widget.initialObstacle : 'stairs';
+
+    // 텍스트 필드 변경 감지하여 버튼 상태 업데이트
+    _textController.addListener(_onTextChanged);
+  }
+
+  void _onTextChanged() {
+    setState(() {});
   }
 
   @override
@@ -78,7 +87,7 @@ class _ObstacleCheckScreenState extends State<ObstacleCheckScreen> {
 
           // 3. 위아래로 움직이는 대시보드 (DraggableSheet)
           DraggableScrollableSheet(
-            initialChildSize: 0.75, // 처음 보여질 높이 비율 (75% - 버튼까지 보이도록)
+            initialChildSize: 0.65, // 하단 텍스트가 딱 보일 정도의 높이
             minChildSize: 0.2, // 최소 높이 (더 아래로 내려가도록 수정)
             maxChildSize: 0.95, // 최대 높이
             builder: (BuildContext context, ScrollController scrollController) {
@@ -140,13 +149,13 @@ class _ObstacleCheckScreenState extends State<ObstacleCheckScreen> {
                         physics:
                             const NeverScrollableScrollPhysics(), // 스크롤 막음 (바깥 스크롤 사용)
                         itemCount: obstacles.length,
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2, // 2열
-                              childAspectRatio: 1.8, // 카드의 가로세로 비율 (납작하게)
-                              crossAxisSpacing: 12,
-                              mainAxisSpacing: 12,
-                            ),
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount:
+                              MediaQuery.of(context).size.width > 600 ? 3 : 2,
+                          mainAxisExtent: 90, // 고정 높이 적용 (더 줄임)
+                          crossAxisSpacing: 12,
+                          mainAxisSpacing: 12,
+                        ),
                         itemBuilder: (context, index) {
                           final item = obstacles[index];
                           final isSelected = selectedId == item['id'];
@@ -191,6 +200,7 @@ class _ObstacleCheckScreenState extends State<ObstacleCheckScreen> {
                               const SizedBox(height: 10),
                               TextField(
                                 controller: _textController,
+                                onChanged: (_) => setState(() {}),
                                 decoration: InputDecoration(
                                   hintText: '예: 파손된 보도블록, 쓰러진 나무 등',
                                   hintStyle: const TextStyle(
@@ -212,7 +222,7 @@ class _ObstacleCheckScreenState extends State<ObstacleCheckScreen> {
                               ),
                               const SizedBox(height: 8),
                               const Text(
-                                '장애물의 종류를 간략하게 설명해주세요.',
+                                '장애물의 종류를 입력해 주세요.',
                                 style: TextStyle(
                                   color: Color(0xFF1F2937),
                                   fontSize: 12,
@@ -230,82 +240,87 @@ class _ObstacleCheckScreenState extends State<ObstacleCheckScreen> {
                         width: double.infinity,
                         height: 56,
                         child: ElevatedButton(
-                          onPressed: () async {
-                            if (selectedId == 'other') {
-                              final text = _textController.text.trim();
-                              if (text.isEmpty) {
-                                // 입력값이 없으면 스낵바 등으로 알림
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('장애물 설명을 입력해주세요.'),
-                                    duration: Duration(seconds: 2),
-                                  ),
-                                );
-                                return;
-                              }
-                              debugPrint('최종 선택 (기타): $text');
-                            } else {
-                              debugPrint('최종 선택: $selectedId');
-                            }
-                            // 제보 확인 화면에서 왔다면 결과 반환하고 종료
-                            if (widget.fromConfirm) {
-                              final label = obstacles.firstWhere(
-                                (e) => e['id'] == selectedId,
-                                orElse: () => {'label': selectedId},
-                              )['label'];
-                              Navigator.pop(context, {
-                                'imagePath': widget.imagePath,
-                                'obstacleType': selectedId == 'other'
-                                    ? _textController.text.trim()
-                                    : label,
-                                'obstacleId': selectedId,
-                              });
-                              return;
-                            }
+                          onPressed:
+                              (selectedId == 'other' &&
+                                  _textController.text.trim().isEmpty)
+                              ? null
+                              : () async {
+                                  if (selectedId == 'other') {
+                                    final text = _textController.text.trim();
+                                    debugPrint('최종 선택 (기타): $text');
+                                  } else {
+                                    debugPrint('최종 선택: $selectedId');
+                                  }
+                                  // 제보 확인 화면에서 왔다면 결과 반환하고 종료
+                                  if (widget.fromConfirm) {
+                                    final label = obstacles.firstWhere(
+                                      (e) => e['id'] == selectedId,
+                                      orElse: () => {'label': selectedId},
+                                    )['label'];
+                                    Navigator.pop(context, {
+                                      'imagePath': widget.imagePath,
+                                      'obstacleType': selectedId == 'other'
+                                          ? _textController.text.trim()
+                                          : label,
+                                      'obstacleId': selectedId,
+                                    });
+                                    return;
+                                  }
 
-                            // 1. 위치 조정 화면으로 이동하여 위치 선택 대기
-                            final result = await Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    const LocationAdjustScreen(
-                                      savedLocation: latlong.LatLng(
-                                        37.5665,
-                                        126.9780,
-                                      ), // Default to Seoul
-                                      savedAddress: '위치를 선택해주세요',
+                                  // 1. 위치 조정 화면으로 이동하여 위치 선택 대기
+                                  final result = await Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          const LocationAdjustScreen(
+                                            savedLocation: latlong.LatLng(
+                                              37.5665,
+                                              126.9780,
+                                            ), // Default to Seoul
+                                            savedAddress: '위치를 선택해주세요',
+                                          ),
                                     ),
-                              ),
-                            );
+                                  );
 
-                            // 2. 위치 선택 완료 시 신고 확인 화면으로 이동
-                            if (result != null && result is Map) {
-                              if (!mounted) return;
+                                  // 2. 위치 선택 완료 시 신고 확인 화면으로 이동
+                                  if (result != null && result is Map) {
+                                    if (!mounted) return;
 
-                              final label = obstacles.firstWhere(
-                                (e) => e['id'] == selectedId,
-                                orElse: () => {'label': selectedId},
-                              )['label'];
+                                    final label = obstacles.firstWhere(
+                                      (e) => e['id'] == selectedId,
+                                      orElse: () => {'label': selectedId},
+                                    )['label'];
 
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => ReportConfirmScreen(
-                                    location: result['latlng'],
-                                    address: result['address'],
-                                    imagePath: widget.imagePath,
-                                    obstacleType: selectedId == 'other'
-                                        ? _textController.text.trim()
-                                        : label,
-                                    obstacleId: selectedId,
-                                  ),
-                                ),
-                              );
-                            }
-                          },
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            ReportConfirmScreen(
+                                              location: result['latlng'],
+                                              address: result['address'],
+                                              imagePath: widget.imagePath,
+                                              obstacleType:
+                                                  selectedId == 'other'
+                                                  ? _textController.text.trim()
+                                                  : label,
+                                              obstacleId: selectedId,
+                                              fromNavigation:
+                                                  widget.fromNavigation,
+                                            ),
+                                      ),
+                                    );
+                                  }
+                                },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: _mainColor, // Gilbeot Green
-                            elevation: 5,
+                            foregroundColor: Colors.white,
+                            disabledBackgroundColor: const Color(0xFFF3F4F6),
+                            disabledForegroundColor: const Color(0xFF9CA3AF),
+                            elevation:
+                                (selectedId == 'other' &&
+                                    _textController.text.trim().isEmpty)
+                                ? 0
+                                : 5,
                             shadowColor: const Color(0x3F00C853),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16),
@@ -314,7 +329,6 @@ class _ObstacleCheckScreenState extends State<ObstacleCheckScreen> {
                           child: const Text(
                             '선택하기',
                             style: TextStyle(
-                              color: Colors.white,
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                             ),

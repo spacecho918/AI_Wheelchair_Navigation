@@ -154,7 +154,7 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
                         decoration: InputDecoration(
                           hintText: '장소, 주소 검색',
                           hintStyle: const TextStyle(
-                            color: Colors.grey,
+                            color: Color(0xFF9EA6B8),
                             fontSize: 14,
                           ),
                           prefixIcon: const Icon(
@@ -170,7 +170,7 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
                               ? IconButton(
                                   icon: const Icon(
                                     Icons.close,
-                                    color: Colors.grey,
+                                    color: Color(0xFF9EA6B8),
                                     size: 18,
                                   ),
                                   onPressed: () {
@@ -187,7 +187,7 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
               ),
             ),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 12),
 
             // 2. Action Buttons (Current Location, Map Select, Saved)
             // Only show if search is empty
@@ -244,14 +244,13 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
                 ),
               ),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 12),
+            const Divider(height: 1, thickness: 1, color: Color(0xFFE5E7EB)),
 
             // 3. Content (Recent Searches or Search Results)
             Expanded(
               child: Container(
-                color: const Color(
-                  0xFFF9FAFB,
-                ), // Light background for list area
+                color: Colors.white,
                 child: _searchController.text.isEmpty
                     ? _buildRecentSearches()
                     : _buildSearchResults(),
@@ -291,7 +290,7 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
 
   Widget _buildRecentSearches() {
     return ListView(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -300,7 +299,7 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
               '최근 검색',
               style: TextStyle(
                 fontSize: 14,
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.w600,
                 color: Color(0xFF101727),
               ),
             ),
@@ -315,7 +314,7 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
               ),
               child: Text(
                 '모두 지우기',
-                style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                style: TextStyle(fontSize: 12, color: Color(0xFF9EA6B8)),
               ),
             ),
           ],
@@ -374,7 +373,7 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           fontSize: 12,
-                          color: Colors.grey,
+                          color: Color(0xFF4A5565),
                         ),
                       ),
                     ],
@@ -447,7 +446,15 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
-                    isSaved ? Icons.star : _getCategoryIcon(item['category']),
+                    item['name'] == '집'
+                        ? Icons.home
+                        : (item['name'] == '회사' || item['name'] == '학교'
+                              ? (item['name'] == '회사'
+                                    ? Icons.work
+                                    : Icons.school)
+                              : (isSaved
+                                    ? Icons.star
+                                    : _getCategoryIcon(item['category']))),
                     color: isSaved
                         ? const Color(0xFFFBC02D)
                         : const Color(0xFF00C853),
@@ -464,7 +471,7 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
                         style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.bold,
-                          color: Colors.black87,
+                          color: Color(0xFF101727),
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -472,12 +479,15 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
                         item['address'],
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF4A5565),
+                        ),
                       ),
                     ],
                   ),
                 ),
-                Icon(Icons.access_time, size: 16, color: Colors.grey[400]),
+                Icon(Icons.access_time, size: 16, color: Color(0xFF9EA6B8)),
               ],
             ),
           ),

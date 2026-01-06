@@ -155,7 +155,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 onTap: () => Navigator.pop(context),
                 child: const Icon(
                   Icons.arrow_back,
-                  color: Colors.black54,
+                  color: Color(0xFF354152),
                   size: 24, // 맵 화면 햄버거는 SVG 20, 아이콘은 보통 24가 적절
                 ),
               ),
@@ -197,7 +197,7 @@ class _SearchScreenState extends State<SearchScreen> {
                       decoration: InputDecoration(
                         hintText: '장소 검색...',
                         hintStyle: const TextStyle(
-                          color: Color(0xFF717182),
+                          color: Color(0xFF9EA6B8),
                           fontSize: 14,
                         ),
                         border: InputBorder.none,
@@ -205,7 +205,7 @@ class _SearchScreenState extends State<SearchScreen> {
                             ? IconButton(
                                 icon: const Icon(
                                   Icons.close,
-                                  color: Colors.grey,
+                                  color: Color(0xFF9EA6B8),
                                   size: 20,
                                 ),
                                 onPressed: () {
@@ -292,7 +292,7 @@ class _SearchScreenState extends State<SearchScreen> {
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
-                color: Colors.black87,
+                color: Color(0xFF101727),
               ),
             ),
             TextButton(
@@ -307,7 +307,7 @@ class _SearchScreenState extends State<SearchScreen> {
               ),
               child: Text(
                 '모두 지우기',
-                style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                style: TextStyle(fontSize: 13, color: Color(0xFF9EA6B8)),
               ),
             ),
           ],
@@ -344,7 +344,7 @@ class _SearchScreenState extends State<SearchScreen> {
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: Colors.black87,
+              color: Color(0xFF101727),
             ),
           ),
         ),
@@ -407,7 +407,7 @@ class _SearchScreenState extends State<SearchScreen> {
                               style: const TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.black87,
+                                color: Color(0xFF101727),
                               ),
                             ),
                             const SizedBox(height: 2),
@@ -415,9 +415,9 @@ class _SearchScreenState extends State<SearchScreen> {
                               fullAddress,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
+                              style: const TextStyle(
                                 fontSize: 12,
-                                color: Colors.grey[500],
+                                color: Color(0xFF4A5565),
                               ),
                             ),
                           ],
@@ -441,7 +441,7 @@ class _SearchScreenState extends State<SearchScreen> {
                       Icon(
                         Icons.chevron_right,
                         size: 20,
-                        color: Colors.grey[400],
+                        color: Color(0xFF9EA6B8),
                       ),
                     ],
                   ),
@@ -527,7 +527,15 @@ class _SearchScreenState extends State<SearchScreen> {
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
-                    isSaved ? Icons.star : Icons.location_on_outlined,
+                    item['name'] == '집'
+                        ? Icons.home
+                        : (item['name'] == '회사' || item['name'] == '학교'
+                              ? (item['name'] == '회사'
+                                    ? Icons.work
+                                    : Icons.school)
+                              : (isSaved
+                                    ? Icons.star
+                                    : Icons.location_on_outlined)),
                     color: isSaved
                         ? const Color(0xFFFBC02D)
                         : const Color(0xFF00C853),
@@ -545,7 +553,7 @@ class _SearchScreenState extends State<SearchScreen> {
                         style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.bold,
-                          color: Colors.black87,
+                          color: Color(0xFF101727),
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -553,13 +561,20 @@ class _SearchScreenState extends State<SearchScreen> {
                         item['address'],
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF4A5565),
+                        ),
                       ),
                     ],
                   ),
                 ),
                 // 오른쪽 시계 아이콘
-                Icon(Icons.access_time, size: 16, color: Colors.grey[400]),
+                const Icon(
+                  Icons.access_time,
+                  size: 16,
+                  color: Color(0xFF9EA6B8),
+                ),
               ],
             ),
           ),

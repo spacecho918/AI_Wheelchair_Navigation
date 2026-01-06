@@ -13,8 +13,8 @@ class CommunityDetailScreen extends StatefulWidget {
 
 class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
   final Color primaryGreen = const Color(0xFF00C853);
-  final Color textDark = const Color(0xFF354152);
-  final Color textGrey = const Color(0xFF99A1AE);
+  final Color textDark = const Color(0xFF101727);
+  final Color textGrey = const Color(0xFF9EA6B8);
   final TextEditingController _commentController = TextEditingController();
 
   int likeCount = 0;
@@ -102,7 +102,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                       Text(
                         '상세 정보',
                         style: TextStyle(
-                          color: textGrey,
+                          color: Color(0xFF4A5565),
                           fontSize: 12,
                           fontWeight: FontWeight.normal,
                         ),
@@ -123,7 +123,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                 ],
               ),
             ),
-            Container(color: Colors.grey.shade200, height: 1.0),
+            Container(color: const Color(0xFFF0F2F5), height: 1.0),
 
             Expanded(
               child: SingleChildScrollView(
@@ -214,7 +214,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                           Text(
                             widget.report['address'],
                             style: TextStyle(
-                              color: textDark,
+                              color: Color(0xFF4A5565),
                               fontSize: 14,
                               fontWeight: FontWeight.w500,
                             ),

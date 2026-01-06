@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:gilbeot/screens/camera_screen.dart';
 import 'package:gilbeot/screens/location_adjust_screen.dart';
+import 'package:gilbeot/screens/report_success_screen.dart';
 import 'package:gilbeot/screens/obstacle_check_screen.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:flutter/services.dart';
@@ -16,6 +17,7 @@ class ReportConfirmScreen extends StatefulWidget {
   final String? imagePath;
   final String? obstacleType;
   final String? obstacleId;
+  final bool fromNavigation;
 
   const ReportConfirmScreen({
     super.key,
@@ -24,6 +26,7 @@ class ReportConfirmScreen extends StatefulWidget {
     this.imagePath,
     this.obstacleType,
     this.obstacleId,
+    this.fromNavigation = false,
   });
 
   @override
@@ -124,41 +127,74 @@ class _ReportConfirmScreenState extends State<ReportConfirmScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF0FDF4), // Light mint background
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          '제보 확인',
-          style: TextStyle(
-            color: Colors.black,
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (_currentImagePath != null) _buildPhotoCard(context),
-              if (_currentImagePath != null) const SizedBox(height: 20),
-              if (_currentObstacleType != null) _buildObstacleCard(context),
-              if (_currentObstacleType != null) const SizedBox(height: 20),
-              _buildLocationCard(context),
-              const SizedBox(height: 20),
-              _buildDescriptionCard(),
-              const SizedBox(height: 32),
-              _buildSubmitButton(),
-            ],
-          ),
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Custom Header
+            Container(
+              height: 56,
+              color: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: IconButton(
+                      icon: const Icon(
+                        Icons.arrow_back,
+                        color: Color(0xFF354152),
+                      ),
+                      onPressed: () => Navigator.pop(context),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ),
+                  const Text(
+                    '제보 확인',
+                    style: TextStyle(
+                      color: Color(0xFF354152),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Container(color: const Color(0xFFF0F2F5), height: 1.0),
+
+            Expanded(
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 600),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          if (_currentImagePath != null)
+                            _buildPhotoCard(context),
+                          if (_currentImagePath != null)
+                            const SizedBox(height: 20),
+                          if (_currentObstacleType != null)
+                            _buildObstacleCard(context),
+                          if (_currentObstacleType != null)
+                            const SizedBox(height: 20),
+                          _buildLocationCard(context),
+                          const SizedBox(height: 20),
+                          _buildDescriptionCard(),
+                          const SizedBox(height: 32),
+                          _buildSubmitButton(),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -198,56 +234,43 @@ class _ReportConfirmScreenState extends State<ReportConfirmScreen> {
           ),
           Positioned(
             top: 16,
-            left: 16,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.1),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: const [
-                  Icon(
-                    Icons.camera_alt_outlined,
-                    size: 16,
-                    color: Colors.black87,
-                  ),
-                  SizedBox(width: 4),
-                  Text(
-                    '촬영된 사진',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black87,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          // Edit Button for Photo (Text Button Overlay)
-          Positioned(
-            top: 16,
             right: 16,
             child: GestureDetector(
               onTap: () => _editPhoto(context),
+              behavior: HitTestBehavior.translucent,
               child: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.9),
-                  shape: BoxShape.circle,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
                 ),
-                child: const Icon(
-                  Icons.edit,
-                  size: 16,
-                  color: Color(0xFF00C853),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.1),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: const [
+                    Icon(
+                      Icons.camera_alt_outlined,
+                      size: 16,
+                      color: Color(0xFF101727),
+                    ),
+                    SizedBox(width: 4),
+                    Text(
+                      '재촬영',
+                      style: TextStyle(
+                        fontSize: 12,
+                        // fontWeight: FontWeight.w600,
+                        color: Color(0xFF101727),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -276,7 +299,7 @@ class _ReportConfirmScreenState extends State<ReportConfirmScreen> {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -303,14 +326,14 @@ class _ReportConfirmScreenState extends State<ReportConfirmScreen> {
               children: [
                 Text(
                   '장애물 종류',
-                  style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                  style: TextStyle(fontSize: 12, color: Color(0xFF9EA6B8)),
                 ),
                 Text(
                   _currentObstacleType ?? '알 수 없음',
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: Colors.black87,
+                    color: Color(0xFF101727),
                   ),
                 ),
               ],
@@ -341,7 +364,7 @@ class _ReportConfirmScreenState extends State<ReportConfirmScreen> {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -358,15 +381,15 @@ class _ReportConfirmScreenState extends State<ReportConfirmScreen> {
                   const Icon(
                     Icons.location_on_outlined,
                     color: Color(0xFF00C853),
-                    size: 20,
+                    size: 14,
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 4),
                   Text(
                     '위치',
                     style: TextStyle(
                       fontSize: 12,
-                      color: Colors.grey[500],
-                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF9EA6B8),
+                      // fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],
@@ -395,7 +418,7 @@ class _ReportConfirmScreenState extends State<ReportConfirmScreen> {
             style: const TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.bold,
-              color: Colors.black87,
+              color: Color(0xFF101727),
             ),
           ),
           const SizedBox(height: 16),
@@ -427,7 +450,7 @@ class _ReportConfirmScreenState extends State<ReportConfirmScreen> {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -441,15 +464,15 @@ class _ReportConfirmScreenState extends State<ReportConfirmScreen> {
               const Text(
                 '상세 설명',
                 style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF101727),
                 ),
               ),
               const SizedBox(width: 4),
               Text(
                 '(선택사항)',
-                style: TextStyle(fontSize: 12, color: Colors.grey[400]),
+                style: TextStyle(fontSize: 12, color: Color(0xFF9EA6B8)),
               ),
             ],
           ),
@@ -459,7 +482,7 @@ class _ReportConfirmScreenState extends State<ReportConfirmScreen> {
             maxLines: 3,
             decoration: InputDecoration(
               hintText: '장애물에 대한 추가 정보(높이, 너비, 우회로 등)를 입력해주세요.',
-              hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
+              hintStyle: TextStyle(color: Color(0xFF9EA6B8), fontSize: 14),
               filled: true,
               fillColor: const Color(0xFFF3F4F6),
               border: OutlineInputBorder(
@@ -477,11 +500,11 @@ class _ReportConfirmScreenState extends State<ReportConfirmScreen> {
   Widget _buildSubmitButton() {
     return ElevatedButton(
       onPressed: () {
-        Navigator.of(context).popUntil((route) => route.isFirst);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('신고가 접수되었습니다.'),
-            backgroundColor: Color(0xFF00C853),
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) =>
+                ReportSuccessScreen(fromNavigation: widget.fromNavigation),
           ),
         );
       },
@@ -492,7 +515,7 @@ class _ReportConfirmScreenState extends State<ReportConfirmScreen> {
         elevation: 0,
       ),
       child: const Text(
-        '신고하기',
+        '제보하기',
         style: TextStyle(
           color: Colors.white,
           fontSize: 16,

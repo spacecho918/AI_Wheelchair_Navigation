@@ -104,7 +104,10 @@ class _SignupScreenState extends State<SignupScreen> {
                 // I will add the Back Arrow if I can.
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Colors.black),
+                    icon: const Icon(
+                      Icons.arrow_back,
+                      color: Color(0xFF354152),
+                    ),
                     onPressed: () => Navigator.pop(context),
                   ),
                   const SizedBox(width: 8),
@@ -175,7 +178,7 @@ class _SignupScreenState extends State<SignupScreen> {
                       '안전한 길안내를 시작하세요', // Changed text to match image "안전한 길안내를 시작하세요" (Start safe navigation) vs "수천 명의..."
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: Color(0xFF495565),
+                        color: Color(0xFF4A5565),
                         fontSize: 12.25,
                       ),
                     ),
@@ -223,7 +226,7 @@ class _SignupScreenState extends State<SignupScreen> {
                         '휠체어 타입',
                         style: const TextStyle(
                           fontSize: 12.25,
-                          color: Colors.black,
+                          color: Color(0xFF101727),
                           fontWeight: FontWeight.w400,
                         ),
                       ),
@@ -242,7 +245,7 @@ class _SignupScreenState extends State<SignupScreen> {
                     const Text(
                       '더 나은 경로 추천을 위해 휠체어 타입을 선택해주세요',
                       style: TextStyle(
-                        color: Color(0xFF697282),
+                        color: Color(0xFF9EA6B8),
                         fontSize: 10.5,
                       ), // Small hint text
                     ),

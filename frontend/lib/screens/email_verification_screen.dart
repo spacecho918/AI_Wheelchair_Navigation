@@ -21,7 +21,10 @@ class EmailVerificationScreen extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.start,
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Colors.black),
+                    icon: const Icon(
+                      Icons.arrow_back,
+                      color: Color(0xFF354152),
+                    ),
                     onPressed: () => Navigator.pop(context),
                   ),
                   const SizedBox(width: 8),
@@ -90,7 +93,7 @@ class EmailVerificationScreen extends StatelessWidget {
                       '이메일을 확인하고 인증을 완료하세요',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: Color(0xFF495565),
+                        color: Color(0xFF4A5565),
                         fontSize: 12.25,
                       ),
                     ),
@@ -124,13 +127,13 @@ class EmailVerificationScreen extends StatelessWidget {
                     const SizedBox(height: 8),
                     const Text(
                       '메일함을 확인해주세요',
-                      style: TextStyle(color: Color(0xFF697282), fontSize: 14),
+                      style: TextStyle(color: Color(0xFF9EA6B8), fontSize: 14),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       email,
                       style: const TextStyle(
-                        color: Color(0xFF697282),
+                        color: Color(0xFF9EA6B8),
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
                       ),
@@ -174,7 +177,7 @@ class EmailVerificationScreen extends StatelessWidget {
                                       '이메일 인증이 완료되었습니다.\n길벗과 함께 안전한 이동을 시작하세요.',
                                       textAlign: TextAlign.center,
                                       style: TextStyle(
-                                        color: Color(0xFF697282),
+                                        color: Color(0xFF4A5565),
                                         fontSize: 14,
                                       ),
                                     ),
@@ -259,7 +262,7 @@ class EmailVerificationScreen extends StatelessWidget {
                         },
                         style: OutlinedButton.styleFrom(
                           side: const BorderSide(color: Color(0xFFE5E7EB)),
-                          foregroundColor: const Color(0xFF4B5563),
+                          foregroundColor: const Color(0xFF4A5565),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
                           ),
@@ -282,7 +285,7 @@ class EmailVerificationScreen extends StatelessWidget {
                         const Text(
                           '메일을 받지 못하셨나요?',
                           style: TextStyle(
-                            color: Color(0xFF697282),
+                            color: Color(0xFF9EA6B8),
                             fontSize: 12.25,
                           ),
                         ),
@@ -314,7 +317,7 @@ class EmailVerificationScreen extends StatelessWidget {
                 child: Text(
                   '계정을 생성하시면 서비스 약관 및 개인정보 처리방침에 동의하는 것으로 간주됩니다',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Color(0xFF697282), fontSize: 10.5),
+                  style: TextStyle(color: Color(0xFF9EA6B8), fontSize: 10.5),
                 ),
               ),
             ],

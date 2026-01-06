@@ -326,14 +326,14 @@ class SideDrawer extends StatelessWidget {
       ),
       child: Column(
         children: [
-          _buildFooterItem(Icons.settings_outlined, '설정', () {}),
+          _buildFooterItem(Icons.settings_outlined, '설정', () {}, false),
           _buildFooterItem(Icons.logout, '로그아웃', () {
             Navigator.pushAndRemoveUntil(
               context,
               MaterialPageRoute(builder: (context) => const LoginScreen()),
               (route) => false,
             );
-          }),
+          }, true), // isLogout = true for red color
           const SizedBox(height: 20),
           Text(
             'Gilbeot v1.0.0',
@@ -344,20 +344,80 @@ class SideDrawer extends StatelessWidget {
     );
   }
 
-  Widget _buildFooterItem(IconData icon, String text, VoidCallback onTap) {
-    return ListTile(
+  Widget _buildFooterItem(
+    IconData icon,
+    String text,
+    VoidCallback onTap, [
+    bool isLogout = false,
+  ]) {
+    return _FooterItem(
+      icon: icon,
+      text: text,
       onTap: onTap,
-      dense: true,
-      visualDensity: VisualDensity.compact,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-      minLeadingWidth: 20,
-      leading: Icon(icon, size: 20, color: const Color(0xFF495565)),
-      title: Text(
-        text,
-        style: const TextStyle(
-          color: Color(0xFF495565),
-          fontSize: 14,
-          fontWeight: FontWeight.w400,
+      isLogout: isLogout,
+    );
+  }
+}
+
+class _FooterItem extends StatefulWidget {
+  final IconData icon;
+  final String text;
+  final VoidCallback onTap;
+  final bool isLogout;
+
+  const _FooterItem({
+    required this.icon,
+    required this.text,
+    required this.onTap,
+    this.isLogout = false,
+  });
+
+  @override
+  State<_FooterItem> createState() => _FooterItemState();
+}
+
+class _FooterItemState extends State<_FooterItem> {
+  bool _isPressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color defaultColor = const Color(0xFF495565);
+    // 로그아웃이면서 눌렸을 때만 빨간색
+    final Color activeColor = widget.isLogout && _isPressed
+        ? const Color(0xFFFF3B30)
+        : defaultColor;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: widget.onTap,
+        onHighlightChanged: (value) {
+          if (widget.isLogout) {
+            setState(() {
+              _isPressed = value;
+            });
+          }
+        },
+        splashColor: widget.isLogout
+            ? const Color(0xFFFF3B30).withValues(alpha: 0.2)
+            : null,
+        highlightColor: widget.isLogout
+            ? const Color(0xFFFF3B30).withValues(alpha: 0.1)
+            : null,
+        child: ListTile(
+          dense: true,
+          visualDensity: VisualDensity.compact,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+          minLeadingWidth: 20,
+          leading: Icon(widget.icon, size: 20, color: activeColor),
+          title: Text(
+            widget.text,
+            style: TextStyle(
+              color: activeColor,
+              fontSize: 14,
+              fontWeight: FontWeight.w400,
+            ),
+          ),
         ),
       ),
     );

@@ -11,7 +11,7 @@ class CustomBackButton extends StatelessWidget {
       onPressed: onPressed ?? () => Navigator.pop(context),
       icon: const Icon(
         Icons.arrow_back_ios_new,
-        color: Color(0xFF101727), // Match text dark color
+        color: Color(0xFF354152), // Unified header text color
         size: 18,
       ),
       padding: EdgeInsets.zero,

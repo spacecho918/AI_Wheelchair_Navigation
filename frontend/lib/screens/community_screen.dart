@@ -12,8 +12,8 @@ class CommunityScreen extends StatefulWidget {
 class _CommunityScreenState extends State<CommunityScreen> {
   // Colors
   final Color primaryGreen = const Color(0xFF00C853);
-  final Color textDark = const Color(0xFF354152);
-  final Color textGrey = const Color(0xFF99A1AE);
+  final Color textDark = const Color(0xFF101727);
+  final Color textGrey = const Color(0xFF9EA6B8);
   final Color backgroundLightGreen = const Color(
     0xFFE8F5E9,
   ); // Light green background
@@ -130,7 +130,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                       Text(
                         '지역 내 장애물 정보 공유',
                         style: TextStyle(
-                          color: textGrey,
+                          color: Color(0xFF4A5565),
                           fontSize: 12,
                           fontWeight: FontWeight.normal,
                         ),
@@ -156,7 +156,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                 ],
               ),
             ),
-            Container(color: Colors.grey.shade200, height: 1.0),
+            Container(color: const Color(0xFFF0F2F5), height: 1.0),
 
             // 1. Filter Chips (Collapsible)
             AnimatedContainer(
@@ -178,7 +178,9 @@ class _CommunityScreenState extends State<CommunityScreen> {
                         label: Text(
                           filter,
                           style: TextStyle(
-                            color: isSelected ? Colors.white : textDark,
+                            color: isSelected
+                                ? Colors.white
+                                : Color(0xFF4A5565),
                             fontSize: 14,
                           ),
                         ),
@@ -255,7 +257,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                                 style: TextStyle(
                                   color: sortOption == 'latest'
                                       ? Colors.white
-                                      : const Color(0xFF6B7280),
+                                      : const Color(0xFF9EA6B8),
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -297,7 +299,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                                 style: TextStyle(
                                   color: sortOption == 'popular'
                                       ? Colors.white
-                                      : const Color(0xFF6B7280),
+                                      : const Color(0xFF9EA6B8),
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -439,7 +441,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                                       Text(
                                         report['address'],
                                         style: TextStyle(
-                                          color: textGrey,
+                                          color: Color(0xFF4A5565),
                                           fontSize: 12,
                                         ),
                                       ),

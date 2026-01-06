@@ -6,11 +6,13 @@ import 'obstacle_check_screen.dart';
 class PhotoConfirmationScreen extends StatelessWidget {
   final String imagePath;
   final bool fromConfirm;
+  final bool fromNavigation;
 
   const PhotoConfirmationScreen({
     super.key,
     required this.imagePath,
     this.fromConfirm = false,
+    this.fromNavigation = false,
   });
 
   @override
@@ -81,6 +83,7 @@ class PhotoConfirmationScreen extends StatelessWidget {
                             imagePath: imagePath,
                             initialObstacle: 'stairs',
                             fromConfirm: fromConfirm,
+                            fromNavigation: fromNavigation,
                           ),
                         ),
                       );
