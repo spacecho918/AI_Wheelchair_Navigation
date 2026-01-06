@@ -6,6 +6,7 @@ import '../screens/wheelchair_settings_screen.dart';
 import '../screens/community_screen.dart';
 import '../screens/my_reports_screen.dart';
 import '../screens/notification_screen.dart';
+import '../screens/history_screen.dart';
 
 class SideDrawer extends StatelessWidget {
   const SideDrawer({super.key});
@@ -59,7 +60,15 @@ class SideDrawer extends StatelessWidget {
                     _buildMenuItem(
                       iconPath: 'assets/clock_icon.svg',
                       text: '주행 기록',
-                      onTap: () {},
+                      onTap: () {
+                        Navigator.pop(context); // Close drawer
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const HistoryScreen(),
+                          ),
+                        );
+                      },
                     ),
                     const SizedBox(height: 7),
                     _buildMenuItem(
