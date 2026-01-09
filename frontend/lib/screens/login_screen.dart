@@ -18,7 +18,12 @@ class LoginScreen extends StatelessWidget {
           // 스크롤 가능하게 설정
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24.0), // 좌우 여백 추가
-            child: Gilbeot(), // Gilbeot 위젯 호출
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 500),
+                child: Gilbeot(),
+              ),
+            ), // Gilbeot 위젯 호출
           ),
         ),
       ),
@@ -186,7 +191,11 @@ class Gilbeot extends StatelessWidget {
                 },
                 child: const Text(
                   '비밀번호를 잊으셨나요?',
-                  style: TextStyle(color: Color(0xFF00C853)),
+                  style: TextStyle(
+                    color: Color(0xFF00C853),
+                    fontSize: 12.25,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
 
@@ -196,7 +205,10 @@ class Gilbeot extends StatelessWidget {
                 children: [
                   const Text(
                     "계정이 없으신가요?",
-                    style: TextStyle(color: Color(0xFF4A5565)),
+                    style: TextStyle(
+                      color: Color(0xFF697282), // SignupScreen과 동일한 색상
+                      fontSize: 12.25,
+                    ),
                   ),
                   TextButton(
                     // [수정] 화살표(=>)를 지우고 중괄호({ })를 열어서 이동 코드를 넣습니다.
@@ -211,6 +223,7 @@ class Gilbeot extends StatelessWidget {
                       style: TextStyle(
                         color: Color(0xFF00C853),
                         fontWeight: FontWeight.bold,
+                        fontSize: 14,
                       ),
                     ),
                   ),
