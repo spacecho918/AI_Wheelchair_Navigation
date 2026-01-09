@@ -2,35 +2,44 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'login_screen.dart';
 
-class EmailVerificationScreen extends StatefulWidget {
-  final String email;
-
-  const EmailVerificationScreen({super.key, required this.email});
+class NewPasswordScreen extends StatefulWidget {
+  const NewPasswordScreen({super.key});
 
   @override
-  State<EmailVerificationScreen> createState() =>
-      _EmailVerificationScreenState();
+  State<NewPasswordScreen> createState() => _NewPasswordScreenState();
 }
 
-class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
-  final TextEditingController _codeController = TextEditingController();
-  bool _isCodeValid = false;
+class _NewPasswordScreenState extends State<NewPasswordScreen> {
+  final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
+
+  bool _isPasswordMatch = true;
+  bool _isFormValid = false;
 
   @override
   void initState() {
     super.initState();
-    _codeController.addListener(_validateCode);
+    _passwordController.addListener(_validateForm);
+    _confirmPasswordController.addListener(_validateForm);
   }
 
   @override
   void dispose() {
-    _codeController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
-  void _validateCode() {
+  void _validateForm() {
+    final isPasswordMatch =
+        _passwordController.text == _confirmPasswordController.text;
+    final isPasswordFilled = _passwordController.text.isNotEmpty;
+    final isConfirmFilled = _confirmPasswordController.text.isNotEmpty;
+
     setState(() {
-      _isCodeValid = _codeController.text.length == 6;
+      _isPasswordMatch = isPasswordMatch;
+      _isFormValid = isPasswordFilled && isConfirmFilled && isPasswordMatch;
     });
   }
 
@@ -108,7 +117,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                 child: Column(
                   children: [
                     const Text(
-                      '이메일 인증',
+                      '새 비밀번호 설정',
                       style: TextStyle(
                         color: Color(0xFF101727),
                         fontSize: 16,
@@ -117,97 +126,43 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                     ),
                     const SizedBox(height: 8),
                     const Text(
-                      '이메일로 전송된 인증 번호를 입력하세요',
+                      '새로운 비밀번호를 입력해주세요',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: Color(0xFF4A5565),
                         fontSize: 12.25,
                       ),
                     ),
-                    const SizedBox(height: 40),
+                    const SizedBox(height: 30),
 
-                    // Icon Circle
-                    Container(
-                      width: 80,
-                      height: 80,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE8F5E9), // Light green bg
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.mail_outline,
-                        color: Color(0xFF00C853),
-                        size: 40,
-                      ),
+                    _buildTextField(
+                      '새 비밀번호',
+                      '새 비밀번호를 입력하세요',
+                      _passwordController,
+                      isPassword: true,
+                    ),
+                    const SizedBox(height: 16),
+
+                    _buildTextField(
+                      '비밀번호 확인',
+                      '비밀번호를 다시 입력하세요',
+                      _confirmPasswordController,
+                      isPassword: true,
+                      errorText:
+                          _isPasswordMatch ||
+                              _confirmPasswordController.text.isEmpty
+                          ? null
+                          : '비밀번호가 일치하지 않습니다',
                     ),
 
                     const SizedBox(height: 24),
 
-                    const Text(
-                      '인증 메일을 보냈습니다!',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF101727),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      '메일함을 확인하고 인증 번호를 입력해주세요',
-                      style: TextStyle(color: Color(0xFF9EA6B8), fontSize: 14),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      widget.email,
-                      style: const TextStyle(
-                        color: Color(0xFF9EA6B8),
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-
-                    const SizedBox(height: 32),
-
-                    // Code Input
-                    TextField(
-                      controller: _codeController,
-                      keyboardType: TextInputType.number,
-                      textAlign: TextAlign.center,
-                      maxLength: 6,
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 8,
-                      ),
-                      decoration: InputDecoration(
-                        counterText: "",
-                        hintText: "000000",
-                        hintStyle: const TextStyle(
-                          color: Color(0xFFD1D5DB),
-                          fontSize: 24,
-                          letterSpacing: 8,
-                        ),
-                        filled: true,
-                        fillColor: const Color(0xFFF3F3F5),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 14,
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    // Verify Button
+                    // Button
                     SizedBox(
                       width: double.infinity,
                       height: 48,
                       child: ElevatedButton(
-                        onPressed: _isCodeValid
+                        onPressed: _isFormValid
                             ? () {
                                 showDialog(
                                   context: context,
@@ -226,8 +181,14 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                                       content: Column(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
+                                          const Icon(
+                                            Icons.check_circle,
+                                            color: Color(0xFF00C853),
+                                            size: 48,
+                                          ),
+                                          const SizedBox(height: 16),
                                           const Text(
-                                            '환영합니다!',
+                                            '비밀번호 변경 완료',
                                             style: TextStyle(
                                               fontSize: 18,
                                               fontWeight: FontWeight.bold,
@@ -236,7 +197,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                                           ),
                                           const SizedBox(height: 12),
                                           const Text(
-                                            '이메일 인증이 완료되었습니다.\n길벗과 함께 안전한 이동을 시작하세요.',
+                                            '새로운 비밀번호로 로그인해주세요.',
                                             textAlign: TextAlign.center,
                                             style: TextStyle(
                                               color: Color(0xFF4A5565),
@@ -298,42 +259,8 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                             borderRadius: BorderRadius.circular(16),
                           ),
                         ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: const [
-                            Icon(Icons.check_circle_outline, size: 20),
-                            SizedBox(width: 8),
-                            Text(
-                              '인증 완료',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    // Return Button
-                    SizedBox(
-                      width: double.infinity,
-                      height: 48,
-                      child: OutlinedButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                        },
-                        style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: Color(0xFFE5E7EB)),
-                          foregroundColor: const Color(0xFF4A5565),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                        ),
                         child: const Text(
-                          '회원가입으로 돌아가기',
+                          '비밀번호 변경',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 14,
@@ -341,54 +268,57 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                         ),
                       ),
                     ),
-
-                    const SizedBox(height: 24),
-
-                    // Resend Link
-                    Column(
-                      children: [
-                        const Text(
-                          '메일을 받지 못하셨나요?',
-                          style: TextStyle(
-                            color: Color(0xFF9EA6B8),
-                            fontSize: 12.25,
-                          ),
-                        ),
-                        TextButton(
-                          onPressed: () {
-                            // Resend logic
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('인증 번호를 다시 보냈습니다.')),
-                            );
-                          },
-                          child: const Text(
-                            '다시 보내기',
-                            style: TextStyle(
-                              color: Color(0xFF00C853),
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
                   ],
-                ),
-              ),
-
-              const SizedBox(height: 20),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20),
-                child: Text(
-                  '계정을 생성하시면 서비스 약관 및 개인정보 처리방침에 동의하는 것으로 간주됩니다',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Color(0xFF9EA6B8), fontSize: 10.5),
                 ),
               ),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildTextField(
+    String label,
+    String placeholder,
+    TextEditingController controller, {
+    bool isPassword = false,
+    String? errorText,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12.25,
+            color: Colors.black,
+            fontWeight: FontWeight.w400,
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: controller,
+          obscureText: isPassword,
+          style: const TextStyle(fontSize: 14),
+          decoration: InputDecoration(
+            hintText: placeholder,
+            hintStyle: const TextStyle(color: Color(0xFF717182), fontSize: 14),
+            filled: true,
+            fillColor: const Color(0xFFF3F3F5),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 14,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+            errorText: errorText,
+            errorStyle: const TextStyle(color: Colors.red, fontSize: 11),
+          ),
+        ),
+      ],
     );
   }
 }

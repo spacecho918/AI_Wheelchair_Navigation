@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'email_verification_screen.dart';
+import 'reset_password_screen.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -299,8 +300,15 @@ class _SignupScreenState extends State<SignupScreen> {
                       child: Column(
                         children: [
                           TextButton(
-                            onPressed:
-                                () {}, // What action? Image says "Forgot password?"
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      const ResetPasswordScreen(),
+                                ),
+                              );
+                            },
                             child: const Text(
                               '비밀번호를 잊으셨나요?',
                               style: TextStyle(

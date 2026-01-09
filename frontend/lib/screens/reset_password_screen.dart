@@ -3,11 +3,37 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:gilbeot/screens/signup_screen.dart';
 import 'reset_password_success_screen.dart';
 
-class ResetPasswordScreen extends StatelessWidget {
+class ResetPasswordScreen extends StatefulWidget {
+  const ResetPasswordScreen({super.key});
+
+  @override
+  State<ResetPasswordScreen> createState() => _ResetPasswordScreenState();
+}
+
+class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   // 이메일 입력값을 제어할 컨트롤러
   final TextEditingController _emailController = TextEditingController();
+  bool _isEmailValid = false;
 
-  ResetPasswordScreen({super.key});
+  @override
+  void initState() {
+    super.initState();
+    _emailController.addListener(_validateEmail);
+  }
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    super.dispose();
+  }
+
+  void _validateEmail() {
+    // Basic email regex
+    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    setState(() {
+      _isEmailValid = emailRegex.hasMatch(_emailController.text);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -112,20 +138,25 @@ class ResetPasswordScreen extends StatelessWidget {
                       width: double.infinity,
                       height: 48,
                       child: ElevatedButton(
-                        onPressed: () {
-                          // Navigate to success screen
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => ResetPasswordSuccessScreen(
-                                email: _emailController.text,
-                              ),
-                            ),
-                          );
-                        },
+                        onPressed: _isEmailValid
+                            ? () {
+                                // Navigate to success screen
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        ResetPasswordSuccessScreen(
+                                          email: _emailController.text,
+                                        ),
+                                  ),
+                                );
+                              }
+                            : null,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF00C853),
+                          disabledBackgroundColor: const Color(0xFFE5E7EB),
                           foregroundColor: Colors.white,
+                          disabledForegroundColor: const Color(0xFF9CA3AF),
                           elevation: 0,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
@@ -249,6 +280,7 @@ class ResetPasswordScreen extends StatelessWidget {
         TextField(
           controller: controller,
           keyboardType: inputType,
+          style: const TextStyle(fontSize: 14),
           decoration: InputDecoration(
             hintText: placeholder,
             hintStyle: const TextStyle(color: Color(0xFF717182), fontSize: 14),

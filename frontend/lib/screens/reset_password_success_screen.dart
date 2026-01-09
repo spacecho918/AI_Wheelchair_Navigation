@@ -1,11 +1,39 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'login_screen.dart';
+import 'new_password_screen.dart';
 
-class ResetPasswordSuccessScreen extends StatelessWidget {
+class ResetPasswordSuccessScreen extends StatefulWidget {
   final String email;
 
   const ResetPasswordSuccessScreen({super.key, required this.email});
+
+  @override
+  State<ResetPasswordSuccessScreen> createState() =>
+      _ResetPasswordSuccessScreenState();
+}
+
+class _ResetPasswordSuccessScreenState
+    extends State<ResetPasswordSuccessScreen> {
+  final TextEditingController _codeController = TextEditingController();
+  bool _isCodeValid = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _codeController.addListener(_validateCode);
+  }
+
+  @override
+  void dispose() {
+    _codeController.dispose();
+    super.dispose();
+  }
+
+  void _validateCode() {
+    setState(() {
+      _isCodeValid = _codeController.text.length == 6;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -81,7 +109,7 @@ class ResetPasswordSuccessScreen extends StatelessWidget {
                 child: Column(
                   children: [
                     const Text(
-                      '비밀번호 재설정',
+                      '인증 번호 입력',
                       style: TextStyle(
                         color: Color(0xFF101727),
                         fontSize: 16,
@@ -90,7 +118,7 @@ class ResetPasswordSuccessScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     const Text(
-                      '이메일을 확인하고 비밀번호를 변경하세요',
+                      '이메일로 전송된 인증 번호를 입력하세요',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: Color(0xFF495565),
@@ -117,7 +145,7 @@ class ResetPasswordSuccessScreen extends StatelessWidget {
                     const SizedBox(height: 24),
 
                     const Text(
-                      '재설정 메일을 보냈습니다!',
+                      '인증 메일을 보냈습니다!',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -126,13 +154,13 @@ class ResetPasswordSuccessScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     const Text(
-                      '메일함의 링크를 클릭하여 새 비밀번호를 설정해주세요',
+                      '메일함을 확인하고 인증 번호를 입력해주세요',
                       textAlign: TextAlign.center,
                       style: TextStyle(color: Color(0xFF697282), fontSize: 14),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      email,
+                      widget.email,
                       style: const TextStyle(
                         color: Color(0xFF697282),
                         fontSize: 14,
@@ -142,66 +170,68 @@ class ResetPasswordSuccessScreen extends StatelessWidget {
 
                     const SizedBox(height: 32),
 
+                    // Code Input
+                    TextField(
+                      controller: _codeController,
+                      keyboardType: TextInputType.number,
+                      textAlign: TextAlign.center,
+                      maxLength: 6,
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 8,
+                      ),
+                      decoration: InputDecoration(
+                        counterText: "",
+                        hintText: "000000",
+                        hintStyle: const TextStyle(
+                          color: Color(0xFFD1D5DB),
+                          fontSize: 24,
+                          letterSpacing: 8,
+                        ),
+                        filled: true,
+                        fillColor: const Color(0xFFF3F3F5),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 24),
+
                     // Verify Button
                     SizedBox(
                       width: double.infinity,
                       height: 48,
                       child: ElevatedButton(
-                        onPressed: () {
-                          Navigator.pushAndRemoveUntil(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => LoginScreen(),
-                            ), // Go to Login
-                            (route) => false,
-                          );
-                        },
+                        onPressed: _isCodeValid
+                            ? () {
+                                Navigator.pushReplacement(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        const NewPasswordScreen(),
+                                  ),
+                                );
+                              }
+                            : null,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF00C853),
+                          disabledBackgroundColor: const Color(0xFFE5E7EB),
                           foregroundColor: Colors.white,
+                          disabledForegroundColor: const Color(0xFF9CA3AF),
                           elevation: 0,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
                           ),
                         ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: const [
-                            Icon(Icons.check_circle_outline, size: 20),
-                            SizedBox(width: 8),
-                            Text(
-                              '로그인으로 이동',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    // Return Button
-                    SizedBox(
-                      width: double.infinity,
-                      height: 48,
-                      child: OutlinedButton(
-                        onPressed: () {
-                          Navigator.pop(
-                            context,
-                          ); // Go back to enter email again ?? Or navigate to ResetPasswordScreen? pop is simpler if we pushed.
-                        },
-                        style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: Color(0xFFE5E7EB)),
-                          foregroundColor: const Color(0xFF4B5563),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                        ),
                         child: const Text(
-                          '이메일 다시 입력하기',
+                          '인증하기',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 14,
@@ -210,7 +240,7 @@ class ResetPasswordSuccessScreen extends StatelessWidget {
                       ),
                     ),
 
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 12),
 
                     // Resend Link
                     Column(
@@ -224,11 +254,8 @@ class ResetPasswordSuccessScreen extends StatelessWidget {
                         ),
                         TextButton(
                           onPressed: () {
-                            // Resend logic
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('재설정 메일을 다시 보냈습니다.'),
-                              ),
+                              const SnackBar(content: Text('인증 번호를 다시 보냈습니다.')),
                             );
                           },
                           child: const Text(
@@ -243,16 +270,6 @@ class ResetPasswordSuccessScreen extends StatelessWidget {
                       ],
                     ),
                   ],
-                ),
-              ),
-
-              const SizedBox(height: 20),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20),
-                child: Text(
-                  '계정을 생성하시면 서비스 약관 및 개인정보 처리방침에 동의하는 것으로 간주됩니다',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Color(0xFF697282), fontSize: 10.5),
                 ),
               ),
             ],
