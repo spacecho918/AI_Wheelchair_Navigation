@@ -7,6 +7,7 @@ import '../screens/community_screen.dart';
 import '../screens/my_reports_screen.dart';
 import '../screens/notification_screen.dart';
 import '../screens/history_screen.dart';
+import '../screens/saved_places_screen.dart';
 
 class SideDrawer extends StatelessWidget {
   const SideDrawer({super.key});
@@ -54,7 +55,15 @@ class SideDrawer extends StatelessWidget {
                     _buildMenuItem(
                       iconPath: 'assets/bookmark_icon.svg',
                       text: '저장된 장소',
-                      onTap: () {},
+                      onTap: () {
+                        Navigator.pop(context); // Close drawer
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const SavedPlacesScreen(),
+                          ),
+                        );
+                      },
                     ),
                     const SizedBox(height: 7),
                     _buildMenuItem(
