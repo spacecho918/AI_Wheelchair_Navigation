@@ -29,7 +29,7 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
   bool _isLoading = false;
 
   // Recent searches synced with SearchScreen
-  final List<Map<String, dynamic>> _recentSearches = [
+  List<Map<String, dynamic>> _recentSearches = [
     {'name': '집', 'address': '서울 성동구 성수동 123', 'type': 'saved'},
     {'name': '서울시청', 'address': '서울 중구 세종대로 110', 'type': 'recent'},
     {'name': '스타벅스', 'address': '서울 성동구 성수1가', 'type': 'recent'},
@@ -305,7 +305,9 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
             ),
             TextButton(
               onPressed: () {
-                debugPrint("모두 지우기 클릭");
+                setState(() {
+                  _recentSearches.clear();
+                });
               },
               style: TextButton.styleFrom(
                 padding: EdgeInsets.zero,
@@ -336,65 +338,92 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
         final name = place['name'];
         final address = place['address'];
 
-        return InkWell(
-          onTap: () {
-            final lat = place['lat'];
-            final lon = place['lng'];
-            Navigator.pop(context, {
-              'latlng': LatLng(lat, lon),
-              'name': name,
-              'address': address,
-            });
-          },
-          child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            decoration: BoxDecoration(
-              border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  _getCategoryIcon(place['category']),
-                  color: Colors.grey,
-                  size: 20,
+        return Container(
+          decoration: const BoxDecoration(
+            border: Border(bottom: BorderSide(color: Color(0xFFE0E0E0))),
+          ),
+          child: Material(
+            color: Colors.white,
+            child: InkWell(
+              onTap: () {
+                final lat = place['lat'];
+                final lon = place['lng'];
+                Navigator.pop(context, {
+                  'latlng': LatLng(lat, lon),
+                  'name': name,
+                  'address': address,
+                });
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 4,
+                  vertical: 12,
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        name,
-                        style: const TextStyle(fontWeight: FontWeight.bold),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 32,
+                      height: 32,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFE8FDF0), // 연두색 배경
+                        shape: BoxShape.circle,
                       ),
+                      child: Icon(
+                        _getCategoryIcon(place['category']),
+                        color: const Color(0xFF00C853), // 메인 그린 색상
+                        size: 18,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            name,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w400,
+                              color: Color(0xFF101727),
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            address,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (widget.userLocation != null) ...[
+                      const SizedBox(width: 8),
                       Text(
-                        address,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                        _formatDistance(
+                          widget.userLocation!,
+                          place['lat'],
+                          place['lng'],
+                        ),
                         style: const TextStyle(
                           fontSize: 12,
-                          color: Color(0xFF4A5565),
+                          color: Color(0xFF00C853),
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ],
-                  ),
+                    const SizedBox(width: 8),
+                    Icon(
+                      Icons.chevron_right,
+                      size: 20,
+                      color: Color(0xFF9EA6B8),
+                    ),
+                  ],
                 ),
-                if (widget.userLocation != null) ...[
-                  const SizedBox(width: 8),
-                  Text(
-                    _formatDistance(
-                      widget.userLocation!,
-                      place['lat'],
-                      place['lng'],
-                    ),
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Color(0xFF00C853),
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ],
+              ),
             ),
           ),
         );
@@ -406,21 +435,12 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
     bool isSaved = item['type'] == 'saved';
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: Color(0xFFE0E0E0))),
       ),
       child: Material(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
         child: InkWell(
-          borderRadius: BorderRadius.circular(16),
           onTap: () {
             // Return selected item
             Navigator.pop(context, {
@@ -433,12 +453,12 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
             });
           },
           child: Padding(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
             child: Row(
               children: [
                 Container(
-                  width: 40,
-                  height: 40,
+                  width: 32,
+                  height: 32,
                   decoration: BoxDecoration(
                     color: isSaved
                         ? const Color(0xFFFFF9C4)
@@ -447,7 +467,7 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
                   ),
                   child: Icon(
                     item['name'] == '집'
-                        ? Icons.home
+                        ? Icons.home_rounded
                         : (item['name'] == '회사' || item['name'] == '학교'
                               ? (item['name'] == '회사'
                                     ? Icons.work
@@ -458,36 +478,36 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
                     color: isSaved
                         ? const Color(0xFFFBC02D)
                         : const Color(0xFF00C853),
-                    size: 22,
+                    size: 18,
                   ),
                 ),
-                const SizedBox(width: 14),
+                const SizedBox(width: 12),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        item['name'],
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF101727),
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        item['address'],
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Color(0xFF4A5565),
-                        ),
-                      ),
-                    ],
+                  child: Text(
+                    item['name'],
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.normal,
+                      color: Color(0xFF101727),
+                    ),
                   ),
                 ),
-                Icon(Icons.access_time, size: 16, color: Color(0xFF9EA6B8)),
+                InkWell(
+                  onTap: () {
+                    setState(() {
+                      _recentSearches.remove(item);
+                    });
+                  },
+                  borderRadius: BorderRadius.circular(20),
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: const Icon(
+                      Icons.close,
+                      size: 16,
+                      color: Color(0xFF9EA6B8),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),

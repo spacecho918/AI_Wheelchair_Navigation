@@ -5,6 +5,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:gilbeot/services/kakao_service.dart';
 import 'package:latlong2/latlong.dart'; // 좌표 전달용
 import 'package:gilbeot/screens/favorites_edit_screen.dart';
+import 'package:gilbeot/screens/route_search_screen.dart';
 import 'package:geolocator/geolocator.dart';
 
 class SearchScreen extends StatefulWidget {
@@ -24,7 +25,7 @@ class _SearchScreenState extends State<SearchScreen> {
   List<dynamic> _searchResults = [];
 
   // 최근 검색어 더미 데이터 (시안과 동일하게 구성)
-  final List<Map<String, dynamic>> _recentSearches = [
+  List<Map<String, dynamic>> _recentSearches = [
     {
       'name': '집',
       'address': '서울 성동구 성수동 123',
@@ -244,12 +245,47 @@ class _SearchScreenState extends State<SearchScreen> {
               icon: Icons.home_rounded,
               label: _homeName,
               color: const Color(0xFF00C853),
+              onTap: () {
+                if (_homeAddress.isNotEmpty) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => RouteSearchScreen(
+                        userLocation: widget.userLocation,
+                        destination: {
+                          'name': _homeName,
+                          'address': _homeAddress,
+                          'latlng':
+                              null, // Coordinates might be fetched in RouteSearchScreen or we can omit
+                        },
+                      ),
+                    ),
+                  );
+                }
+              },
             ),
             const SizedBox(width: 8),
             _buildChip(
               icon: Icons.business_rounded,
               label: _workLabel,
               color: const Color(0xFF00C853),
+              onTap: () {
+                if (_workAddress.isNotEmpty) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => RouteSearchScreen(
+                        userLocation: widget.userLocation,
+                        destination: {
+                          'name': _workLabel,
+                          'address': _workAddress,
+                          'latlng': null,
+                        },
+                      ),
+                    ),
+                  );
+                }
+              },
             ),
             const Spacer(),
             Material(
@@ -287,18 +323,22 @@ class _SearchScreenState extends State<SearchScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
-              '최근 검색',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF101727),
+            Padding(
+              padding: const EdgeInsets.only(left: 4.0),
+              child: const Text(
+                '최근 검색',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: Color(0xFF101727),
+                ),
               ),
             ),
             TextButton(
               onPressed: () {
-                // 모두 지우기 로직 (여기서는 더미 초기화 안함, 실제 구현 시 리스트 비우기)
-                debugPrint("모두 지우기 클릭");
+                setState(() {
+                  _recentSearches.clear();
+                });
               },
               style: TextButton.styleFrom(
                 padding: EdgeInsets.zero,
@@ -343,7 +383,7 @@ class _SearchScreenState extends State<SearchScreen> {
             '검색 결과',
             style: TextStyle(
               fontSize: 16,
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w600,
               color: Color(0xFF101727),
             ),
           ),
@@ -355,21 +395,12 @@ class _SearchScreenState extends State<SearchScreen> {
           final fullAddress = place['address'];
 
           return Container(
-            margin: const EdgeInsets.only(bottom: 12),
-            decoration: BoxDecoration(
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
+            decoration: const BoxDecoration(
+              border: Border(bottom: BorderSide(color: Color(0xFFE0E0E0))),
             ),
             child: Material(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
               child: InkWell(
-                borderRadius: BorderRadius.circular(16),
                 onTap: () {
                   // KakaoService already returns doubles
                   final lat = place['lat'];
@@ -381,12 +412,15 @@ class _SearchScreenState extends State<SearchScreen> {
                   });
                 },
                 child: Padding(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 12,
+                  ),
                   child: Row(
                     children: [
                       Container(
-                        width: 40,
-                        height: 40,
+                        width: 32,
+                        height: 32,
                         decoration: const BoxDecoration(
                           color: Color(0xFFE8FDF0), // 연두색 배경
                           shape: BoxShape.circle,
@@ -394,10 +428,10 @@ class _SearchScreenState extends State<SearchScreen> {
                         child: Icon(
                           _getCategoryIcon(place['category']),
                           color: const Color(0xFF00C853), // 메인 그린 색상
-                          size: 22,
+                          size: 18,
                         ),
                       ),
-                      const SizedBox(width: 14),
+                      const SizedBox(width: 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -405,8 +439,8 @@ class _SearchScreenState extends State<SearchScreen> {
                             Text(
                               name,
                               style: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w400,
                                 color: Color(0xFF101727),
                               ),
                             ),
@@ -417,7 +451,7 @@ class _SearchScreenState extends State<SearchScreen> {
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
                                 fontSize: 12,
-                                color: Color(0xFF4A5565),
+                                color: Colors.grey,
                               ),
                             ),
                           ],
@@ -438,6 +472,7 @@ class _SearchScreenState extends State<SearchScreen> {
                           ),
                         ),
                       ],
+                      const SizedBox(width: 8),
                       Icon(
                         Icons.chevron_right,
                         size: 20,
@@ -460,6 +495,7 @@ class _SearchScreenState extends State<SearchScreen> {
     required IconData icon,
     required String label,
     required Color color,
+    VoidCallback? onTap,
   }) {
     return Material(
       color: Colors.white,
@@ -469,7 +505,7 @@ class _SearchScreenState extends State<SearchScreen> {
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
-        onTap: () => debugPrint("$label 클릭됨"),
+        onTap: onTap ?? () => debugPrint("$label 클릭됨"),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           child: Row(
@@ -496,39 +532,33 @@ class _SearchScreenState extends State<SearchScreen> {
     bool isSaved = item['type'] == 'saved'; // 저장은 노란별, 최근은 초록핀
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: Color(0xFFE0E0E0))),
       ),
       child: Material(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
         child: InkWell(
-          borderRadius: BorderRadius.circular(16),
           onTap: () => debugPrint("${item['name']} 선택됨"),
           child: Padding(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 4, // 리스트 형태라 패딩 조절
+              vertical: 12,
+            ),
             child: Row(
               children: [
                 // 아이콘 원형 배경
                 Container(
-                  width: 40,
-                  height: 40,
+                  width: 32,
+                  height: 32,
                   decoration: BoxDecoration(
                     color: isSaved
                         ? const Color(0xFFFFF9C4)
-                        : const Color(0xFFE8FDF0), // 노랑(집) vs 연두(최근)
+                        : const Color(0xFFE8FDF0),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
                     item['name'] == '집'
-                        ? Icons.home
+                        ? Icons.home_rounded
                         : (item['name'] == '회사' || item['name'] == '학교'
                               ? (item['name'] == '회사'
                                     ? Icons.work
@@ -539,41 +569,37 @@ class _SearchScreenState extends State<SearchScreen> {
                     color: isSaved
                         ? const Color(0xFFFBC02D)
                         : const Color(0xFF00C853),
-                    size: 22,
+                    size: 18,
                   ),
                 ),
-                const SizedBox(width: 14),
+                const SizedBox(width: 12),
                 // 텍스트 정보
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        item['name'],
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF101727),
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        item['address'],
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Color(0xFF4A5565),
-                        ),
-                      ),
-                    ],
+                  child: Text(
+                    item['name'],
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.normal,
+                      color: Color(0xFF101727),
+                    ),
                   ),
                 ),
-                // 오른쪽 시계 아이콘
-                const Icon(
-                  Icons.access_time,
-                  size: 16,
-                  color: Color(0xFF9EA6B8),
+                // 삭제 버튼 (X 아이콘)
+                InkWell(
+                  onTap: () {
+                    setState(() {
+                      _recentSearches.remove(item);
+                    });
+                  },
+                  borderRadius: BorderRadius.circular(20),
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: const Icon(
+                      Icons.close,
+                      size: 16,
+                      color: Color(0xFF9EA6B8),
+                    ),
+                  ),
                 ),
               ],
             ),

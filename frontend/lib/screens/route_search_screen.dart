@@ -7,8 +7,9 @@ import 'package:latlong2/latlong.dart';
 
 class RouteSearchScreen extends StatefulWidget {
   final LatLng? userLocation;
+  final Map<String, dynamic>? destination;
 
-  const RouteSearchScreen({super.key, this.userLocation});
+  const RouteSearchScreen({super.key, this.userLocation, this.destination});
 
   @override
   State<RouteSearchScreen> createState() => _RouteSearchScreenState();
@@ -42,6 +43,11 @@ class _RouteSearchScreenState extends State<RouteSearchScreen> {
     // 1. 출발지 기본 값은 현재위치
     _startPlace = _currentLocationPlace;
     _fetchCurrentAddress();
+
+    // 2. 도착지가 전달되었으면 설정
+    if (widget.destination != null) {
+      _endPlace = widget.destination;
+    }
   }
 
   Future<void> _fetchCurrentAddress() async {

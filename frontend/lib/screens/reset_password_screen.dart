@@ -54,8 +54,16 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
                   // 1. 로고 영역
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisAlignment: MainAxisAlignment.start,
                     children: [
+                      IconButton(
+                        icon: const Icon(
+                          Icons.arrow_back,
+                          color: Color(0xFF354152),
+                        ),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                      const SizedBox(width: 8),
                       Container(
                         width: 32,
                         height: 32,
@@ -215,7 +223,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
                         // [버튼 3] 로그인으로 가기
                         Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             const Text(
                               '계정이 없으신가요?',

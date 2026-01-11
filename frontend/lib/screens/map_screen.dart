@@ -288,7 +288,7 @@ class _MapScreenState extends State<MapScreen> {
                           _buildRecentDestinationItem(
                             '집',
                             '서울시 서초구 서초동 567-89',
-                            Icons.business_rounded,
+                            Icons.home_rounded,
                           ),
                           const SizedBox(height: 12),
                           _buildRecentDestinationItem(
