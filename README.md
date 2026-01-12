@@ -348,13 +348,34 @@ Supabase SQL Editor에서 실행
 SUPABASE_URL=https://abcdefg.supabase.co
 SUPABASE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6...
 
-kakaoapi 키 값도 추가해야됨.
-
 # 경사도 데이터 설정
 USE_PRECOMPUTED_EDGES=true   # 사전 계산 데이터 사용 (권장)
 USE_DEM_ELEVATION=false      # 실시간 API 사용 (비권장)
 DEM_SAMPLE_INTERVAL=5        # 샘플링 간격 (m) - 샘플링 간격 5m로 미리 db에 저장 작업함.
 ```
+
+---
+
+## 👥 팀원별 작업 가이드
+
+### 🖥️ 앱 팀 (Flutter)
+- `POST /route` API 연동
+- 경로 geometry를 지도에 표시
+- 장애물 제보 시 `POST /obstacle` 호출
+
+### 🖧 서버 팀
+- `main_server.py` 관리
+- Supabase 연동 및 데이터 관리
+- API 추가/수정
+
+### 🤖 AI 팀 (YOLOv8)
+- 장애물 인식 후 `POST /obstacle` 호출
+- `obstacle_type` 설정 (stairs, construction 등)
+
+### 📊 알고리즘 팀
+- `route_algorithm.py` 가중치 조정
+- `osm_parser.py` 필터링 로직 수정
+- 새로운 경로 모드 추가
 
 ---
 
@@ -371,6 +392,4 @@ A: `.env` 파일에 올바른 SUPABASE_URL과 SUPABASE_KEY가 설정되어 있�
 
 ### Q: 지역을 변경하고 싶어요
 A: `osm_parser.py`의 `BBOX_NORTH/SOUTH/EAST/WEST` 값을 수정 후 `preprocess_edges.py`를 다시 실행.
-    
-    *경사도 전처리 때문에 박스는 바꿀거면 미리 보고.*
-
+    ㄴ경사도 전처리 때문에 박스는 바꿀거면 미리 보고.

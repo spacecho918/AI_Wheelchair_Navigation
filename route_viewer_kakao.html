@@ -282,6 +282,29 @@
             position: relative;
             flex: 1;
         }
+
+        /* 휠체어 유형 선택 드롭다운 */
+        .wheelchair-select {
+            padding: 10px 14px;
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            background: white;
+            color: #495057;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .wheelchair-select:hover {
+            border-color: #764ba2;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+        }
+
+        .wheelchair-select:focus {
+            outline: none;
+            border-color: #764ba2;
+        }
     </style>
 </head>
 
@@ -303,6 +326,14 @@
             <div class="stat">
                 <div class="stat-value" id="mode">-</div>
                 <div class="stat-label">모드</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="wheelchair-display">🦽 수동</div>
+                <div class="stat-label">휠체어 유형</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="dataSource">-</div>
+                <div class="stat-label">데이터 소스</div>
             </div>
         </div>
     </div>
@@ -329,6 +360,14 @@
         <button class="btn-primary" onclick="searchRoute('short')">🚀 최단</button>
         <button class="btn-safe" onclick="searchRoute('safe')">🛡️ 안전</button>
         <button class="btn-optimal" onclick="searchRoute('optimal')">⚖️ 최적</button>
+
+        <select id="wheelchairType" class="wheelchair-select" onchange="updateWheelchairDisplay()">
+            <option value="electric">⚡ 전동휠체어 (6km/h)</option>
+            <option value="manual" selected>🦽 수동휠체어 (3km/h)</option>
+            <option value="manual_with_helper">👥 수동+보호자 (3.5km/h)</option>
+            <option value="none">🚶 휠체어 미사용 (4.5km/h)</option>
+        </select>
+
         <button class="btn-secondary" onclick="toggleResult()">📋 JSON</button>
         <button class="btn-secondary" onclick="toggleObstacles()">⚠️ 장애물</button>
 
@@ -552,9 +591,28 @@
             optimal: '#f5576c'
         };
 
+        // 휠체어 유형 표시 업데이트
+        function updateWheelchairDisplay() {
+            const wheelchairType = document.getElementById('wheelchairType').value;
+            document.getElementById('wheelchair-display').textContent = getWheelchairLabel(wheelchairType);
+        }
+
+        function getWheelchairLabel(type) {
+            const labels = {
+                electric: '⚡ 전동',
+                manual: '🦽 수동',
+                manual_with_helper: '👥 수동+보호자',
+                none: '🚶 미사용'
+            };
+            return labels[type] || type;
+        }
+
         async function searchRoute(mode) {
             const loading = document.getElementById('loading');
             loading.classList.add('show');
+
+            // 선택된 휠체어 유형 가져오기
+            const wheelchairType = document.getElementById('wheelchairType').value;
 
             try {
                 const response = await fetch('http://localhost:8000/route', {
@@ -565,7 +623,8 @@
                         start_lon: startCoord.lng,
                         end_lat: endCoord.lat,
                         end_lon: endCoord.lng,
-                        mode: mode
+                        mode: mode,
+                        wheelchair_type: wheelchairType
                     })
                 });
 
@@ -576,7 +635,22 @@
                     document.getElementById('distance').textContent = data.route.distance.toFixed(1) + 'm';
                     document.getElementById('time').textContent = data.route.estimated_time + '분';
                     document.getElementById('mode').textContent = getModeLabel(mode);
+                    document.getElementById('wheelchair-display').textContent = getWheelchairLabel(wheelchairType);
                     document.getElementById('result').textContent = JSON.stringify(data, null, 2);
+
+                    // 데이터 소스 표시 (경사도 데이터가 어디서 왔는지)
+                    const sourceEl = document.getElementById('dataSource');
+                    const edgeSource = data.route.edge_data_source || 'none';
+                    if (edgeSource === 'database') {
+                        sourceEl.textContent = '🗄️ DB';
+                        sourceEl.style.color = '#38ef7d';
+                    } else if (edgeSource === 'json') {
+                        sourceEl.textContent = '📁 JSON';
+                        sourceEl.style.color = '#f39c12';
+                    } else {
+                        sourceEl.textContent = '❌ 없음';
+                        sourceEl.style.color = '#e74c3c';
+                    }
                 } else {
                     alert('경로 탐색 실패: ' + (data.message || '알 수 없는 오류'));
                 }
@@ -601,27 +675,7 @@
         createObstacleMarkers();
         startInput.value = startCoord.name;
         endInput.value = endCoord.name;
-
-        // 초기 경로
-        const initialRoute = [
-            [37.3398324, 126.7322196], [37.3400384, 126.7327613], [37.3406947, 126.7333346],
-            [37.3412571, 126.7324818], [37.3416653, 126.7329086], [37.3418943, 126.7328392],
-            [37.3423622, 126.7320654], [37.34238, 126.7320446], [37.3437069, 126.7332937],
-            [37.3438029, 126.7333862], [37.3447539, 126.7343085], [37.3452437, 126.7347766],
-            [37.3457582, 126.7352817], [37.3462302, 126.7357285], [37.3468525, 126.7363289],
-            [37.3469731, 126.7364453], [37.3473665, 126.7368249], [37.3485765, 126.7380022],
-            [37.3499843, 126.739351], [37.3500949, 126.7394577], [37.3502533, 126.7396186],
-            [37.3505835, 126.7399587], [37.3514449, 126.7407494], [37.3515404, 126.7407438],
-            [37.3519823, 126.7409937], [37.3516827, 126.7420372], [37.3516209, 126.7422523],
-            [37.3515747, 126.7427226], [37.3515972, 126.7427353]
-        ];
-
-        drawRoute(initialRoute);
-        document.getElementById('distance').textContent = '1,911.5m';
-        document.getElementById('time').textContent = '32분';
-        document.getElementById('mode').textContent = '초기';
     </script>
 </body>
-
 
 </html>

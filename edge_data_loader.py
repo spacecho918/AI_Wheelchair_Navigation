@@ -45,6 +45,7 @@ class EdgeDataLoader:
         self.supabase_key = supabase_key or os.getenv("SUPABASE_KEY", "")
         self.client = None
         self.edges_data: Dict[str, EdgeInfo] = {}
+        self.last_source: str = "none"  # 데이터 소스 추적: "database", "json", "none"
         
         if self.supabase_url and self.supabase_key:
             self._init_supabase()
@@ -115,6 +116,7 @@ class EdgeDataLoader:
                 )
                 self.edges_data[edge_info.edge_id] = edge_info
             
+            self.last_source = "database"
             return self.edges_data
             
         except Exception as e:
@@ -162,6 +164,7 @@ class EdgeDataLoader:
                 self.edges_data[edge_info.edge_id] = edge_info
             
             logger.info(f"JSON에서 {len(self.edges_data)}개 엣지 로드 완료")
+            self.last_source = "json"
             return self.edges_data
             
         except Exception as e:

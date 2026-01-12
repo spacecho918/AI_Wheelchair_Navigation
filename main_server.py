@@ -19,7 +19,7 @@ load_dotenv()
 
 # 내부 모듈
 from osm_parser import OSMGraphBuilder, KOREA_TECH_LAT, KOREA_TECH_LON, JEONGWANG_STATION_LAT, JEONGWANG_STATION_LON
-from route_algorithm import RouteCalculator, RouteResult
+from route_algorithm import RouteCalculator, RouteResult, WheelchairType
 from obstacle_manager import ObstacleManager, Obstacle
 from edge_data_loader import EdgeDataLoader
 from dataclasses import asdict
@@ -49,6 +49,7 @@ graph_builder: Optional[OSMGraphBuilder] = None
 route_calculator: Optional[RouteCalculator] = None
 obstacle_manager: Optional[ObstacleManager] = None
 is_initialized = False
+edge_data_source: str = "none"  # 경사도 데이터 소스: "database", "json", "none"
 
 
 # ===== Pydantic 모델 =====
@@ -62,6 +63,10 @@ class RouteRequest(BaseModel):
     mode: Literal["short", "safe", "optimal"] = Field(
         default="optimal",
         description="경로 모드: short(최단), safe(안전), optimal(최적)"
+    )
+    wheelchair_type: Literal["electric", "manual", "manual_with_helper", "none"] = Field(
+        default="manual",
+        description="휠체어 유형: electric(전동), manual(수동), manual_with_helper(수동+보호자), none(미사용)"
     )
 
 
@@ -90,7 +95,7 @@ class TestMsg(BaseModel):
 
 def initialize_system():
     """시스템 초기화 - 그래프 로드 및 설정"""
-    global graph_builder, route_calculator, obstacle_manager, is_initialized
+    global graph_builder, route_calculator, obstacle_manager, is_initialized, edge_data_source
     
     if is_initialized:
         return True
@@ -132,8 +137,10 @@ def initialize_system():
                 
                 if edges:
                     graph, applied = edge_loader.apply_to_graph(graph)
-                    logger.info(f"사전 계산된 경사도 데이터 적용: {applied}개 엣지")
+                    edge_data_source = edge_loader.last_source  # 데이터 소스 저장
+                    logger.info(f"사전 계산된 경사도 데이터 적용: {applied}개 엣지 (소스: {edge_data_source})")
                 else:
+                    edge_data_source = "none"
                     logger.warning("사전 계산된 데이터 없음. 먼저 preprocess_edges.py 실행 필요")
                     logger.info("기본 경사도(0)를 사용합니다.")
                     
@@ -217,25 +224,64 @@ async def route_viewer_osm():
 
 @app.get("/graph")
 async def graph_viewer():
-    """전체 그래프 뷰어"""
-    return FileResponse("graph_viewer.html")
+    """전체 그래프 뷰어 (Kakao Maps)"""
+    with open("graph_viewer.html", "r", encoding="utf-8") as f:
+        content = f.read()
+    
+    # API 키 주입
+    kakao_key = os.getenv("KAKAO_JAVASCRIPT_KEY", "")
+    content = content.replace("__KAKAO_KEY__", kakao_key)
+    
+    return HTMLResponse(content=content)
 
 
 @app.get("/edges_data.json")
 async def edges_data():
-    """엣지 데이터 JSON (graph_viewer.html용) - DB 연동"""
+    """엣지 데이터 JSON - DB 우선, JSON 폴백"""
     try:
-        # DB에서 데이터 로드 (실패 시 로컬 JSON 폴백)
         loader = EdgeDataLoader()
         edges_map = loader.load(prefer_db=True)
         
-        # 리스트 형태로 변환
         result = [asdict(edge) for edge in edges_map.values()]
         return result
     except Exception as e:
         logger.error(f"엣지 데이터 로드 실패: {e}")
-        # 오류 발생 시 빈 리스트 또는 에러 메시지
         return []
+
+
+@app.get("/api/edges")
+async def get_edges_from_db():
+    """엣지 데이터 API - DB(Supabase)에서 직접 조회 (실패시 에러 반환)"""
+    try:
+        loader = EdgeDataLoader()
+        
+        # Supabase DB에서만 조회 시도
+        edges_map = loader.load_from_supabase()
+        
+        if edges_map:
+            result = [asdict(edge) for edge in edges_map.values()]
+            return {
+                "success": True,
+                "source": "database",
+                "count": len(result),
+                "edges": result
+            }
+        else:
+            # DB에서 데이터를 못 가져온 경우
+            return {
+                "success": False,
+                "source": "none",
+                "message": "DB에서 데이터를 가져올 수 없습니다",
+                "edges": []
+            }
+    except Exception as e:
+        logger.error(f"DB 엣지 데이터 조회 실패: {e}")
+        return {
+            "success": False,
+            "source": "error",
+            "message": str(e),
+            "edges": []
+        }
 
 
 @app.get("/api")
@@ -273,7 +319,7 @@ async def initialize():
 @app.post("/route", response_model=RouteResponse)
 async def find_route(request: RouteRequest):
     """
-    경로 탐색 API
+    경로 탐색 
     
     3가지 모드 지원:
     - short: 최단 거리 (약간의 불편함 허용)
@@ -291,13 +337,14 @@ async def find_route(request: RouteRequest):
             raise HTTPException(status_code=500, detail="시스템 초기화 실패")
     
     try:
-        # 경로 탐색
+        # 경로 탐색 (모드 + 휠체어 유형 적용)
         result: RouteResult = route_calculator.find_route(
             start_lat=request.start_lat,
             start_lon=request.start_lon,
             end_lat=request.end_lat,
             end_lon=request.end_lon,
-            mode=request.mode
+            mode=request.mode,
+            wheelchair_type=request.wheelchair_type
         )
         
         if result.success:
@@ -310,7 +357,9 @@ async def find_route(request: RouteRequest):
                     "geometry": result.geometry,
                     "avoided_obstacles": result.avoided_obstacles,
                     "mode": result.mode,
-                    "total_weight": result.total_weight
+                    "wheelchair_type": request.wheelchair_type,
+                    "total_weight": result.total_weight,
+                    "edge_data_source": edge_data_source  # 경사도 데이터 소스
                 }
             )
         else:
@@ -351,7 +400,7 @@ async def compare_routes(request: RouteRequest):
             request.end_lat
         )
         
-        results = route_calculator.compare_routes(start_node, end_node)
+        results = route_calculator.compare_routes(start_node, end_node, request.wheelchair_type)
         
         return {
             "success": True,

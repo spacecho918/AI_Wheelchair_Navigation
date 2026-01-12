@@ -101,6 +101,149 @@
             width: 20px;
             height: 3px;
         }
+
+        /* 엣지 정보 패널 스타일 */
+        .edge-info-panel {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 420px;
+            max-width: calc(100vw - 40px);
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            padding: 20px;
+            z-index: 1000;
+            display: none;
+            animation: slideIn 0.3s ease-out;
+            border: 1px solid rgba(52, 152, 219, 0.2);
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .edge-info-panel.show {
+            display: block;
+        }
+
+        .edge-info-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #3498db;
+        }
+
+        .edge-info-header h3 {
+            font-size: 1.1rem;
+            color: #2c3e50;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .close-btn {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .close-btn:hover {
+            background: #c0392b;
+            transform: scale(1.1);
+        }
+
+        .edge-info-content {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .info-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            background: rgba(52, 152, 219, 0.08);
+            border-radius: 10px;
+            transition: all 0.2s;
+        }
+
+        .info-row:hover {
+            background: rgba(52, 152, 219, 0.15);
+            transform: translateX(5px);
+        }
+
+        .info-icon {
+            font-size: 1.2rem;
+            width: 30px;
+            text-align: center;
+        }
+
+        .info-label {
+            font-size: 0.85rem;
+            color: #7f8c8d;
+            min-width: 60px;
+        }
+
+        .info-value {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #2c3e50;
+            flex: 1;
+            word-break: break-all;
+        }
+
+        /* 경사도 배지 */
+        .grade-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .grade-low {
+            background: rgba(39, 174, 96, 0.2);
+            color: #27ae60;
+        }
+
+        .grade-mid {
+            background: rgba(243, 156, 18, 0.2);
+            color: #f39c12;
+        }
+
+        .grade-high {
+            background: rgba(231, 76, 60, 0.2);
+            color: #e74c3c;
+        }
+
+        /* 선택된 엣지 하이라이트 */
+        .leaflet-interactive.selected {
+            stroke-width: 6 !important;
+            opacity: 1 !important;
+        }
     </style>
 </head>
 
@@ -110,6 +253,7 @@
         <div class="stats">
             <div class="stat">총 엣지: <strong id="edgeCount">로딩 중...</strong></div>
             <div class="stat">표시 중: <strong id="visibleCount">0</strong>개</div>
+            <div class="stat" id="dataSourceBadge">📂 데이터 소스: <strong id="dataSource">확인 중...</strong></div>
         </div>
     </div>
     <div class="controls">
@@ -126,6 +270,51 @@
     </div>
     <div id="map"></div>
 
+    <!-- 엣지 정보 패널 -->
+    <div class="edge-info-panel" id="edgeInfoPanel">
+        <div class="edge-info-header">
+            <h3>📍 엣지 정보</h3>
+            <button class="close-btn" onclick="closeEdgeInfo()">✕</button>
+        </div>
+        <div class="edge-info-content">
+            <div class="info-row">
+                <span class="info-icon">🆔</span>
+                <span class="info-label">ID</span>
+                <span class="info-value" id="edge-id">-</span>
+            </div>
+            <div class="info-row">
+                <span class="info-icon">📐</span>
+                <span class="info-label">경사도</span>
+                <span class="info-value" id="edge-grade">-</span>
+            </div>
+            <div class="info-row">
+                <span class="info-icon">📏</span>
+                <span class="info-label">거리</span>
+                <span class="info-value" id="edge-length">-</span>
+            </div>
+            <div class="info-row">
+                <span class="info-icon">🛤️</span>
+                <span class="info-label">노면</span>
+                <span class="info-value" id="edge-surface">-</span>
+            </div>
+            <div class="info-row">
+                <span class="info-icon">🛣️</span>
+                <span class="info-label">도로</span>
+                <span class="info-value" id="edge-highway">-</span>
+            </div>
+            <div class="info-row">
+                <span class="info-icon">📍</span>
+                <span class="info-label">시작점</span>
+                <span class="info-value" id="edge-start">-</span>
+            </div>
+            <div class="info-row">
+                <span class="info-icon">🏁</span>
+                <span class="info-label">끝점</span>
+                <span class="info-value" id="edge-end">-</span>
+            </div>
+        </div>
+    </div>
+
     <script>
         // 지도 초기화
         const map = L.map('map').setView([37.3460, 126.7370], 15);
@@ -139,19 +328,50 @@
 
         let edgesData = [];
         let edgeLayers = [];
+        let selectedEdge = null;
 
-        // edges_data.json 로드
-        fetch('edges_data.json')
-            .then(res => res.json())
-            .then(data => {
-                edgesData = data;
-                document.getElementById('edgeCount').textContent = data.length + '개';
+        // 데이터 로드 (DB 우선, 실패 시 JSON 폴백)
+        async function loadEdgesData() {
+            const dataSourceEl = document.getElementById('dataSource');
+
+            // 1차: DB API 시도
+            try {
+                const response = await fetch('/api/edges');
+                if (response.ok) {
+                    const result = await response.json();
+                    // API 응답 형식: { success, source, count, edges }
+                    if (result.success && result.edges && result.edges.length > 0) {
+                        edgesData = result.edges;
+                        document.getElementById('edgeCount').textContent = result.count + '개';
+                        dataSourceEl.textContent = '🗄️ Database';
+                        dataSourceEl.style.color = '#2ecc71';
+                        showAllEdges();
+                        return;
+                    }
+                }
+            } catch (err) {
+                console.log('DB API 사용 불가, JSON 파일로 폴백:', err);
+            }
+
+            // 2차: JSON 파일 폴백
+            try {
+                const response = await fetch('edges_data.json');
+                const data = await response.json();
+                // JSON은 배열 형태 또는 { edges: [] } 형태일 수 있음
+                edgesData = Array.isArray(data) ? data : (data.edges || []);
+                document.getElementById('edgeCount').textContent = edgesData.length + '개';
+                dataSourceEl.textContent = '📄 JSON 파일';
+                dataSourceEl.style.color = '#f39c12';
                 showAllEdges();
-            })
-            .catch(err => {
+            } catch (err) {
                 document.getElementById('edgeCount').textContent = '로드 실패';
-                console.error('edges_data.json 로드 실패:', err);
-            });
+                dataSourceEl.textContent = '❌ 로드 실패';
+                dataSourceEl.style.color = '#e74c3c';
+                console.error('데이터 로드 실패:', err);
+            }
+        }
+
+        loadEdgesData();
 
         function getGradeColor(grade) {
             if (grade <= 5) return '#27ae60';  // 녹색 (완만)
@@ -159,10 +379,60 @@
             return '#e74c3c';                   // 빨강 (급경사)
         }
 
+        function getGradeClass(grade) {
+            if (grade <= 5) return 'grade-low';
+            if (grade <= 10) return 'grade-mid';
+            return 'grade-high';
+        }
+
+        function getGradeLabel(grade) {
+            if (grade <= 5) return '완만';
+            if (grade <= 10) return '중간';
+            return '급경사';
+        }
+
         function clearEdges() {
             edgeLayers.forEach(layer => map.removeLayer(layer));
             edgeLayers = [];
             document.getElementById('visibleCount').textContent = '0';
+            closeEdgeInfo();
+        }
+
+        function showEdgeInfo(edge, layer) {
+            // 이전 선택 해제
+            if (selectedEdge) {
+                selectedEdge.getElement()?.classList.remove('selected');
+            }
+
+            // 새로운 선택
+            selectedEdge = layer;
+            layer.getElement()?.classList.add('selected');
+
+            const grade = edge.grade || 0;
+            const gradeClass = getGradeClass(grade);
+            const gradeLabel = getGradeLabel(grade);
+
+            document.getElementById('edge-id').textContent = edge.edge_id || '-';
+            document.getElementById('edge-grade').innerHTML = `
+                <span class="grade-badge ${gradeClass}">
+                    ${grade.toFixed(1)}° (${gradeLabel})
+                </span>
+            `;
+            document.getElementById('edge-length').textContent = (edge.length || 0).toFixed(1) + 'm';
+            document.getElementById('edge-surface').textContent = edge.surface_type || 'unknown';
+            document.getElementById('edge-highway').textContent = edge.highway_type || 'unknown';
+            document.getElementById('edge-start').textContent = `${edge.start_lat?.toFixed(5)}, ${edge.start_lon?.toFixed(5)}`;
+            document.getElementById('edge-end').textContent = `${edge.end_lat?.toFixed(5)}, ${edge.end_lon?.toFixed(5)}`;
+
+            document.getElementById('edgeInfoPanel').classList.add('show');
+        }
+
+        function closeEdgeInfo() {
+            document.getElementById('edgeInfoPanel').classList.remove('show');
+            if (selectedEdge) {
+                selectedEdge.getElement()?.classList.remove('selected');
+                selectedEdge = null;
+            }
         }
 
         function showAllEdges() {
@@ -177,13 +447,24 @@
                     opacity: 0.7
                 }).addTo(map);
 
-                line.bindPopup(`
-                    <b>ID:</b> ${edge.edge_id}<br>
-                    <b>경사도:</b> ${(edge.grade || 0).toFixed(1)}°<br>
-                    <b>거리:</b> ${(edge.length || 0).toFixed(1)}m<br>
-                    <b>노면:</b> ${edge.surface_type || 'unknown'}<br>
-                    <b>도로:</b> ${edge.highway_type || 'unknown'}
-                `);
+                // 클릭 이벤트 추가
+                line.on('click', function (e) {
+                    L.DomEvent.stopPropagation(e);
+                    showEdgeInfo(edge, line);
+                });
+
+                // 호버 효과
+                line.on('mouseover', function () {
+                    if (this !== selectedEdge) {
+                        this.setStyle({ weight: 5, opacity: 0.9 });
+                    }
+                });
+                line.on('mouseout', function () {
+                    if (this !== selectedEdge) {
+                        this.setStyle({ weight: 3, opacity: 0.7 });
+                    }
+                });
+
                 edgeLayers.push(line);
             });
             document.getElementById('visibleCount').textContent = edgeLayers.length;
@@ -212,12 +493,24 @@
                     opacity: 0.9
                 }).addTo(map);
 
-                line.bindPopup(`
-                    <b>ID:</b> ${edge.edge_id}<br>
-                    <b>경사도:</b> ${(edge.grade || 0).toFixed(1)}°<br>
-                    <b>거리:</b> ${(edge.length || 0).toFixed(1)}m<br>
-                    <b>노면:</b> ${edge.surface_type || 'unknown'}
-                `);
+                // 클릭 이벤트 추가
+                line.on('click', function (e) {
+                    L.DomEvent.stopPropagation(e);
+                    showEdgeInfo(edge, line);
+                });
+
+                // 호버 효과
+                line.on('mouseover', function () {
+                    if (this !== selectedEdge) {
+                        this.setStyle({ weight: 6, opacity: 1 });
+                    }
+                });
+                line.on('mouseout', function () {
+                    if (this !== selectedEdge) {
+                        this.setStyle({ weight: 4, opacity: 0.9 });
+                    }
+                });
+
                 edgeLayers.push(line);
             });
             document.getElementById('visibleCount').textContent = edgeLayers.length;
@@ -233,6 +526,11 @@
                 document.querySelector('.controls button:first-child').classList.add('btn-active');
             }
         }
+
+        // 지도 클릭 시 정보 패널 닫기
+        map.on('click', function () {
+            closeEdgeInfo();
+        });
     </script>
 </body>
 

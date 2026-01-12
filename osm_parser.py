@@ -124,8 +124,8 @@ class OSMGraphBuilder:
     def filter_wheelchair_accessible(self, graph: nx.MultiDiGraph) -> nx.MultiDiGraph:
         """
         휠체어 통행 불가능한 엣지 필터링
-        - 계단(steps) 제거
-        - 경사도 높은 구간 필터링
+        - 에스컬레이터, 공사 구간은 제거
+        - 계단(steps)은 제거하지 않고 is_stairs 플래그 표시 (휠체어 미사용 시 허용)
         - 비포장도로 필터링
         
         Args:
@@ -136,10 +136,14 @@ class OSMGraphBuilder:
         """
         logger.info("휠체어 통행 불가능 구간 필터링 중...")
         
-        # 필터링할 highway 타입
-        inaccessible_types = {'steps', 'escalator', 'construction'}
+        # 필터링할 highway 타입 (계단은 제거하지 않음 - 휠체어 미사용자 허용)
+        inaccessible_types = {'escalator', 'construction'}
+        
+        # 계단 타입 (제거하지 않고 표시만)
+        stairs_types = {'steps'}
         
         edges_to_remove = []
+        stairs_marked = 0
         
         for u, v, key, data in graph.edges(keys=True, data=True):
             highway = data.get('highway', '')
@@ -150,26 +154,31 @@ class OSMGraphBuilder:
             else:
                 highway_set = {highway}
             
-            # 통행 불가능 타입 체크
+            # 에스컬레이터, 공사 구간 제거
             if highway_set & inaccessible_types:
                 edges_to_remove.append((u, v, key))
                 continue
             
-            # 계단 태그 체크
-            if data.get('stairs') == 'yes':
-                edges_to_remove.append((u, v, key))
-                continue
+            # 계단 표시 (제거하지 않음)
+            if highway_set & stairs_types or data.get('stairs') == 'yes':
+                data['is_stairs'] = True
+                stairs_marked += 1
+            else:
+                data['is_stairs'] = False
                 
             # 휠체어 접근 불가 태그 체크
             wheelchair = data.get('wheelchair', '')
             if wheelchair in ['no', 'limited']:
-                edges_to_remove.append((u, v, key))
+                # 제거 대신 표시만 (휠체어 미사용 시 허용)
+                data['wheelchair_restricted'] = True
+            else:
+                data['wheelchair_restricted'] = False
         
-        # 엣지 제거
+        # 엣지 제거 (에스컬레이터, 공사 구간만)
         for u, v, key in edges_to_remove:
             graph.remove_edge(u, v, key)
         
-        logger.info(f"필터링 완료: {len(edges_to_remove)}개 엣지 제거")
+        logger.info(f"필터링 완료: {len(edges_to_remove)}개 엣지 제거, {stairs_marked}개 계단 표시")
         
         # 고립된 노드 제거
         isolated_nodes = list(nx.isolates(graph))
