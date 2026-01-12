@@ -78,7 +78,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
       }
       if (permission == LocationPermission.deniedForever) return;
 
-      Position position = await Geolocator.getCurrentPosition();
+      await Geolocator.getCurrentPosition();
       // Location retrieved successfully
     } catch (e) {
       debugPrint('Error getting location: $e');

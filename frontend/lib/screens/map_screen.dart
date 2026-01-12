@@ -390,7 +390,7 @@ class _MapScreenState extends State<MapScreen> {
                                 BoxShadow(
                                   color: const Color(
                                     0xFF00C853,
-                                  ).withOpacity(0.3),
+                                  ).withValues(alpha: 0.3),
                                   blurRadius: 20,
                                   offset: const Offset(0, 8),
                                 ),

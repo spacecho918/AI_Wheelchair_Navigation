@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:gilbeot/widgets/custom_back_button.dart';
+import 'package:gilbeot/screens/report_edit_screen.dart';
 
 class CommunityDetailScreen extends StatefulWidget {
   final Map<String, dynamic> report;
@@ -370,7 +371,15 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                       SizedBox(
                         width: double.infinity,
                         child: OutlinedButton.icon(
-                          onPressed: () {},
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    ReportEditScreen(report: widget.report),
+                              ),
+                            );
+                          },
                           icon: Icon(
                             Icons.edit_outlined,
                             size: 16,
