@@ -27,9 +27,11 @@ class ObstacleCheckScreen extends StatefulWidget {
 class _ObstacleCheckScreenState extends State<ObstacleCheckScreen> {
   static const Color _mainColor = Color(0xFF00C853);
 
-  // 현재 선택된 장애물 ID
-  late String selectedId;
-  final TextEditingController _textController = TextEditingController();
+  // 현재 선택된 장애물 IDs
+  late Set<String> _selectedIds;
+
+  // 기타 입력 관리
+  final List<TextEditingController> _otherControllers = [];
 
   // 장애물 데이터 리스트 (파일명과 라벨 매칭)
   final List<Map<String, String>> obstacles = [
@@ -48,12 +50,46 @@ class _ObstacleCheckScreenState extends State<ObstacleCheckScreen> {
   @override
   void initState() {
     super.initState();
-    // 초기 선택값 설정 (목록에 없으면 첫 번째 값)
-    final exists = obstacles.any((e) => e['id'] == widget.initialObstacle);
-    selectedId = exists ? widget.initialObstacle : 'stairs';
+    // 초기 선택값 설정
+    _selectedIds = {};
 
-    // 텍스트 필드 변경 감지하여 버튼 상태 업데이트
-    _textController.addListener(_onTextChanged);
+    // 기본적으로 기타 입력창 하나 추가
+    _addOtherInput();
+
+    final exists = obstacles.any((e) => e['id'] == widget.initialObstacle);
+    if (exists) {
+      _selectedIds.add(widget.initialObstacle);
+    } else {
+      if (widget.initialObstacle.isNotEmpty) {
+        _selectedIds.add('stairs');
+      }
+    }
+    if (!exists) {
+      _selectedIds.add('stairs');
+    }
+  }
+
+  void _addOtherInput() {
+    final controller = TextEditingController();
+    controller.addListener(_onTextChanged);
+    setState(() {
+      _otherControllers.add(controller);
+    });
+  }
+
+  void _removeOtherInput(int index) {
+    if (_otherControllers.length > 1) {
+      final controller = _otherControllers[index];
+      controller.removeListener(_onTextChanged);
+      controller.dispose();
+      setState(() {
+        _otherControllers.removeAt(index);
+      });
+    } else {
+      // 하나 남았을 때는 내용만 지움? 아니면 삭제 불가?
+      // 보통 하나는 남겨둠.
+      _otherControllers[0].clear();
+    }
   }
 
   void _onTextChanged() {
@@ -62,7 +98,9 @@ class _ObstacleCheckScreenState extends State<ObstacleCheckScreen> {
 
   @override
   void dispose() {
-    _textController.dispose();
+    for (var controller in _otherControllers) {
+      controller.dispose();
+    }
     super.dispose();
   }
 
@@ -82,13 +120,13 @@ class _ObstacleCheckScreenState extends State<ObstacleCheckScreen> {
                 : Container(color: Colors.black), // 사진 없을 때
           ),
 
-          // 2. 검은색 반투명 오버레이 (바텀 시트가 올라올 때 뒤를 살짝 어둡게 하려면 추가)
+          // 2. 검은색 반투명 오버레이
           // Positioned.fill(child: Container(color: Colors.black.withOpacity(0.3))),
 
           // 3. 위아래로 움직이는 대시보드 (DraggableSheet)
           DraggableScrollableSheet(
             initialChildSize: 0.65, // 하단 텍스트가 딱 보일 정도의 높이
-            minChildSize: 0.2, // 최소 높이 (더 아래로 내려가도록 수정)
+            minChildSize: 0.2, // 최소 높이
             maxChildSize: 0.95, // 최대 높이
             builder: (BuildContext context, ScrollController scrollController) {
               return Container(
@@ -124,15 +162,18 @@ class _ObstacleCheckScreenState extends State<ObstacleCheckScreen> {
                       ),
 
                       // 타이틀
-                      Text(
-                        '이 장애물이 ${_getLabel(selectedId)}인가요?', // 동적 타이틀
-                        style: const TextStyle(
+                      const Text(
+                        '해당하는 장애물을 선택해주세요',
+                        style: TextStyle(
                           fontSize: 21,
                           fontWeight: FontWeight.bold,
                           color: Color(0xFF101727),
                         ),
                       ),
                       const SizedBox(height: 8),
+                      // Subtitle removed or kept? "AI가 감지한 결과입니다..." might not fit "Multi-select".
+                      // Keeping it generic or removing.
+                      // Let's keep a generic instruction.
                       const Text(
                         'AI가 감지한 결과입니다. 맞는지 확인하거나 선택해주세요.',
                         style: TextStyle(
@@ -146,27 +187,32 @@ class _ObstacleCheckScreenState extends State<ObstacleCheckScreen> {
                       GridView.builder(
                         padding: EdgeInsets.zero,
                         shrinkWrap: true, // ScrollView 안에 있으므로 필수
-                        physics:
-                            const NeverScrollableScrollPhysics(), // 스크롤 막음 (바깥 스크롤 사용)
+                        physics: const NeverScrollableScrollPhysics(), // 스크롤 막음
                         itemCount: obstacles.length,
                         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount:
                               MediaQuery.of(context).size.width > 600 ? 3 : 2,
-                          mainAxisExtent: 90, // 고정 높이 적용 (더 줄임)
+                          mainAxisExtent: 90, // 고정 높이
                           crossAxisSpacing: 12,
                           mainAxisSpacing: 12,
                         ),
                         itemBuilder: (context, index) {
                           final item = obstacles[index];
-                          final isSelected = selectedId == item['id'];
+                          final isSelected = _selectedIds.contains(item['id']);
 
                           return GestureDetector(
                             onTap: () {
                               setState(() {
-                                selectedId = item['id']!;
-                                // 기타가 아닌 다른 것 선택 시 텍스트 필드 초기화 (선택 사항)
-                                if (selectedId != 'other') {
-                                  _textController.clear();
+                                if (isSelected) {
+                                  _selectedIds.remove(item['id']);
+                                } else {
+                                  _selectedIds.add(item['id']!);
+                                }
+
+                                // 기타 해제 시 텍스트 필드 클리어? (Optional, maybe keep it)
+                                if (item['id'] == 'other' && isSelected) {
+                                  // removed other
+                                  // _textController.clear(); // Keep text just in case user re-selects
                                 }
                               });
                             },
@@ -176,7 +222,7 @@ class _ObstacleCheckScreenState extends State<ObstacleCheckScreen> {
                       ),
 
                       // 기타 선택 시 입력창 표시
-                      if (selectedId == 'other') ...[
+                      if (_selectedIds.contains('other')) ...[
                         const SizedBox(height: 20),
                         Container(
                           width: double.infinity,
@@ -189,38 +235,109 @@ class _ObstacleCheckScreenState extends State<ObstacleCheckScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
-                                '장애물 설명', // Describe the obstacle
-                                style: TextStyle(
-                                  color: Colors.black,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                ),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text(
+                                    '장애물 설명', // Describe the obstacle
+                                    style: TextStyle(
+                                      color: Colors.black,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                  // 추가 버튼
+                                  GestureDetector(
+                                    onTap: _addOtherInput,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: _mainColor.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: const [
+                                          Icon(
+                                            Icons.add,
+                                            size: 14,
+                                            color: _mainColor,
+                                          ),
+                                          SizedBox(width: 4),
+                                          Text(
+                                            '추가',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: _mainColor,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                               const SizedBox(height: 10),
-                              TextField(
-                                controller: _textController,
-                                onChanged: (_) => setState(() {}),
-                                decoration: InputDecoration(
-                                  hintText: '예: 파손된 보도블록, 쓰러진 나무 등',
-                                  hintStyle: const TextStyle(
-                                    color: Color(0xFF9CA3AF),
-                                    fontSize: 14,
+
+                              // 입력창 리스트
+                              ...List.generate(_otherControllers.length, (
+                                index,
+                              ) {
+                                return Padding(
+                                  padding: const EdgeInsets.only(bottom: 8.0),
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: TextField(
+                                          controller: _otherControllers[index],
+                                          onChanged: (_) => setState(() {}),
+                                          decoration: InputDecoration(
+                                            hintText: '예: 파손된 보도블록, 쓰러진 나무 등',
+                                            hintStyle: const TextStyle(
+                                              color: Color(0xFF9CA3AF),
+                                              fontSize: 14,
+                                            ),
+                                            filled: true,
+                                            fillColor: const Color(0xFFF3F4F6),
+                                            border: OutlineInputBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              borderSide: BorderSide.none,
+                                            ),
+                                            contentPadding:
+                                                const EdgeInsets.symmetric(
+                                                  horizontal: 12,
+                                                  vertical: 12,
+                                                ),
+                                          ),
+                                          style: const TextStyle(fontSize: 14),
+                                        ),
+                                      ),
+                                      if (_otherControllers.length > 1)
+                                        Padding(
+                                          padding: const EdgeInsets.only(
+                                            left: 8.0,
+                                          ),
+                                          child: GestureDetector(
+                                            onTap: () =>
+                                                _removeOtherInput(index),
+                                            child: const Icon(
+                                              Icons.remove_circle_outline,
+                                              color: Color(0xFF9CA3AF),
+                                            ),
+                                          ),
+                                        ),
+                                    ],
                                   ),
-                                  filled: true,
-                                  fillColor: const Color(0xFFF3F4F6),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                    borderSide: BorderSide.none,
-                                  ),
-                                  contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 12,
-                                  ),
-                                ),
-                                style: const TextStyle(fontSize: 14),
-                              ),
-                              const SizedBox(height: 8),
+                                );
+                              }),
+
+                              const SizedBox(height: 4),
                               const Text(
                                 '장애물의 종류를 입력해 주세요.',
                                 style: TextStyle(
@@ -240,29 +357,51 @@ class _ObstacleCheckScreenState extends State<ObstacleCheckScreen> {
                         width: double.infinity,
                         height: 56,
                         child: ElevatedButton(
-                          onPressed:
-                              (selectedId == 'other' &&
-                                  _textController.text.trim().isEmpty)
+                          onPressed: _isSubmitDisabled()
                               ? null
                               : () async {
-                                  if (selectedId == 'other') {
-                                    final text = _textController.text.trim();
-                                    debugPrint('최종 선택 (기타): $text');
-                                  } else {
-                                    debugPrint('최종 선택: $selectedId');
+                                  // Construct final types and IDs
+
+                                  // IDs
+                                  final List<String> finalIds = [];
+                                  final List<String> finalLabels = [];
+
+                                  for (String id in _selectedIds) {
+                                    if (id == 'other') {
+                                      //Add each non-empty custom input
+                                      for (var controller
+                                          in _otherControllers) {
+                                        if (controller.text.trim().isNotEmpty) {
+                                          finalIds.add('other');
+                                          finalLabels.add(
+                                            controller.text.trim(),
+                                          );
+                                        }
+                                      }
+                                    } else {
+                                      finalIds.add(id);
+                                      final label = obstacles.firstWhere(
+                                        (e) => e['id'] == id,
+                                      )['label']!;
+                                      finalLabels.add(label);
+                                    }
                                   }
+
+                                  final String joinedIds = finalIds.join(', ');
+                                  final String joinedLabels = finalLabels.join(
+                                    ', ',
+                                  );
+
+                                  debugPrint(
+                                    '최종 선택: $joinedLabels ($joinedIds)',
+                                  );
+
                                   // 제보 확인 화면에서 왔다면 결과 반환하고 종료
                                   if (widget.fromConfirm) {
-                                    final label = obstacles.firstWhere(
-                                      (e) => e['id'] == selectedId,
-                                      orElse: () => {'label': selectedId},
-                                    )['label'];
                                     Navigator.pop(context, {
                                       'imagePath': widget.imagePath,
-                                      'obstacleType': selectedId == 'other'
-                                          ? _textController.text.trim()
-                                          : label,
-                                      'obstacleId': selectedId,
+                                      'obstacleType': joinedLabels,
+                                      'obstacleId': joinedIds,
                                     });
                                     return;
                                   }
@@ -286,11 +425,6 @@ class _ObstacleCheckScreenState extends State<ObstacleCheckScreen> {
                                   if (result != null && result is Map) {
                                     if (!mounted) return;
 
-                                    final label = obstacles.firstWhere(
-                                      (e) => e['id'] == selectedId,
-                                      orElse: () => {'label': selectedId},
-                                    )['label'];
-
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
@@ -299,11 +433,8 @@ class _ObstacleCheckScreenState extends State<ObstacleCheckScreen> {
                                               location: result['latlng'],
                                               address: result['address'],
                                               imagePath: widget.imagePath,
-                                              obstacleType:
-                                                  selectedId == 'other'
-                                                  ? _textController.text.trim()
-                                                  : label,
-                                              obstacleId: selectedId,
+                                              obstacleType: joinedLabels,
+                                              obstacleId: joinedIds,
                                               fromNavigation:
                                                   widget.fromNavigation,
                                             ),
@@ -316,11 +447,7 @@ class _ObstacleCheckScreenState extends State<ObstacleCheckScreen> {
                             foregroundColor: Colors.white,
                             disabledBackgroundColor: const Color(0xFFF3F4F6),
                             disabledForegroundColor: const Color(0xFF9CA3AF),
-                            elevation:
-                                (selectedId == 'other' &&
-                                    _textController.text.trim().isEmpty)
-                                ? 0
-                                : 5,
+                            elevation: _isSubmitDisabled() ? 0 : 5,
                             shadowColor: const Color(0x3F00C853),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16),
@@ -352,7 +479,7 @@ class _ObstacleCheckScreenState extends State<ObstacleCheckScreen> {
             },
           ),
 
-          // 4. 뒤로가기 버튼 (상단 왼쪽)
+          // 4. 뒤로가기 버튼
           Positioned(
             left: 0,
             top: 0,
@@ -368,7 +495,7 @@ class _ObstacleCheckScreenState extends State<ObstacleCheckScreen> {
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.1),
+                          color: Colors.black.withOpacity(0.1),
                           blurRadius: 10,
                           offset: const Offset(0, 4),
                         ),
@@ -387,6 +514,24 @@ class _ObstacleCheckScreenState extends State<ObstacleCheckScreen> {
         ],
       ),
     );
+  }
+
+  bool _isSubmitDisabled() {
+    if (_selectedIds.isEmpty) return true;
+    if (_selectedIds.contains('other')) {
+      // Check if ALL text fields are empty
+      // Actually, we require AT LEAST ONE if 'other' is selected?
+      // Let's say if 'other' is selected, at least one text field must have content.
+      bool hasContent = false;
+      for (var c in _otherControllers) {
+        if (c.text.trim().isNotEmpty) {
+          hasContent = true;
+          break;
+        }
+      }
+      if (!hasContent) return true;
+    }
+    return false;
   }
 
   // 선택 카드 위젯
@@ -448,9 +593,5 @@ class _ObstacleCheckScreenState extends State<ObstacleCheckScreen> {
         ],
       ),
     );
-  }
-
-  String _getLabel(String id) {
-    return obstacles.firstWhere((e) => e['id'] == id)['label']!;
   }
 }

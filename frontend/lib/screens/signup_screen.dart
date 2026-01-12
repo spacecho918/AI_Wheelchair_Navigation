@@ -14,6 +14,7 @@ class SignupScreen extends StatefulWidget {
 class _SignupScreenState extends State<SignupScreen> {
   // Controllers
   final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _nicknameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController =
@@ -29,6 +30,7 @@ class _SignupScreenState extends State<SignupScreen> {
   void initState() {
     super.initState();
     _nameController.addListener(_validateForm);
+    _nicknameController.addListener(_validateForm);
     _emailController.addListener(_validateForm);
     _passwordController.addListener(_validateForm);
     _confirmPasswordController.addListener(_validateForm);
@@ -37,6 +39,7 @@ class _SignupScreenState extends State<SignupScreen> {
   @override
   void dispose() {
     _nameController.dispose();
+    _nicknameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
@@ -56,6 +59,7 @@ class _SignupScreenState extends State<SignupScreen> {
 
     // Check all fields
     final isNameFilled = _nameController.text.isNotEmpty;
+    final isNicknameFilled = _nicknameController.text.isNotEmpty;
     final isEmailFilled = _emailController.text.isNotEmpty;
     final isPasswordFilled = _passwordController.text.isNotEmpty;
     final isConfirmFilled = _confirmPasswordController.text.isNotEmpty;
@@ -66,6 +70,7 @@ class _SignupScreenState extends State<SignupScreen> {
       _isPasswordMatch = isPasswordMatch;
       _isFormValid =
           isNameFilled &&
+          isNicknameFilled &&
           isEmailFilled &&
           isPasswordFilled &&
           isConfirmFilled &&
@@ -181,6 +186,12 @@ class _SignupScreenState extends State<SignupScreen> {
                         const SizedBox(height: 30),
 
                         _buildTextField('이름', '이름을 입력하세요', _nameController),
+                        const SizedBox(height: 16),
+                        _buildTextField(
+                          '닉네임',
+                          '닉네임을 입력하세요',
+                          _nicknameController,
+                        ),
                         const SizedBox(height: 16),
 
                         _buildTextField(

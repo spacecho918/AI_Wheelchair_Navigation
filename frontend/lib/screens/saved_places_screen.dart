@@ -1,15 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:gilbeot/screens/location_search_screen.dart';
 
 class SavedPlacesScreen extends StatefulWidget {
-  const SavedPlacesScreen({super.key});
+  final int initialTabIndex;
+
+  const SavedPlacesScreen({super.key, this.initialTabIndex = 0});
 
   @override
   State<SavedPlacesScreen> createState() => _SavedPlacesScreenState();
 }
 
 class _SavedPlacesScreenState extends State<SavedPlacesScreen> {
-  // 0: 전체, 1: 즐겨찾기, 2: 저장됨
+  // 0: 전체, 1: 내 장소, 2: 즐겨찾기
   int _selectedTabIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedTabIndex = widget.initialTabIndex;
+  }
 
   // Mock Data
   final List<Map<String, dynamic>> _allPlaces = [
@@ -26,36 +35,11 @@ class _SavedPlacesScreenState extends State<SavedPlacesScreen> {
       'icon':
           'assets/document_icon.svg', // Using document as placeholder for work if no suitcase
     },
-    {
-      'type': 'saved',
-      'name': '강남역',
-      'address': '서울시 강남구 강남대로 지하 396',
-      'time': '2시간 전',
-    },
-    {
-      'type': 'saved',
-      'name': '코엑스몰',
-      'address': '서울시 강남구 영동대로 513',
-      'time': '1일 전',
-    },
-    {
-      'type': 'saved',
-      'name': '서울대학교병원',
-      'address': '서울시 종로구 연건동 101',
-      'time': '5일 전',
-    },
-    {
-      'type': 'saved',
-      'name': '한강공원',
-      'address': '서울시 영등포구 여의도동',
-      'time': '5일 전',
-    },
-    {
-      'type': 'saved',
-      'name': '국립중앙박물관',
-      'address': '서울시 용산구 서빙고로 137',
-      'time': '7일 전',
-    },
+    {'type': 'saved', 'name': '강남역', 'address': '서울시 강남구 강남대로 지하 396'},
+    {'type': 'saved', 'name': '코엑스몰', 'address': '서울시 강남구 영동대로 513'},
+    {'type': 'saved', 'name': '서울대학교병원', 'address': '서울시 종로구 연건동 101'},
+    {'type': 'saved', 'name': '한강공원', 'address': '서울시 영등포구 여의도동'},
+    {'type': 'saved', 'name': '국립중앙박물관', 'address': '서울시 용산구 서빙고로 137'},
   ];
 
   @override
@@ -78,6 +62,30 @@ class _SavedPlacesScreenState extends State<SavedPlacesScreen> {
             fontWeight: FontWeight.w600,
           ),
         ),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Center(
+              child: ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF00C853),
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 0,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  minimumSize: const Size(64, 32),
+                ),
+                child: const Text('저장'),
+              ),
+            ),
+          ),
+        ],
       ),
       body: SafeArea(
         child: Column(
@@ -89,9 +97,9 @@ class _SavedPlacesScreenState extends State<SavedPlacesScreen> {
                 children: [
                   _buildTabButton(0, '전체'),
                   const SizedBox(width: 8),
-                  _buildTabButton(1, '즐겨찾기'),
+                  _buildTabButton(1, '내 장소'),
                   const SizedBox(width: 8),
-                  _buildTabButton(2, '저장됨'),
+                  _buildTabButton(2, '즐겨찾기'),
                 ],
               ),
             ),
@@ -115,8 +123,24 @@ class _SavedPlacesScreenState extends State<SavedPlacesScreen> {
                 width: double.infinity,
                 height: 56,
                 child: ElevatedButton(
-                  onPressed: () {
-                    // TODO: Implement add place logic
+                  onPressed: () async {
+                    final result = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const LocationSearchScreen(),
+                      ),
+                    );
+
+                    if (result != null && result is Map) {
+                      setState(() {
+                        _allPlaces.add({
+                          'type': 'saved',
+                          'name': result['name'],
+                          'address': result['address'],
+                        });
+                      });
+                      _showToast('장소가 추가되었습니다.');
+                    }
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF00C853),
@@ -131,7 +155,7 @@ class _SavedPlacesScreenState extends State<SavedPlacesScreen> {
                       Icon(Icons.add, color: Colors.white),
                       SizedBox(width: 8),
                       Text(
-                        '새 장소 추가',
+                        '새 즐겨찾기 추가',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 16,
@@ -147,6 +171,53 @@ class _SavedPlacesScreenState extends State<SavedPlacesScreen> {
         ),
       ),
     );
+  }
+
+  void _deletePlace(Map<String, dynamic> place) {
+    setState(() {
+      if (place['type'] == 'home' || place['type'] == 'work') {
+        final index = _allPlaces.indexOf(place);
+        if (index != -1) {
+          _allPlaces[index] = {...place, 'address': ''};
+        }
+      } else {
+        _allPlaces.remove(place);
+      }
+    });
+
+    _showToast('장소가 삭제되었습니다.');
+  }
+
+  void _showToast(String message) {
+    late OverlayEntry overlayEntry;
+    overlayEntry = OverlayEntry(
+      builder: (context) => Positioned(
+        bottom: 100.0,
+        left: 0.0,
+        right: 0.0,
+        child: Material(
+          color: Colors.transparent,
+          child: Center(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.4),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Text(
+                message,
+                style: const TextStyle(color: Colors.white, fontSize: 14),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    Overlay.of(context).insert(overlayEntry);
+    Future.delayed(const Duration(seconds: 2), () {
+      overlayEntry.remove();
+    });
   }
 
   Widget _buildTabButton(int index, String text) {
@@ -218,39 +289,91 @@ class _SavedPlacesScreenState extends State<SavedPlacesScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  place['name'],
-                  style: const TextStyle(
-                    color: Color(0xFF101727),
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  place['address'],
-                  style: const TextStyle(
-                    color: Color(0xFF4A5565),
-                    fontSize: 12,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                if (place['time'] != null) ...[
-                  const SizedBox(height: 2),
+                if (isSaved && place['type'] == 'work')
+                  GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        place['name'] = place['name'] == '회사' ? '학교' : '회사';
+                      });
+                    },
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          place['name'],
+                          style: const TextStyle(
+                            color: Color(0xFF101727),
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        const Icon(
+                          Icons.swap_horiz,
+                          size: 14,
+                          color: Colors.grey,
+                        ),
+                      ],
+                    ),
+                  )
+                else
                   Text(
-                    place['time'],
+                    place['name'],
                     style: const TextStyle(
-                      color: Color(0xFF9CA3AF),
-                      fontSize: 11,
+                      color: Color(0xFF101727),
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                ],
+                const SizedBox(height: 2),
+                if (place['address'] != null && place['address'].isNotEmpty)
+                  Text(
+                    place['address'],
+                    style: const TextStyle(
+                      color: Color(0xFF4A5565),
+                      fontSize: 12,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
               ],
             ),
           ),
-          // Arrow
-          const Icon(Icons.chevron_right, color: Color(0xFF9EA6B8), size: 20),
+          // Edit Button
+          if (place['type'] == 'home' || place['type'] == 'work')
+            IconButton(
+              onPressed: () async {
+                final result = await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const LocationSearchScreen(),
+                  ),
+                );
+
+                if (result != null && result is Map) {
+                  setState(() {
+                    final index = _allPlaces.indexOf(place);
+                    if (index != -1) {
+                      bool isHomeOrWork =
+                          place['type'] == 'home' || place['type'] == 'work';
+                      _allPlaces[index] = {
+                        ...place,
+                        'name': isHomeOrWork ? place['name'] : result['name'],
+                        'address': result['address'],
+                      };
+                    }
+                  });
+                  _showToast('장소가 수정되었습니다.');
+                }
+              },
+              icon: const Icon(Icons.edit, color: Color(0xFF9EA6B8)),
+            ),
+          // Delete Button
+          if (place['type'] == 'saved')
+            IconButton(
+              onPressed: () => _deletePlace(place),
+              icon: const Icon(Icons.close, color: Color(0xFF9EA6B8)),
+            ),
         ],
       ),
     );
@@ -263,7 +386,7 @@ class _SavedPlacesScreenState extends State<SavedPlacesScreen> {
       case 'work':
         return Icons.work;
       case 'saved':
-        return Icons.bookmark;
+        return Icons.star;
       default:
         return Icons.location_on_outlined;
     }

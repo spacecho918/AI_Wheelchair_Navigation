@@ -95,93 +95,84 @@ class _HistoryScreenState extends State<HistoryScreen> {
             ),
             Container(height: 1, color: const Color(0xFFF0F2F5)),
 
+            // 1. Filter Tabs (Now Fixed)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+              child: Row(
+                children: List.generate(_filters.length, (index) {
+                  final isSelected = _selectedFilterIndex == index;
+                  return Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _selectedFilterIndex = index;
+                        });
+                      },
+                      child: Container(
+                        margin: EdgeInsets.only(
+                          right: index == _filters.length - 1 ? 0 : 8,
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        decoration: BoxDecoration(
+                          color: isSelected ? primaryGreen : Colors.white,
+                          borderRadius: BorderRadius.circular(25),
+                          border: Border.all(
+                            color: isSelected
+                                ? primaryGreen
+                                : const Color(0xFFE5E7EB),
+                          ),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          _filters[index],
+                          style: TextStyle(
+                            color: isSelected ? Colors.white : textGrey,
+                            fontSize: 14,
+                            fontWeight: isSelected
+                                ? FontWeight.w600
+                                : FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                }),
+              ),
+            ),
+
+            const Divider(height: 1, thickness: 1, color: Color(0xFFF0F2F5)),
+            const SizedBox(height: 20),
+
+            // 2. Summary Cards (Now Fixed)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
+                children: [
+                  _buildSummaryCard(
+                    '총 이동 거리',
+                    '42.1km',
+                    '이번 주',
+                    Icons.route_outlined,
+                    isGreenIcon: true,
+                  ),
+                  const SizedBox(width: 6),
+                  _buildSummaryCard(
+                    '주행 횟수',
+                    '5회',
+                    '이번 주',
+                    Icons.trending_up_rounded,
+                    isGreenIcon: true,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+
             Expanded(
               child: SingleChildScrollView(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // 1. Filter Tabs
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
-                      child: Row(
-                        children: List.generate(_filters.length, (index) {
-                          final isSelected = _selectedFilterIndex == index;
-                          return Expanded(
-                            child: GestureDetector(
-                              onTap: () {
-                                setState(() {
-                                  _selectedFilterIndex = index;
-                                });
-                              },
-                              child: Container(
-                                margin: EdgeInsets.only(
-                                  right: index == _filters.length - 1 ? 0 : 8,
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 12,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: isSelected
-                                      ? primaryGreen
-                                      : Colors.white,
-                                  borderRadius: BorderRadius.circular(25),
-                                  border: Border.all(
-                                    color: isSelected
-                                        ? primaryGreen
-                                        : const Color(0xFFE5E7EB),
-                                  ),
-                                ),
-                                alignment: Alignment.center,
-                                child: Text(
-                                  _filters[index],
-                                  style: TextStyle(
-                                    color: isSelected ? Colors.white : textGrey,
-                                    fontSize: 14,
-                                    fontWeight: isSelected
-                                        ? FontWeight.w600
-                                        : FontWeight.w500,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          );
-                        }),
-                      ),
-                    ),
-
-                    const Divider(
-                      height: 1,
-                      thickness: 1,
-                      color: Color(0xFFF0F2F5),
-                    ),
-                    const SizedBox(height: 20),
-
-                    // 2. Summary Cards
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: Row(
-                        children: [
-                          _buildSummaryCard(
-                            '총 이동 거리',
-                            '42.1km',
-                            '이번 주',
-                            Icons.route_outlined,
-                            isGreenIcon: true,
-                          ),
-                          const SizedBox(width: 6),
-                          _buildSummaryCard(
-                            '주행 횟수',
-                            '5회',
-                            '이번 주',
-                            Icons.trending_up_rounded,
-                            isGreenIcon: true,
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 24),
-
                     // 3. Recent History Label
                     Padding(
                       padding: const EdgeInsets.only(left: 24, bottom: 12),

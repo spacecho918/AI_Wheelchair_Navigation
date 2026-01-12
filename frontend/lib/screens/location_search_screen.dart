@@ -222,7 +222,7 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
                         );
 
                         if (result != null && result is Map && mounted) {
-                          // Return result to FavoritesEditScreen
+                          // Return result to MyPlacesEditScreen
                           Navigator.pop(context, {
                             'latlng': result['latlng'],
                             'name':

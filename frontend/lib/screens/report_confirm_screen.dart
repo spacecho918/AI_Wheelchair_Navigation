@@ -281,15 +281,11 @@ class _ReportConfirmScreenState extends State<ReportConfirmScreen> {
   }
 
   Widget _buildObstacleCard(BuildContext context) {
-    String imageAsset = 'assets/stairs.png'; // default
-    if (_currentObstacleId != null) {
-      final found = _obstacleData.firstWhere(
-        (e) => e['id'] == _currentObstacleId,
-        orElse: () => {},
-      );
-      if (found.isNotEmpty) {
-        imageAsset = found['image']!;
-      }
+    List<String> ids = [];
+    if (_currentObstacleId != null && _currentObstacleId!.isNotEmpty) {
+      ids = _currentObstacleId!.split(',').map((e) => e.trim()).toList();
+    } else {
+      ids.add('stairs'); // default
     }
 
     return Container(
@@ -307,19 +303,22 @@ class _ReportConfirmScreenState extends State<ReportConfirmScreen> {
       ),
       child: Row(
         children: [
-          Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              border: Border.all(
-                color: const Color(0xFF00C853).withValues(alpha: 0.3),
-              ),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            padding: const EdgeInsets.all(8),
-            child: Image.asset(imageAsset),
+          // Render icons (max 3 with overlapping logic or +N)
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (ids.length <= 3)
+                ...ids.map((id) => _buildIconContainer(id))
+              else ...[
+                _buildIconContainer(ids[0]),
+                _buildIconContainer(ids[1]),
+                _buildPlusContainer(ids.length - 2),
+              ],
+            ],
           ),
-          const SizedBox(width: 16),
+
+          const SizedBox(width: 8), // Adjusted spacing
+
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -335,6 +334,8 @@ class _ReportConfirmScreenState extends State<ReportConfirmScreen> {
                     fontWeight: FontWeight.bold,
                     color: Color(0xFF101727),
                   ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
@@ -587,5 +588,54 @@ class _ReportConfirmScreenState extends State<ReportConfirmScreen> {
         await _loadMap();
       }
     }
+  }
+
+  Widget _buildIconContainer(String id) {
+    String imageAsset = 'assets/stairs.png'; // fallback
+    final found = _obstacleData.firstWhere(
+      (e) => e['id'] == id,
+      orElse: () => {},
+    );
+    if (found.isNotEmpty) {
+      imageAsset = found['image']!;
+    }
+    return Container(
+      width: 50,
+      height: 50,
+      margin: const EdgeInsets.only(right: 8),
+      decoration: BoxDecoration(
+        border: Border.all(
+          color: const Color(0xFF00C853).withValues(alpha: 0.3),
+        ),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      padding: const EdgeInsets.all(8),
+      child: Image.asset(imageAsset),
+    );
+  }
+
+  Widget _buildPlusContainer(int count) {
+    return Container(
+      width: 50,
+      height: 50,
+      margin: const EdgeInsets.only(right: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF0FDF4),
+        border: Border.all(
+          color: const Color(0xFF00C853).withValues(alpha: 0.3),
+        ),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Center(
+        child: Text(
+          '+$count',
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF00C853),
+          ),
+        ),
+      ),
+    );
   }
 }

@@ -265,12 +265,16 @@ class _ReportEditScreenState extends State<ReportEditScreen> {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    Text(
-                      widget.report['user'] ?? 'User',
-                      style: TextStyle(
-                        color: textDark,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
+                    Expanded(
+                      child: Text(
+                        widget.report['content'] ?? '내용 없음',
+                        style: TextStyle(
+                          color: textDark,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],

@@ -85,7 +85,7 @@ class ReportSuccessScreen extends StatelessWidget {
                 const SizedBox(height: 12),
                 // Subtitle
                 const Text(
-                  '안전한 길을 만드는 데 도움을 주셔서 감사합니다.\n제보 내용이 성공적으로 등록되었습니다.',
+                  '안전한 길을 만드는 데 도움 주셔서 감사합니다.\n제보 내용이 성공적으로 등록되었습니다.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 14,
