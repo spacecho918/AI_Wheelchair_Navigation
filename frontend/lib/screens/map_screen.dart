@@ -26,6 +26,8 @@ class MapScreen extends StatefulWidget {
 
 class _MapScreenState extends State<MapScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  final DraggableScrollableController _sheetController =
+      DraggableScrollableController();
   WebViewController? _mapController;
   latlong.LatLng? _mapCenter;
   latlong.LatLng? _currentLocation;
@@ -400,9 +402,12 @@ class _MapScreenState extends State<MapScreen> {
           // 3 & 4. 대시보드 및 신고 버튼
           // ---------------------------------------------------------
           DraggableScrollableSheet(
+            controller: _sheetController,
             initialChildSize: 0.45,
             minChildSize: 0.20,
             maxChildSize: 0.85,
+            snap: true,
+            snapSizes: const [0.20, 0.45, 0.85],
             builder: (BuildContext context, ScrollController scrollController) {
               return PointerInterceptor(
                 child: Stack(
@@ -432,18 +437,37 @@ class _MapScreenState extends State<MapScreen> {
                             const ClampingScrollPhysics(), // [수정 2] 탭을 잡아도 창이 딸려오게 하는 물리 효과
                         padding: const EdgeInsets.fromLTRB(21, 10, 21, 30),
                         children: [
-                          // Handle Bar
-                          Center(
+                          // Handle Bar - Draggable
+                          GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onVerticalDragUpdate: (details) {
+                              final screenHeight = MediaQuery.of(
+                                context,
+                              ).size.height;
+                              final delta = -details.delta.dy / screenHeight;
+                              final currentSize = _sheetController.size;
+                              final newSize = (currentSize + delta).clamp(
+                                0.20,
+                                0.85,
+                              );
+                              _sheetController.jumpTo(newSize);
+                            },
                             child: Container(
-                              width: 42,
-                              height: 5,
-                              margin: const EdgeInsets.only(bottom: 24),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFD1D5DC),
-                                borderRadius: BorderRadius.circular(100),
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              child: Center(
+                                child: Container(
+                                  width: 42,
+                                  height: 5,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFD1D5DC),
+                                    borderRadius: BorderRadius.circular(100),
+                                  ),
+                                ),
                               ),
                             ),
                           ),
+                          const SizedBox(height: 12),
 
                           // 1. Recent Destinations
                           _buildSectionHeader('최근 목적지', () {
