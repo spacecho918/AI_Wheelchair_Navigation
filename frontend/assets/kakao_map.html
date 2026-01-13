@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <!-- 
       TODO: Replace YOUR_KAKAO_JAVASCRIPT_KEY with your actual Kakao JavaScript Key.
       Ensure you have registered the domain used in WebView's baseUrl (e.g., https://gilbeot.app) in the Kakao Developers Console.
@@ -17,11 +17,14 @@
             padding: 0;
             width: 100%;
             height: 100%;
+            overflow: hidden;
+            touch-action: manipulation;
         }
 
         #map {
             width: 100%;
             height: 100%;
+            touch-action: pan-x pan-y;
         }
     </style>
 </head>

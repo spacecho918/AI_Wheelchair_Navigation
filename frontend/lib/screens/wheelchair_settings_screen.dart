@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gilbeot/widgets/custom_back_button.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class WheelchairSettingsScreen extends StatefulWidget {
   const WheelchairSettingsScreen({super.key});
@@ -106,12 +107,16 @@ class _WheelchairSettingsScreenState extends State<WheelchairSettingsScreen> {
                       type: 'Manual',
                       title: '수동 휠체어',
                       subtitle: '수동 휠체어를 사용합니다',
-                      iconPath: 'assets/wheelchair.png',
+                      iconPath: 'assets/wheelchair_icon.svg',
+                      iconWidth: 28,
+                    ),
+                    const SizedBox(height: 12),
+                    _buildOptionCard(
+                      type: 'CaregiverManual',
+                      title: '보호자 동반 수동 휠체어',
+                      subtitle: '보호자와 함께 수동 휠체어를 사용합니다',
+                      iconData: Icons.person,
                       iconWidth: 34,
-                      iconAlignment: const Alignment(
-                        0,
-                        -1.2,
-                      ), // Move up slightly
                     ),
                     const SizedBox(height: 12),
                     _buildOptionCard(
@@ -132,7 +137,7 @@ class _WheelchairSettingsScreenState extends State<WheelchairSettingsScreen> {
                       decoration: BoxDecoration(
                         color: const Color(
                           0xFFE3F2FD,
-                        ).withValues(alpha: 0.5), // Light blue
+                        ).withOpacity(0.5), // Light blue
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(color: const Color(0xFFBBDEFB)),
                       ),
@@ -163,6 +168,8 @@ class _WheelchairSettingsScreenState extends State<WheelchairSettingsScreen> {
                           _buildInfoItem('전동: 경사로와 엘리베이터를 우선적으로 고려'),
                           const SizedBox(height: 4),
                           _buildInfoItem('수동: 가장 평평하고 쉬운 경로 추천'),
+                          const SizedBox(height: 4),
+                          _buildInfoItem('보호자 동반 수동: 보호자의 도움으로 이동 가능한 경로 추천'),
                           const SizedBox(height: 4),
                           _buildInfoItem('사용 안함: 일반 보행자 경로 추천'),
                         ],
@@ -196,7 +203,8 @@ class _WheelchairSettingsScreenState extends State<WheelchairSettingsScreen> {
     required String type,
     required String title,
     required String subtitle,
-    required String iconPath,
+    String? iconPath,
+    IconData? iconData,
     bool isXIcon = false,
     double? iconWidth,
     AlignmentGeometry? iconAlignment,
@@ -223,7 +231,7 @@ class _WheelchairSettingsScreenState extends State<WheelchairSettingsScreen> {
           boxShadow: [
             if (!isSelected) // Slight shadow for unselected to look like card
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
+                color: Colors.black.withOpacity(0.05),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -236,15 +244,39 @@ class _WheelchairSettingsScreenState extends State<WheelchairSettingsScreen> {
               width: 40, // Adjust size
               height: 40,
               alignment: iconAlignment ?? Alignment.center,
-              child: Image.asset(
-                iconPath,
-                width:
-                    iconWidth ??
-                    (isXIcon ? 22 : 28), // X icon might need size adjustment
-                color: isSelected
-                    ? const Color(0xFF00C853)
-                    : const Color(0xFF4A5565), // Green or Dark Grey
-              ),
+              child: iconData != null
+                  ? Icon(
+                      iconData,
+                      size: iconWidth ?? 28,
+                      color: isSelected
+                          ? const Color(0xFF00C853)
+                          : const Color(0xFF4A5565),
+                    )
+                  : (iconPath != null && iconPath.endsWith('.svg'))
+                  ? SvgPicture.asset(
+                      iconPath,
+                      width: iconWidth ?? 28,
+                      colorFilter: ColorFilter.mode(
+                        isSelected
+                            ? const Color(0xFF00C853)
+                            : const Color(0xFF4A5565),
+                        BlendMode.srcIn,
+                      ),
+                    )
+                  : Image.asset(
+                      iconPath!,
+                      width:
+                          iconWidth ??
+                          (isXIcon
+                              ? 22
+                              : 28), // X icon might need size adjustment
+                      color: isSelected
+                          ? const Color(0xFF00C853)
+                          : const Color(0xFF4A5565), // Green or Dark Grey
+                    ),
+            ),
+            const SizedBox(
+              width: 16,
             ), // Or specific coloring per icon? Image shows Flash is Yellow/Orange when active?
             // Actually image shows:
             // Electric: Flash icon is Yellow/Orange.

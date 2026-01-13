@@ -61,10 +61,12 @@ class _SearchScreenState extends State<SearchScreen> {
   // 검색 로직 (Kakao Local API)
   Future<void> _searchPlaces(String query) async {
     if (query.isEmpty) {
+      if (!mounted) return;
       setState(() => _searchResults = []);
       return;
     }
 
+    if (!mounted) return;
     setState(() => _isLoading = true);
 
     try {
@@ -77,12 +79,14 @@ class _SearchScreenState extends State<SearchScreen> {
         lat: lat,
         lng: lng,
       );
+      if (!mounted) return;
       setState(() {
         _searchResults = results;
         _isLoading = false;
       });
     } catch (e) {
       debugPrint("Error: $e");
+      if (!mounted) return;
       setState(() => _isLoading = false);
     }
   }

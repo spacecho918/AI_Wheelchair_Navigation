@@ -242,11 +242,37 @@ class _SignupScreenState extends State<SignupScreen> {
                         const SizedBox(height: 8),
                         Row(
                           children: [
-                            Expanded(child: _buildWheelchairOption('전동')),
+                            Expanded(
+                              child: _buildWheelchairOption(
+                                '전동',
+                                value: 'Electric',
+                              ),
+                            ),
                             const SizedBox(width: 8),
-                            Expanded(child: _buildWheelchairOption('수동')),
+                            Expanded(
+                              child: _buildWheelchairOption(
+                                '수동',
+                                value: 'Manual',
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildWheelchairOption(
+                                '보호자 동반 수동',
+                                value: 'CaregiverManual',
+                              ),
+                            ),
                             const SizedBox(width: 8),
-                            Expanded(child: _buildWheelchairOption('선택안함')),
+                            Expanded(
+                              child: _buildWheelchairOption(
+                                '선택안함',
+                                value: 'None',
+                              ),
+                            ),
                           ],
                         ),
                         const SizedBox(height: 8),
@@ -255,7 +281,7 @@ class _SignupScreenState extends State<SignupScreen> {
                           style: TextStyle(
                             color: Color(0xFF9EA6B8),
                             fontSize: 10.5,
-                          ), // Small hint text
+                          ),
                         ),
 
                         const SizedBox(height: 24),
@@ -280,9 +306,7 @@ class _SignupScreenState extends State<SignupScreen> {
                                 : null,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFF00C853),
-                              disabledBackgroundColor: const Color(
-                                0xFFE5E7EB,
-                              ), // Grey when disabled
+                              disabledBackgroundColor: const Color(0xFFE5E7EB),
                               foregroundColor: Colors.white,
                               disabledForegroundColor: const Color(0xFF9CA3AF),
                               elevation: 0,
@@ -384,12 +408,12 @@ class _SignupScreenState extends State<SignupScreen> {
     );
   }
 
-  Widget _buildWheelchairOption(String type) {
-    final isSelected = _selectedWheelchairType == type;
+  Widget _buildWheelchairOption(String label, {required String value}) {
+    final isSelected = _selectedWheelchairType == value;
     return GestureDetector(
-      onTap: () => _onWheelchairTypeSelected(type),
+      onTap: () => _onWheelchairTypeSelected(value),
       child: Container(
-        height: 48, // approximate height
+        height: 48,
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: isSelected ? const Color(0xFFE8F5E9) : Colors.white,
@@ -402,12 +426,12 @@ class _SignupScreenState extends State<SignupScreen> {
           borderRadius: BorderRadius.circular(12),
         ),
         child: Text(
-          type,
+          label,
           style: TextStyle(
             color: isSelected
                 ? const Color(0xFF00C853)
                 : const Color(0xFF101727),
-            fontSize: 13, // Adjust font size
+            fontSize: 13,
             fontWeight: FontWeight.w400,
           ),
         ),

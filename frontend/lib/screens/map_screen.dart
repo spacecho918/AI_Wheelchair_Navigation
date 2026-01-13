@@ -15,6 +15,7 @@ import 'history_screen.dart';
 import 'route_search_screen.dart'; // Import user's new screen
 import 'package:latlong2/latlong.dart' as latlong;
 import 'package:gilbeot/helpers/kakao_map_helper.dart';
+import 'wheelchair_settings_screen.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -33,6 +34,152 @@ class _MapScreenState extends State<MapScreen> {
   void initState() {
     super.initState();
     _initMapController();
+
+    // Show wheelchair setting popup after frame load
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _showWheelchairSettingDialog();
+    });
+  }
+
+  // ... (rest of initState or methods)
+
+  // Wheelchair Setting Popup
+  void _showWheelchairSettingDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      barrierColor: Colors.black.withOpacity(
+        0.5,
+      ), // Semi-transparent black background
+      builder: (context) {
+        return Dialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 400),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Close button
+                  Align(
+                    alignment: Alignment.topRight,
+                    child: GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: const Icon(
+                        Icons.close,
+                        color: Color(0xFF101727),
+                        size: 20,
+                      ),
+                    ),
+                  ),
+
+                  // Icon
+                  Container(
+                    width: 64,
+                    height: 64,
+                    padding: const EdgeInsets.all(16),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF00C853),
+                      shape: BoxShape.circle,
+                    ),
+                    child: SvgPicture.asset(
+                      'assets/wheelchair_icon.svg',
+                      colorFilter: const ColorFilter.mode(
+                        Colors.white,
+                        BlendMode.srcIn,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Title
+                  const Text(
+                    '휠체어 종류를 설정해주세요',
+                    style: TextStyle(
+                      fontSize: 18, // 20 might be too big, trying 18-20 range
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF101727),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Subtitle
+                  const Text(
+                    '정확한 경로 안내를 위해\n사용 중인 휠체어 종류가 필요합니다',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Color(0xFF6B7280), // Grey text
+                      height: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Buttons
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.pop(context); // Close dialog first
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                const WheelchairSettingsScreen(),
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF00C853),
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        '지금 설정하기',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Color(0xFFE5E7EB)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        '나중에 설정하기',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w500,
+                          color: Color(0xFF4B5563),
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
   }
 
   String? _mapError;
@@ -44,6 +191,29 @@ class _MapScreenState extends State<MapScreen> {
       if (!kIsWeb) {
         controller.setJavaScriptMode(JavaScriptMode.unrestricted);
         controller.setBackgroundColor(const Color(0x00000000));
+
+        // Add navigation delegate for debugging
+        controller.setNavigationDelegate(
+          NavigationDelegate(
+            onPageStarted: (String url) {
+              debugPrint('WebView: Page started loading: $url');
+            },
+            onPageFinished: (String url) {
+              debugPrint('WebView: Page finished loading: $url');
+            },
+            onWebResourceError: (WebResourceError error) {
+              debugPrint(
+                'WebView Error: ${error.errorCode} - ${error.description}',
+              );
+              debugPrint('WebView Error URL: ${error.url}');
+              debugPrint('WebView Error Type: ${error.errorType}');
+            },
+            onHttpError: (HttpResponseError error) {
+              debugPrint('WebView HTTP Error: ${error.response?.statusCode}');
+            },
+          ),
+        );
+
         controller.addJavaScriptChannel(
           'MapChannel',
           onMessageReceived: (JavaScriptMessage message) {
@@ -126,13 +296,13 @@ class _MapScreenState extends State<MapScreen> {
         Uri.parse('${Uri.base.origin}/kakao_map.html'),
       );
     } else {
-      String fileText = await rootBundle.loadString('assets/kakao_map.html');
-      _mapController!.loadRequest(
-        Uri.dataFromString(
-          fileText,
-          mimeType: 'text/html',
-          encoding: Encoding.getByName('utf-8'),
-        ),
+      // Load HTML content with a base URL registered in Kakao Developer Console
+      String htmlContent = await rootBundle.loadString('assets/kakao_map.html');
+
+      // Use https://gilbeot.app as base URL (registered in Kakao console)
+      await (_mapController as WebViewController).loadHtmlString(
+        htmlContent,
+        baseUrl: 'https://gilbeot.app',
       );
     }
   }
@@ -693,7 +863,7 @@ class _MapScreenState extends State<MapScreen> {
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.1),
+                          color: Colors.black.withOpacity(0.1),
                           blurRadius: 10,
                           offset: const Offset(0, 4),
                         ),
