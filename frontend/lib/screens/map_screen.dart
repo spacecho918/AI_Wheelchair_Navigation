@@ -69,13 +69,16 @@ class _MapScreenState extends State<MapScreen> {
                   // Close button
                   Align(
                     alignment: Alignment.topRight,
-                    child: GestureDetector(
-                      onTap: () => Navigator.pop(context),
-                      child: const Icon(
+                    child: IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(
                         Icons.close,
                         color: Color(0xFF101727),
                         size: 20,
                       ),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      splashRadius: 20,
                     ),
                   ),
 

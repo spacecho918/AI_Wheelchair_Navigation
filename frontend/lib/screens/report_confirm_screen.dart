@@ -127,7 +127,7 @@ class _ReportConfirmScreenState extends State<ReportConfirmScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF0FDF4),
+      backgroundColor: const Color(0xFFF5F7FA),
       body: SafeArea(
         child: Column(
           children: [

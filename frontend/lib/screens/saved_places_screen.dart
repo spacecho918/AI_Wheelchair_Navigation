@@ -109,8 +109,10 @@ class _SavedPlacesScreenState extends State<SavedPlacesScreen> {
               child: ListView.separated(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 itemCount: _filteredPlaces().length,
-                separatorBuilder: (context, index) =>
-                    const SizedBox(height: 16),
+                separatorBuilder: (context, index) => const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 4),
+                  child: Divider(height: 1, color: Color(0xFFE5E7EB)),
+                ),
                 itemBuilder: (context, index) =>
                     _buildPlaceItem(_filteredPlaces()[index]),
               ),

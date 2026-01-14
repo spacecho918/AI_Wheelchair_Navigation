@@ -100,7 +100,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
     final displayReports = getFilteredAndSortedReports();
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF5F7FA),
       body: SafeArea(
         child: Column(
           children: [
@@ -108,6 +108,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
             // Custom Header
             Container(
               height: 56,
+              color: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Stack(
                 alignment: Alignment.center,
@@ -156,159 +157,172 @@ class _CommunityScreenState extends State<CommunityScreen> {
                 ],
               ),
             ),
-            Container(color: const Color(0xFFF0F2F5), height: 1.0),
-
-            // 1. Filter Chips (Collapsible)
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              height: isFilterVisible ? 60 : 0,
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
-                  children: filters.map((filter) {
-                    final isSelected = selectedFilter == filter;
-                    return Padding(
-                      padding: const EdgeInsets.only(
-                        right: 8,
-                        top: 10,
-                        bottom: 10,
-                      ), // Adjust padding for vertical center
-                      child: ChoiceChip(
-                        label: Text(
-                          filter,
-                          style: TextStyle(
-                            color: isSelected
-                                ? Colors.white
-                                : Color(0xFF4A5565),
-                            fontSize: 14,
-                          ),
-                        ),
-                        selected: isSelected,
-                        selectedColor: primaryGreen,
-                        backgroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
-                          side: BorderSide(
-                            color: isSelected
-                                ? primaryGreen
-                                : Colors.grey.shade300,
-                          ),
-                        ),
-                        onSelected: (selected) {
-                          setState(() {
-                            selectedFilter = filter;
-                          });
-                        },
-                        showCheckmark: false,
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ),
-            ),
-
-            // 2. Sort Bar
             Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              decoration: BoxDecoration(
+              width: double.infinity,
+              decoration: const BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.1),
-                    spreadRadius: 2,
-                    blurRadius: 15,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
+                border: Border(bottom: BorderSide(color: Color(0xFFF5F7FA))),
               ),
-              child: Row(
+              child: Column(
                 children: [
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          sortOption = 'latest';
-                        });
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        decoration: BoxDecoration(
-                          color: sortOption == 'latest'
-                              ? primaryGreen
-                              : Colors.transparent,
-                          borderRadius: BorderRadius.circular(12),
+                  // 1. Filter Chips (Collapsible)
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    height: isFilterVisible ? 60 : 0,
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Row(
+                        children: filters.map((filter) {
+                          final isSelected = selectedFilter == filter;
+                          return Padding(
+                            padding: const EdgeInsets.only(
+                              right: 8,
+                              top: 10,
+                              bottom: 10,
+                            ), // Adjust padding for vertical center
+                            child: ChoiceChip(
+                              label: Text(
+                                filter,
+                                style: TextStyle(
+                                  color: isSelected
+                                      ? Colors.white
+                                      : const Color(0xFF4A5565),
+                                  fontSize: 14,
+                                ),
+                              ),
+                              selected: isSelected,
+                              selectedColor: primaryGreen,
+                              backgroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                                side: BorderSide(
+                                  color: isSelected
+                                      ? primaryGreen
+                                      : Colors.grey.shade300,
+                                ),
+                              ),
+                              onSelected: (selected) {
+                                setState(() {
+                                  selectedFilter = filter;
+                                });
+                              },
+                              showCheckmark: false,
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ),
+
+                  // 2. Sort Bar
+                  Container(
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.1),
+                          spreadRadius: 2,
+                          blurRadius: 15,
+                          offset: const Offset(0, 4),
                         ),
-                        child: Center(
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.access_time,
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                sortOption = 'latest';
+                              });
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              decoration: BoxDecoration(
                                 color: sortOption == 'latest'
-                                    ? Colors.white
-                                    : const Color(0xFF6B7280),
-                                size: 16,
+                                    ? primaryGreen
+                                    : Colors.transparent,
+                                borderRadius: BorderRadius.circular(12),
                               ),
-                              const SizedBox(width: 4),
-                              Text(
-                                '최신순',
-                                style: TextStyle(
-                                  color: sortOption == 'latest'
-                                      ? Colors.white
-                                      : const Color(0xFF9EA6B8),
-                                  fontWeight: FontWeight.bold,
+                              child: Center(
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.access_time,
+                                      color: sortOption == 'latest'
+                                          ? Colors.white
+                                          : const Color(0xFF6B7280),
+                                      size: 16,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      '최신순',
+                                      style: TextStyle(
+                                        color: sortOption == 'latest'
+                                            ? Colors.white
+                                            : const Color(0xFF9EA6B8),
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                            ],
+                            ),
                           ),
                         ),
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          sortOption = 'popular';
-                        });
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        decoration: BoxDecoration(
-                          color: sortOption == 'popular'
-                              ? primaryGreen
-                              : Colors.transparent,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Center(
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.trending_up,
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                sortOption = 'popular';
+                              });
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              decoration: BoxDecoration(
                                 color: sortOption == 'popular'
-                                    ? Colors.white
-                                    : const Color(0xFF6B7280),
-                                size: 16,
+                                    ? primaryGreen
+                                    : Colors.transparent,
+                                borderRadius: BorderRadius.circular(12),
                               ),
-                              const SizedBox(width: 4),
-                              Text(
-                                '인기순',
-                                style: TextStyle(
-                                  color: sortOption == 'popular'
-                                      ? Colors.white
-                                      : const Color(0xFF9EA6B8),
-                                  fontWeight: FontWeight.bold,
+                              child: Center(
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.trending_up,
+                                      color: sortOption == 'popular'
+                                          ? Colors.white
+                                          : const Color(0xFF6B7280),
+                                      size: 16,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      '인기순',
+                                      style: TextStyle(
+                                        color: sortOption == 'popular'
+                                            ? Colors.white
+                                            : const Color(0xFF9EA6B8),
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                            ],
+                            ),
                           ),
                         ),
-                      ),
+                      ],
                     ),
                   ),
+                  const SizedBox(height: 6), // Bottom padding for the section
                 ],
               ),
             ),
@@ -316,7 +330,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
             // 3. Report List
             Expanded(
               child: Container(
-                color: backgroundLightGreen, // Changed background color
+                color: const Color(0xFFF5F7FA), // Changed background color
                 child: displayReports.isEmpty
                     ? Center(
                         child: Text(
