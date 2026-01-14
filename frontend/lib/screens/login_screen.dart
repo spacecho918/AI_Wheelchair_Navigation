@@ -262,7 +262,6 @@ class Gilbeot extends StatelessWidget {
               text,
               style: const TextStyle(
                 color: Color(0xFF101727), // Unified Dark Text
-                fontFamily: 'Roboto', // 글꼴: Roboto
                 fontWeight: FontWeight.w500, // Medium
                 fontSize: 14, // 14
                 height: 20 / 14, // 20 (line-height)

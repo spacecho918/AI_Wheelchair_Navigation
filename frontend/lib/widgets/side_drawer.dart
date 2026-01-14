@@ -8,6 +8,7 @@ import '../screens/my_reports_screen.dart';
 import '../screens/notification_screen.dart';
 import '../screens/history_screen.dart';
 import '../screens/saved_places_screen.dart';
+import '../screens/settings_screen.dart';
 
 class SideDrawer extends StatelessWidget {
   const SideDrawer({super.key});
@@ -200,7 +201,6 @@ class SideDrawer extends StatelessWidget {
               color: Colors.white,
               fontSize: 22,
               fontWeight: FontWeight.w600,
-              fontFamily: 'Arial',
             ),
           ),
           const SizedBox(height: 10),
@@ -319,7 +319,6 @@ class SideDrawer extends StatelessWidget {
         style: TextStyle(
           color: textDark,
           fontSize: 14,
-          fontFamily: 'Arial',
           fontWeight: FontWeight.w400,
         ),
       ),
@@ -335,7 +334,13 @@ class SideDrawer extends StatelessWidget {
       ),
       child: Column(
         children: [
-          _buildFooterItem(Icons.settings_outlined, '설정', () {}, false),
+          _buildFooterItem(Icons.settings_outlined, '설정', () {
+            Navigator.pop(context); // Close drawer
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const SettingsScreen()),
+            );
+          }, false),
           _buildFooterItem(Icons.logout, '로그아웃', () {
             Navigator.pushAndRemoveUntil(
               context,
