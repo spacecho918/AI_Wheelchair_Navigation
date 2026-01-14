@@ -9,7 +9,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:gilbeot/helpers/kakao_map_helper.dart';
 import 'dart:convert';
 import 'camera_screen.dart';
-import 'map_screen.dart';
+import 'navigation_end_screen.dart';
 
 class NavigationScreen extends StatefulWidget {
   final String routeType; // '추천', '최단', '안전'
@@ -160,10 +160,15 @@ class _NavigationScreenState extends State<NavigationScreen> {
   }
 
   void _endNavigation() {
-    Navigator.pushAndRemoveUntil(
+    Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (context) => const MapScreen()),
-      (route) => false,
+      MaterialPageRoute(
+        builder: (context) => NavigationEndScreen(
+          routeType: widget.routeType,
+          estimatedTime: widget.estimatedTime,
+          totalDistance: widget.totalDistance,
+        ),
+      ),
     );
   }
 
