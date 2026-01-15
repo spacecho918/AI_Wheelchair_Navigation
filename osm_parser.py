@@ -1,7 +1,7 @@
 """
 OSM 데이터 파싱 모듈
 OpenStreetMap 데이터를 그래프 구조로 변환합니다.
-한국공학대학교 ↔ 정왕역 범위로 제한
+지정된 바운딩 박스 범위로 제한
 """
 
 import osmnx as ox
@@ -13,19 +13,19 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# 한국공학대학교 ↔ 정왕역 영역 좌표 (바운딩 박스)
-# 한국공학대학교: 약 37.3401, 126.7315
-# 정왕역: 약 37.35166, 126.74279
+# 기본 영역 좌표 (바운딩 박스)
+# 기준점 1: 37.3401, 126.7315
+# 기준점 2: 37.35166, 126.74279
 KOREA_TECH_LAT = 37.3401
 KOREA_TECH_LON = 126.7315
 JEONGWANG_STATION_LAT = 37.35166
 JEONGWANG_STATION_LON = 126.74279
 
-# 바운딩 박스 (정왕역 포함을 위해 확장)
-BBOX_NORTH = 37.360  # 북쪽 경계 (확장)
-BBOX_SOUTH = 37.330  # 남쪽 경계 (확장)
-BBOX_EAST = 126.750  # 동쪽 경계 (확장)
-BBOX_WEST = 126.720  # 서쪽 경계 (확장)
+# 바운딩 박스
+BBOX_NORTH = 37.360  # 북쪽 경계
+BBOX_SOUTH = 37.330  # 남쪽 경계
+BBOX_EAST = 126.750  # 동쪽 경계
+BBOX_WEST = 126.720  # 서쪽 경계
 
 
 class OSMGraphBuilder:
@@ -409,7 +409,7 @@ class OSMGraphBuilder:
 if __name__ == "__main__":
     builder = OSMGraphBuilder()
     
-    # 한국공학대 ↔ 정왕역 범위로 그래프 생성
+    # 바운딩 박스 범위로 그래프 생성
     print("=== OSM 그래프 생성 테스트 ===")
     graph = builder.build_graph_from_bbox()
     
@@ -423,11 +423,11 @@ if __name__ == "__main__":
     print(f"  - 노드 수: {graph.number_of_nodes()}")
     print(f"  - 엣지 수: {graph.number_of_edges()}")
     
-    # 한국공학대에서 가장 가까운 노드
+    # 기준점 1에서 가장 가까운 노드
     nearest = builder.get_nearest_node(KOREA_TECH_LAT, KOREA_TECH_LON)
-    print(f"  - 한국공학대 가장 가까운 노드: {nearest}")
+    print(f"  - 기준점 1 가장 가까운 노드: {nearest}")
     
-    # 정왕역에서 가장 가까운 노드
+    # 기준점 2에서 가장 가까운 노드
     nearest = builder.get_nearest_node(JEONGWANG_STATION_LAT, JEONGWANG_STATION_LON)
-    print(f"  - 정왕역 가장 가까운 노드: {nearest}")
+    print(f"  - 기준점 2 가장 가까운 노드: {nearest}")
 

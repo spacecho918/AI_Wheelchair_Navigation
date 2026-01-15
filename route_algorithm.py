@@ -61,13 +61,13 @@ class WeightCalculator:
         "safe": {
             "grade_multiplier": 2.0,      # 경사도 패널티 높음 (안전 우선)
             "surface_multiplier": 2.0,    # 노면 패널티 높음
-            "distance_weight": 0.3,       # 거리 가중치 낮음
+            "distance_weight": 0.5,       # 거리 가중치 낮음
             "safety_weight": 1.0,         # 안전 가중치 높음
         },
         "optimal": {
             "grade_multiplier": 1.0,      # 경사도 패널티 중간 (균형)
             "surface_multiplier": 1.0,    # 노면 패널티 중간
-            "distance_weight": 0.6,       # 거리 가중치 중간
+            "distance_weight": 0.7,       # 거리 가중치 중간
             "safety_weight": 0.4,         # 안전 가중치 중간
         }
     }
@@ -91,8 +91,8 @@ class WeightCalculator:
             "description": "수동휠체어+보호자"
         },
         "none": {
-            "grade_sensitivity": 0.1,      # 미사용: 경사도에 거의 민감하지 않음
-            "surface_sensitivity": 0.1,    # 미사용: 노면에 거의 민감하지 않음
+            "grade_sensitivity": 0,      # 미사용: 경사도에 민감하지 않음
+            "surface_sensitivity": 0,    # 미사용: 노면에 민감하지 않음
             "description": "휠체어 미사용"
         }
     }
@@ -106,9 +106,9 @@ class WeightCalculator:
     
     # 휠체어 유형별 경사도 한계값 (도) - 이 값 초과 시 매우 높은 패널티
     WHEELCHAIR_GRADE_LIMITS = {
-        "electric": 15.0,          # 전동: 15도까지 통행 가능
+        "electric": 20.0,          # 전동: 20도까지 통행 가능
         "manual": 10.0,             # 수동: 10도 초과 시 매우 힘듦
-        "manual_with_helper": 15.0, # 수동+보호자: 15도까지 가능
+        "manual_with_helper": 18.0, # 수동+보호자: 18도까지 가능
         "none": 99.0,              # 미사용: 계단 아닌 이상 대부분 가능
     }
     

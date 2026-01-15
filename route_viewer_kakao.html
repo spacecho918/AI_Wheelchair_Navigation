@@ -343,14 +343,14 @@
         <div class="search-row">
             <span class="search-label">🚩 출발</span>
             <div class="input-wrapper">
-                <input type="text" id="startInput" class="search-input" placeholder="출발지를 검색하세요 (예: 한국공학대학교)">
+                <input type="text" id="startInput" class="search-input" placeholder="출발지를 검색하세요">
                 <div id="startResults" class="search-results"></div>
             </div>
         </div>
         <div class="search-row">
             <span class="search-label">🏁 도착</span>
             <div class="input-wrapper">
-                <input type="text" id="endInput" class="search-input" placeholder="도착지를 검색하세요 (예: 정왕역)">
+                <input type="text" id="endInput" class="search-input" placeholder="도착지를 검색하세요">
                 <div id="endResults" class="search-results"></div>
             </div>
         </div>
@@ -388,9 +388,9 @@
     <div class="loading" id="loading">🔄 경로 탐색 중...</div>
 
     <script>
-        // 선택된 출발/도착 좌표
-        let startCoord = { lat: 37.3401, lng: 126.7315, name: '한국공학대학교' };
-        let endCoord = { lat: 37.35166, lng: 126.74279, name: '정왕역' };
+        // 선택된 출발/도착 좌표 (초기값 없음 - 사용자가 검색해서 선택)
+        let startCoord = null;
+        let endCoord = null;
 
         // 지도 초기화
         const container = document.getElementById('map');
@@ -413,19 +413,11 @@
         const markerSize = new kakao.maps.Size(50, 45);
         const markerOffset = new kakao.maps.Point(15, 43);
 
-        // 출발지 마커
-        let startMarker = new kakao.maps.Marker({
-            position: new kakao.maps.LatLng(startCoord.lat, startCoord.lng),
-            image: new kakao.maps.MarkerImage(startImageSrc, markerSize, { offset: markerOffset }),
-            map: map
-        });
+        // 출발지 마커 (초기에는 생성하지 않음)
+        let startMarker = null;
 
-        // 도착지 마커
-        let endMarker = new kakao.maps.Marker({
-            position: new kakao.maps.LatLng(endCoord.lat, endCoord.lng),
-            image: new kakao.maps.MarkerImage(endImageSrc, markerSize, { offset: markerOffset }),
-            map: map
-        });
+        // 도착지 마커 (초기에는 생성하지 않음)
+        let endMarker = null;
 
         // 경로 폴리라인
         let routePolyline = null;
@@ -507,21 +499,44 @@
 
             if (type === 'start') {
                 startCoord = coord;
-                startMarker.setPosition(new kakao.maps.LatLng(coord.lat, coord.lng));
+                // 마커가 없으면 새로 생성
+                if (!startMarker) {
+                    startMarker = new kakao.maps.Marker({
+                        position: new kakao.maps.LatLng(coord.lat, coord.lng),
+                        image: new kakao.maps.MarkerImage(startImageSrc, markerSize, { offset: markerOffset }),
+                        map: map
+                    });
+                } else {
+                    startMarker.setPosition(new kakao.maps.LatLng(coord.lat, coord.lng));
+                }
             } else {
                 endCoord = coord;
-                endMarker.setPosition(new kakao.maps.LatLng(coord.lat, coord.lng));
+                // 마커가 없으면 새로 생성
+                if (!endMarker) {
+                    endMarker = new kakao.maps.Marker({
+                        position: new kakao.maps.LatLng(coord.lat, coord.lng),
+                        image: new kakao.maps.MarkerImage(endImageSrc, markerSize, { offset: markerOffset }),
+                        map: map
+                    });
+                } else {
+                    endMarker.setPosition(new kakao.maps.LatLng(coord.lat, coord.lng));
+                }
             }
 
             inputEl.value = place.place_name;
             inputEl.classList.add('selected');
             resultsDiv.style.display = 'none';
 
-            // 지도 중심 이동
-            const bounds = new kakao.maps.LatLngBounds();
-            bounds.extend(new kakao.maps.LatLng(startCoord.lat, startCoord.lng));
-            bounds.extend(new kakao.maps.LatLng(endCoord.lat, endCoord.lng));
-            map.setBounds(bounds, 80, 80, 80, 80);
+            // 지도 중심 이동 (두 좌표가 모두 있을 때만)
+            if (startCoord && endCoord) {
+                const bounds = new kakao.maps.LatLngBounds();
+                bounds.extend(new kakao.maps.LatLng(startCoord.lat, startCoord.lng));
+                bounds.extend(new kakao.maps.LatLng(endCoord.lat, endCoord.lng));
+                map.setBounds(bounds, 80, 80, 80, 80);
+            } else {
+                // 하나만 있으면 해당 위치로 이동
+                map.setCenter(new kakao.maps.LatLng(coord.lat, coord.lng));
+            }
         }
 
         // 장애물 마커 생성
@@ -608,6 +623,12 @@
         }
 
         async function searchRoute(mode) {
+            // 출발지와 도착지가 모두 선택되었는지 확인
+            if (!startCoord || !endCoord) {
+                alert('출발지와 도착지를 먼저 검색하여 선택해주세요.');
+                return;
+            }
+
             const loading = document.getElementById('loading');
             loading.classList.add('show');
 
@@ -673,8 +694,9 @@
 
         // 초기화
         createObstacleMarkers();
-        startInput.value = startCoord.name;
-        endInput.value = endCoord.name;
+        // 초기 입력 필드는 비워둠
+        startInput.value = '';
+        endInput.value = '';
     </script>
 </body>
 

@@ -441,20 +441,20 @@ def add_elevation_data_to_graph(
 if __name__ == "__main__":
     print("=== 경사도 계산 테스트 ===")
     
-    # 한국공학대 ↔ 정왕역 테스트
-    korea_tech = (37.3401, 126.7315)
-    jeongwang = (37.35166, 126.74279)
+    # 테스트 구간
+    start_point = (37.3401, 126.7315)
+    end_point = (37.35166, 126.74279)
     
     calculator = SlopeCalculator()
     
-    print(f"\n테스트 구간: 한국공학대 → 정왕역")
-    print(f"시작점: {korea_tech}")
-    print(f"끝점: {jeongwang}")
+    print(f"\n테스트 구간: 시작점 → 끝점")
+    print(f"시작점: {start_point}")
+    print(f"끝점: {end_point}")
     
     # 샘플 포인트 생성
     points = calculator.sample_points_along_edge(
-        korea_tech[0], korea_tech[1],
-        jeongwang[0], jeongwang[1],
+        start_point[0], start_point[1],
+        end_point[0], end_point[1],
         sample_interval=50  # 50m 간격
     )
     print(f"\n샘플링 포인트 수: {len(points)}")
@@ -462,8 +462,8 @@ if __name__ == "__main__":
     # 경사도 계산
     print("\n경사도 계산 중 (API 호출)...")
     grade, segments = calculator.calculate_edge_grade(
-        korea_tech[0], korea_tech[1],
-        jeongwang[0], jeongwang[1],
+        start_point[0], start_point[1],
+        end_point[0], end_point[1],
         sample_interval=100,  # 100m 간격으로 테스트
         method="max"
     )

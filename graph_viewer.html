@@ -312,6 +312,11 @@
                 <span class="info-label">끝점</span>
                 <span class="info-value" id="edge-end">-</span>
             </div>
+            <div class="info-row">
+                <span class="info-icon">♿</span>
+                <span class="info-label">휠체어</span>
+                <span class="info-value" id="edge-wheelchair">-</span>
+            </div>
         </div>
     </div>
 
@@ -321,10 +326,6 @@
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap'
         }).addTo(map);
-
-        // 마커
-        L.marker([37.3401, 126.7315]).addTo(map).bindPopup('🏫 한국공학대학교');
-        L.marker([37.35166, 126.74279]).addTo(map).bindPopup('🚇 정왕역');
 
         let edgesData = [];
         let edgeLayers = [];
@@ -423,6 +424,16 @@
             document.getElementById('edge-highway').textContent = edge.highway_type || 'unknown';
             document.getElementById('edge-start').textContent = `${edge.start_lat?.toFixed(5)}, ${edge.start_lon?.toFixed(5)}`;
             document.getElementById('edge-end').textContent = `${edge.end_lat?.toFixed(5)}, ${edge.end_lon?.toFixed(5)}`;
+
+            // 휠체어 접근성 표시
+            const isAccessible = edge.is_wheelchair_accessible;
+            if (isAccessible === true) {
+                document.getElementById('edge-wheelchair').innerHTML = '<span style="color: #27ae60; font-weight: 600;">✅ 접근 가능</span>';
+            } else if (isAccessible === false) {
+                document.getElementById('edge-wheelchair').innerHTML = '<span style="color: #e74c3c; font-weight: 600;">❌ 접근 불가</span>';
+            } else {
+                document.getElementById('edge-wheelchair').innerHTML = '<span style="color: #95a5a6;">정보 없음</span>';
+            }
 
             document.getElementById('edgeInfoPanel').classList.add('show');
         }

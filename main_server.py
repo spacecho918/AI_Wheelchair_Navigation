@@ -2,6 +2,12 @@
 휠체어 내비게이션 '길벗' - FastAPI 메인 서버
 OSM 기반 경로 탐색 + 실시간 장애물 반영
 """
+# 실행 방법:
+# python -m uvicorn main_server:app --host 0.0.0.0 --port 8000 --reload
+# 그래프 확인용 
+# http://localhost:8000/graph
+# 경로 확인용 
+# http://localhost:8000/viewer
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -46,7 +52,7 @@ app.add_middleware(
 
 # 전역 변수로 그래프 및 매니저 관리
 graph_builder: Optional[OSMGraphBuilder] = None
-route_calculator: Optional[RouteCalculator] = None
+route_calculator: Optional[RouteCalculator] = None  
 obstacle_manager: Optional[ObstacleManager] = None
 is_initialized = False
 edge_data_source: str = "none"  # 경사도 데이터 소스: "database", "json", "none"
@@ -110,8 +116,8 @@ def initialize_system():
         # 1. OSM 그래프 빌더 초기화
         graph_builder = OSMGraphBuilder()
         
-        # 2. 한국공학대 ↔ 정왕역 범위로 그래프 생성
-        logger.info("OSM 그래프 생성 중 (한국공학대 ↔ 정왕역)...")
+        # 2. 바운딩 박스 범위로 그래프 생성
+        logger.info("OSM 그래프 생성 중 (바운딩 박스 범위)...")
         graph = graph_builder.build_graph_from_bbox()
         
         # 3. 휠체어 접근 불가 구간 필터링
@@ -214,12 +220,6 @@ async def route_viewer():
     content = content.replace("__KAKAO_KEY__", kakao_key)
     
     return HTMLResponse(content=content)
-
-
-@app.get("/viewer/osm")
-async def route_viewer_osm():
-    """경로 뷰어 (OSM - 기존)"""
-    return FileResponse("route_viewer.html")
 
 
 @app.get("/graph")
@@ -530,9 +530,4 @@ if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
 
 
-# 실행 방법:
-# python -m uvicorn main_server:app --host 0.0.0.0 --port 8000 --reload
-# 그래프 확인용 
-# http://localhost:8000/graph
-# 경로 확인용 
-# http://localhost:8000/viewer
+

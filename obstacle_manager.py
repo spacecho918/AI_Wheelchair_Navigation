@@ -365,7 +365,7 @@ if __name__ == "__main__":
     # Supabase 없이 테스트
     manager = ObstacleManager()
     
-    # 테스트 장애물 추가 (한국공학대 근처)
+    # 테스트 장애물 추가
     manager.add_obstacle_manually(
         latitude=37.3410,
         longitude=126.7320,
@@ -388,6 +388,6 @@ if __name__ == "__main__":
     
     # 거리 계산 테스트
     dist = manager.haversine_distance(37.3401, 126.7315, 37.35166, 126.74279)
-    print(f"\n한국공학대 ↔ 정왕역 거리: {dist:.1f}m")
+    print(f"\n테스트 구간 거리: {dist:.1f}m")
     
     print("\n(그래프 적용 테스트는 osm_parser 모듈이 필요합니다)")
