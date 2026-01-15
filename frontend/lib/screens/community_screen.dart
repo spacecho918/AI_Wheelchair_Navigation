@@ -143,8 +143,8 @@ class _CommunityScreenState extends State<CommunityScreen> {
                     child: IconButton(
                       icon: Icon(
                         isFilterVisible
-                            ? Icons.filter_list_off
-                            : Icons.filter_list,
+                            ? Icons.filter_alt_off
+                            : Icons.filter_alt_outlined,
                         color: textDark,
                       ),
                       onPressed: () {

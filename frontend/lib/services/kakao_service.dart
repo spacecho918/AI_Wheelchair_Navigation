@@ -48,6 +48,8 @@ class KakaoService {
                 'lat': double.parse(doc['y']),
                 'lng': double.parse(doc['x']),
                 'category': doc['category_group_code'], // Add category code
+                'phone': doc['phone'] ?? '',
+                'url': doc['place_url'] ?? '',
               };
             })
             .toList()

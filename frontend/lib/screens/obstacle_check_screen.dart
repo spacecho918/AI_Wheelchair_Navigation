@@ -256,7 +256,9 @@ class _ObstacleCheckScreenState extends State<ObstacleCheckScreen> {
                                         vertical: 4,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: _mainColor.withOpacity(0.1),
+                                        color: _mainColor.withValues(
+                                          alpha: 0.1,
+                                        ),
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: Row(
@@ -495,7 +497,7 @@ class _ObstacleCheckScreenState extends State<ObstacleCheckScreen> {
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
+                          color: Colors.black.withValues(alpha: 0.1),
                           blurRadius: 10,
                           offset: const Offset(0, 4),
                         ),

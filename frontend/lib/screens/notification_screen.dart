@@ -12,11 +12,22 @@ class _NotificationScreenState extends State<NotificationScreen> {
   // Dummy Data
   List<Map<String, dynamic>> notifications = [
     {
+      'id': 6,
+      'title': '장애물 상태 확인',
+      'description': '일주일 전 제보하신 장애물이 아직 존재하나요?',
+      'time': '방금 전',
+      'type': 'feedback',
+      'isRead': false,
+      'location': '강남역 2번 출구',
+      'obstacleId': 'obs_123',
+      'feedbackSubmitted': false,
+    },
+    {
       'id': 1,
       'title': '새로운 장애물 제보',
       'description': '강남역 2번 출구 근처에 새로운 장애물이 제보되었습니다.',
       'time': '10분 전',
-      'type': 'warning', // warning, location, like, info
+      'type': 'warning',
       'isRead': false,
       'hasAction': true,
     },
@@ -227,6 +238,64 @@ class _NotificationScreenState extends State<NotificationScreen> {
                     ),
                   ),
                 ],
+                // Feedback type notification with action buttons
+                if (item['type'] == 'feedback' &&
+                    item['feedbackSubmitted'] != true) ...[
+                  if (item['location'] != null) ...[
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.place,
+                          size: 14,
+                          color: Color(0xFF9CA3AF),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          item['location'],
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: Color(0xFF6B7280),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      _buildFeedbackButton(
+                        label: '여전히 있음',
+                        color: const Color(0xFFEF4444),
+                        onTap: () => _submitFeedback(item, 'still_exists'),
+                      ),
+                      const SizedBox(width: 8),
+                      _buildFeedbackButton(
+                        label: '해결됨',
+                        color: const Color(0xFF00C853),
+                        onTap: () => _submitFeedback(item, 'resolved'),
+                      ),
+                      const SizedBox(width: 8),
+                      _buildFeedbackButton(
+                        label: '모름',
+                        color: const Color(0xFF6B7280),
+                        onTap: () => _submitFeedback(item, 'unknown'),
+                      ),
+                    ],
+                  ),
+                ],
+                if (item['type'] == 'feedback' &&
+                    item['feedbackSubmitted'] == true) ...[
+                  const SizedBox(height: 8),
+                  const Text(
+                    '피드백을 제출해주셔서 감사합니다!',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Color(0xFF00C853),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -245,8 +314,49 @@ class _NotificationScreenState extends State<NotificationScreen> {
         return Icons.thumb_up_alt_outlined;
       case 'info':
         return Icons.info_outline;
+      case 'feedback':
+        return Icons.help_outline_rounded;
       default:
         return Icons.notifications_none;
     }
+  }
+
+  void _submitFeedback(Map<String, dynamic> item, String status) {
+    setState(() {
+      item['feedbackSubmitted'] = true;
+      item['feedbackStatus'] = status;
+      item['isRead'] = true;
+    });
+    // TODO: Send feedback to backend
+    debugPrint('Feedback submitted: ${item['obstacleId']} -> $status');
+  }
+
+  Widget _buildFeedbackButton({
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: color.withValues(alpha: 0.3)),
+          ),
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: color,
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

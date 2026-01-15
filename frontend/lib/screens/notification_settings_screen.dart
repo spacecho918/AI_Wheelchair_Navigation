@@ -82,6 +82,10 @@ class _NotificationSettingsScreenState
                                   _communityPush = false;
                                   _reportStatusPush = false;
                                   _routeAlertPush = false;
+                                } else {
+                                  _communityPush = true;
+                                  _reportStatusPush = true;
+                                  _routeAlertPush = true;
                                 }
                               });
                             },
@@ -145,6 +149,8 @@ class _NotificationSettingsScreenState
                                 _emailEnabled = value;
                                 if (!value) {
                                   _marketingEmail = false;
+                                } else {
+                                  _marketingEmail = true;
                                 }
                               });
                             },

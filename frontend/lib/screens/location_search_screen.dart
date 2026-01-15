@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gilbeot/services/kakao_service.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -30,10 +31,38 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
 
   // Recent searches synced with SearchScreen
   List<Map<String, dynamic>> _recentSearches = [
-    {'name': '집', 'address': '서울 성동구 성수동 123', 'type': 'saved'},
-    {'name': '서울시청', 'address': '서울 중구 세종대로 110', 'type': 'recent'},
-    {'name': '스타벅스', 'address': '서울 성동구 성수1가', 'type': 'recent'},
-    {'name': '강남역', 'address': '서울 강남구 서초대로 396', 'type': 'recent'},
+    {
+      'name': '집',
+      'address': '서울 성동구 성수동 123',
+      'type': 'saved',
+      'lat': 37.5445,
+      'lng': 127.0560,
+      'category': 'ETC',
+    },
+    {
+      'name': '서울시청',
+      'address': '서울 중구 세종대로 110',
+      'type': 'recent',
+      'lat': 37.5665,
+      'lng': 126.9780,
+      'category': 'PO3',
+    },
+    {
+      'name': '스타벅스',
+      'address': '서울 성동구 성수1가',
+      'type': 'recent',
+      'lat': 37.541,
+      'lng': 127.054,
+      'category': 'CE7',
+    },
+    {
+      'name': '강남역',
+      'address': '서울 강남구 서초대로 396',
+      'type': 'recent',
+      'lat': 37.4979,
+      'lng': 127.0276,
+      'category': 'SW8',
+    },
   ];
 
   @override
@@ -225,8 +254,7 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
                           // Return result to MyPlacesEditScreen
                           Navigator.pop(context, {
                             'latlng': result['latlng'],
-                            'name':
-                                '지도 선택', // Or fetch address name from result
+                            'name': result['address'], // Show address as name
                             'address': result['address'],
                           });
                         }
@@ -346,12 +374,11 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
             color: Colors.white,
             child: InkWell(
               onTap: () {
-                final lat = place['lat'];
-                final lon = place['lng'];
+                // Return result directly without showing detail sheet
                 Navigator.pop(context, {
-                  'latlng': LatLng(lat, lon),
-                  'name': name,
-                  'address': address,
+                  'latlng': LatLng(place['lat'], place['lng']),
+                  'name': place['name'],
+                  'address': place['address'],
                 });
               },
               child: Padding(
@@ -442,12 +469,9 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
         color: Colors.white,
         child: InkWell(
           onTap: () {
-            // Return selected item
+            // Return result directly without showing detail sheet
             Navigator.pop(context, {
-              'latlng': const LatLng(
-                37.5665,
-                126.9780,
-              ), // Dummy coords for list items if real data missing
+              'latlng': LatLng(item['lat'], item['lng']),
               'name': item['name'],
               'address': item['address'],
             });
@@ -571,6 +595,228 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
         return Icons.local_pharmacy;
       default:
         return Icons.location_on_outlined;
+    }
+  }
+
+  void _showPlaceDetailSheet(BuildContext context, Map<String, dynamic> place) {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black54,
+      builder: (context) {
+        return Align(
+          alignment: Alignment.bottomCenter,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+            child: Material(
+              color: Colors.transparent,
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header Row with Name and Close Button
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Category Icon
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFE8FDF0),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            _getCategoryIcon(place['category']),
+                            color: const Color(0xFF00C853),
+                            size: 24,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        // Name & Category
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                place['name'],
+                                style: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF101727),
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                _getCategoryName(place['category']),
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        // Close Button
+                        GestureDetector(
+                          onTap: () => Navigator.pop(context),
+                          child: const Icon(
+                            Icons.close,
+                            color: Color(0xFF9CA3AF),
+                            size: 24,
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    // Address
+                    _buildDetailRow(
+                      Icons.location_on_outlined,
+                      place['address'],
+                    ),
+
+                    // Distance (if available)
+                    if (widget.userLocation != null &&
+                        place['lat'] != null &&
+                        place['lng'] != null) ...[
+                      const SizedBox(height: 12),
+                      _buildDetailRow(
+                        Icons.directions_walk,
+                        '${_formatDistance(widget.userLocation!, place['lat'], place['lng'])} 거리',
+                      ),
+                    ],
+
+                    const SizedBox(height: 24),
+
+                    // Select Button
+                    SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          Navigator.pop(context, {
+                            'latlng': LatLng(place['lat'], place['lng']),
+                            'name': place['name'],
+                            'address': place['address'],
+                          });
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF00C853),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: const Text(
+                          '도착지로 선택',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _launchUrl(String url) async {
+    final uri = Uri.parse(url);
+    if (!await launchUrl(uri)) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('링크를 열 수 없습니다.')));
+      }
+    }
+  }
+
+  Widget _buildDetailRow(
+    IconData icon,
+    String text, {
+    bool isLink = false,
+    VoidCallback? onTap,
+  }) {
+    return GestureDetector(
+      onTap: isLink ? onTap : null,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 20, color: const Color(0xFF9EA6B8)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: 15,
+                color: isLink
+                    ? const Color(0xFF2979FF)
+                    : const Color(0xFF4A5565),
+                decoration: isLink ? TextDecoration.underline : null,
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _getCategoryName(String? code) {
+    switch (code) {
+      case 'MT1':
+        return '대형마트';
+      case 'CS2':
+        return '편의점';
+      case 'PS3':
+        return '어린이집/유치원';
+      case 'SC4':
+        return '학교';
+      case 'AC5':
+        return '학원';
+      case 'PK6':
+        return '주차장';
+      case 'OL7':
+        return '주유소/충전소';
+      case 'SW8':
+        return '지하철역';
+      case 'BK9':
+        return '은행';
+      case 'CT1':
+        return '문화시설';
+      case 'AG2':
+        return '중개업소';
+      case 'PO3':
+        return '공공기관';
+      case 'AT4':
+        return '관광명소';
+      case 'AD5':
+        return '숙박';
+      case 'FD6':
+        return '음식점';
+      case 'CE7':
+        return '카페';
+      case 'HP8':
+        return '병원';
+      case 'PM9':
+        return '약국';
+      default:
+        return '장소';
     }
   }
 }

@@ -50,135 +50,137 @@ class _MapScreenState extends State<MapScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      barrierColor: Colors.black.withOpacity(
-        0.5,
+      barrierColor: Colors.black.withValues(
+        alpha: 0.5,
       ), // Semi-transparent black background
       builder: (context) {
-        return Dialog(
-          backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 400),
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Close button
-                  Align(
-                    alignment: Alignment.topRight,
-                    child: IconButton(
-                      onPressed: () => Navigator.pop(context),
-                      icon: const Icon(
-                        Icons.close,
+        return PointerInterceptor(
+          child: Dialog(
+            backgroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 400),
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Close button
+                    Align(
+                      alignment: Alignment.topRight,
+                      child: IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(
+                          Icons.close,
+                          color: Color(0xFF101727),
+                          size: 20,
+                        ),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        splashRadius: 20,
+                      ),
+                    ),
+
+                    // Icon
+                    Container(
+                      width: 64,
+                      height: 64,
+                      padding: const EdgeInsets.all(16),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF00C853),
+                        shape: BoxShape.circle,
+                      ),
+                      child: SvgPicture.asset(
+                        'assets/wheelchair_icon.svg',
+                        colorFilter: const ColorFilter.mode(
+                          Colors.white,
+                          BlendMode.srcIn,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Title
+                    const Text(
+                      '휠체어 종류를 설정해주세요',
+                      style: TextStyle(
+                        fontSize: 18, // 20 might be too big, trying 18-20 range
+                        fontWeight: FontWeight.bold,
                         color: Color(0xFF101727),
-                        size: 20,
-                      ),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                      splashRadius: 20,
-                    ),
-                  ),
-
-                  // Icon
-                  Container(
-                    width: 64,
-                    height: 64,
-                    padding: const EdgeInsets.all(16),
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF00C853),
-                      shape: BoxShape.circle,
-                    ),
-                    child: SvgPicture.asset(
-                      'assets/wheelchair_icon.svg',
-                      colorFilter: const ColorFilter.mode(
-                        Colors.white,
-                        BlendMode.srcIn,
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 20),
+                    const SizedBox(height: 8),
 
-                  // Title
-                  const Text(
-                    '휠체어 종류를 설정해주세요',
-                    style: TextStyle(
-                      fontSize: 18, // 20 might be too big, trying 18-20 range
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF101727),
+                    // Subtitle
+                    const Text(
+                      '정확한 경로 안내를 위해\n사용 중인 휠체어 종류가 필요합니다',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Color(0xFF6B7280), // Grey text
+                        height: 1.5,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 8),
+                    const SizedBox(height: 24),
 
-                  // Subtitle
-                  const Text(
-                    '정확한 경로 안내를 위해\n사용 중인 휠체어 종류가 필요합니다',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Color(0xFF6B7280), // Grey text
-                      height: 1.5,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Buttons
-                  SizedBox(
-                    width: double.infinity,
-                    height: 48,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        Navigator.pop(context); // Close dialog first
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                const WheelchairSettingsScreen(),
+                    // Buttons
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.pop(context); // Close dialog first
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  const WheelchairSettingsScreen(),
+                            ),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF00C853),
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF00C853),
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
                         ),
-                      ),
-                      child: const Text(
-                        '지금 설정하기',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                          fontSize: 14,
+                        child: const Text(
+                          '지금 설정하기',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            fontSize: 14,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 48,
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.pop(context),
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: Color(0xFFE5E7EB)),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: Color(0xFFE5E7EB)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
-                      ),
-                      child: const Text(
-                        '나중에 설정하기',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w500,
-                          color: Color(0xFF4B5563),
-                          fontSize: 14,
+                        child: const Text(
+                          '나중에 설정하기',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w500,
+                            color: Color(0xFF4B5563),
+                            fontSize: 14,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -762,7 +764,7 @@ class _MapScreenState extends State<MapScreen> {
           // 2. 상단 검색바 (햄버거 아이콘 복구)
           // ---------------------------------------------------------
           Positioned(
-            top: 20,
+            top: MediaQuery.of(context).padding.top + 20,
             left: 20,
             right: 20,
             child: PointerInterceptor(
@@ -890,7 +892,7 @@ class _MapScreenState extends State<MapScreen> {
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
+                          color: Colors.black.withValues(alpha: 0.1),
                           blurRadius: 10,
                           offset: const Offset(0, 4),
                         ),

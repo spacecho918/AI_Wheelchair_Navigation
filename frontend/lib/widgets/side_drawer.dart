@@ -94,12 +94,6 @@ class SideDrawer extends StatelessWidget {
                         );
                       },
                     ),
-                    const SizedBox(height: 7),
-                    _buildMenuItem(
-                      iconPath: 'assets/bell_icon.svg', // New Icon
-                      text: '공지사항',
-                      onTap: () {},
-                    ),
                   ],
                 ),
               ),

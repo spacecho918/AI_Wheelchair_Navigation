@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:gilbeot/services/kakao_service.dart';
 import 'package:latlong2/latlong.dart'; // 좌표 전달용
 import 'package:gilbeot/screens/saved_places_screen.dart';
@@ -29,15 +30,43 @@ class _SearchScreenState extends State<SearchScreen> {
     {
       'name': '집',
       'address': '서울 성동구 성수동 123',
-      'type': 'saved', // 저장된 장소 (노란 별)
+      'type': 'saved',
+      'lat': 37.5445,
+      'lng': 127.0560,
+      'category': 'ETC',
+      'phone': '',
+      'url': '',
     },
     {
       'name': '서울시청',
       'address': '서울 중구 세종대로 110',
-      'type': 'recent', // 최근 기록 (초록 핀)
+      'type': 'recent',
+      'lat': 37.5665,
+      'lng': 126.9780,
+      'category': 'PO3',
+      'phone': '02-120',
+      'url': 'https://www.seoul.go.kr',
     },
-    {'name': '스타벅스', 'address': '서울 성동구 성수1가', 'type': 'recent'},
-    {'name': '강남역', 'address': '서울 강남구 서초대로 396', 'type': 'recent'},
+    {
+      'name': '스타벅스',
+      'address': '서울 성동구 성수1가',
+      'type': 'recent',
+      'lat': 37.541,
+      'lng': 127.054,
+      'category': 'CE7',
+      'phone': '1522-3232',
+      'url': 'https://www.starbucks.co.kr',
+    },
+    {
+      'name': '강남역',
+      'address': '서울 강남구 서초대로 396',
+      'type': 'recent',
+      'lat': 37.4979,
+      'lng': 127.0276,
+      'category': 'SW8',
+      'phone': '02-6110-2282',
+      'url': '',
+    },
   ];
 
   bool _isLoading = false;
@@ -251,20 +280,15 @@ class _SearchScreenState extends State<SearchScreen> {
               color: const Color(0xFF00C853),
               onTap: () {
                 if (_homeAddress.isNotEmpty) {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => RouteSearchScreen(
-                        userLocation: widget.userLocation,
-                        destination: {
-                          'name': _homeName,
-                          'address': _homeAddress,
-                          'latlng':
-                              null, // Coordinates might be fetched in RouteSearchScreen or we can omit
-                        },
-                      ),
-                    ),
-                  );
+                  _showPlaceDetailSheet(context, {
+                    'name': _homeName,
+                    'address': _homeAddress,
+                    'lat': 37.5445,
+                    'lng': 127.0560,
+                    'category': 'ETC',
+                    'phone': '',
+                    'url': '',
+                  });
                 }
               },
             ),
@@ -275,19 +299,15 @@ class _SearchScreenState extends State<SearchScreen> {
               color: const Color(0xFF00C853),
               onTap: () {
                 if (_workAddress.isNotEmpty) {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => RouteSearchScreen(
-                        userLocation: widget.userLocation,
-                        destination: {
-                          'name': _workLabel,
-                          'address': _workAddress,
-                          'latlng': null,
-                        },
-                      ),
-                    ),
-                  );
+                  _showPlaceDetailSheet(context, {
+                    'name': _workLabel,
+                    'address': _workAddress,
+                    'lat': 37.5665,
+                    'lng': 126.9780,
+                    'category': _workLabel == '회사' ? 'PO3' : 'SC4',
+                    'phone': '',
+                    'url': '',
+                  });
                 }
               },
             ),
@@ -406,14 +426,7 @@ class _SearchScreenState extends State<SearchScreen> {
               color: Colors.white,
               child: InkWell(
                 onTap: () {
-                  // KakaoService already returns doubles
-                  final lat = place['lat'];
-                  final lon = place['lng'];
-                  Navigator.pop(context, {
-                    'latlng': LatLng(lat, lon),
-                    'name': name,
-                    'address': fullAddress,
-                  });
+                  _showPlaceDetailSheet(context, place);
                 },
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
@@ -542,7 +555,7 @@ class _SearchScreenState extends State<SearchScreen> {
       child: Material(
         color: Colors.white,
         child: InkWell(
-          onTap: () => debugPrint("${item['name']} 선택됨"),
+          onTap: () => _showPlaceDetailSheet(context, item),
           child: Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: 4, // 리스트 형태라 패딩 조절
@@ -683,6 +696,269 @@ class _SearchScreenState extends State<SearchScreen> {
         return Icons.local_pharmacy;
       default:
         return Icons.location_on_outlined;
+    }
+  }
+
+  Future<void> _launchUrl(String url) async {
+    final uri = Uri.parse(url);
+    if (!await launchUrl(uri)) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('링크를 열 수 없습니다.')));
+      }
+    }
+  }
+
+  void _showPlaceDetailSheet(BuildContext context, Map<String, dynamic> place) {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black54,
+      builder: (context) {
+        return Align(
+          alignment: Alignment.bottomCenter,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+            child: Material(
+              color: Colors.transparent,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 400),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Header Row with Name and Close Button
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Category Icon
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFE8FDF0),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              _getCategoryIcon(place['category']),
+                              color: const Color(0xFF00C853),
+                              size: 24,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          // Name & Category
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  place['name'],
+                                  style: const TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF101727),
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  _getCategoryName(place['category']),
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          // Close Button
+                          GestureDetector(
+                            onTap: () => Navigator.pop(context),
+                            child: const Icon(
+                              Icons.close,
+                              color: Color(0xFF9CA3AF),
+                              size: 24,
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      // Address
+                      _buildDetailRow(
+                        Icons.location_on_outlined,
+                        place['address'] ?? '',
+                      ),
+
+                      // Distance (if available)
+                      if (widget.userLocation != null &&
+                          place['lat'] != null &&
+                          place['lng'] != null) ...[
+                        const SizedBox(height: 12),
+                        _buildDetailRow(
+                          Icons.directions_walk,
+                          '${_formatDistance(widget.userLocation!, place['lat'], place['lng'])} 거리',
+                        ),
+                      ],
+
+                      // Phone (if available)
+                      if (place['phone'] != null &&
+                          place['phone'].isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        _buildDetailRow(
+                          Icons.phone_outlined,
+                          place['phone'],
+                          isLink: true,
+                          onTap: () {
+                            _launchUrl('tel:${place['phone']}');
+                          },
+                        ),
+                      ],
+
+                      // URL (if available)
+                      if (place['url'] != null && place['url'].isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        _buildDetailRow(
+                          Icons.language,
+                          '장소 상세 정보 보기',
+                          isLink: true,
+                          onTap: () {
+                            _launchUrl(place['url']);
+                          },
+                        ),
+                      ],
+
+                      const SizedBox(height: 24),
+
+                      // Select Button
+                      SizedBox(
+                        width: double.infinity,
+                        height: 52,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            Navigator.pop(context);
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => RouteSearchScreen(
+                                  userLocation: widget.userLocation,
+                                  destination: {
+                                    'name': place['name'],
+                                    'address': place['address'],
+                                    'latlng': LatLng(
+                                      place['lat'] ?? 0.0,
+                                      place['lng'] ?? 0.0,
+                                    ),
+                                  },
+                                ),
+                              ),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF00C853),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            elevation: 0,
+                          ),
+                          child: const Text(
+                            '도착지로 선택',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildDetailRow(
+    IconData icon,
+    String text, {
+    bool isLink = false,
+    VoidCallback? onTap,
+  }) {
+    return GestureDetector(
+      onTap: isLink ? onTap : null,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 20, color: const Color(0xFF9EA6B8)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: 15,
+                color: isLink
+                    ? const Color(0xFF2979FF)
+                    : const Color(0xFF4A5565),
+                decoration: isLink ? TextDecoration.underline : null,
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _getCategoryName(String? code) {
+    switch (code) {
+      case 'MT1':
+        return '대형마트';
+      case 'CS2':
+        return '편의점';
+      case 'PS3':
+        return '어린이집/유치원';
+      case 'SC4':
+        return '학교';
+      case 'AC5':
+        return '학원';
+      case 'PK6':
+        return '주차장';
+      case 'OL7':
+        return '주유소/충전소';
+      case 'SW8':
+        return '지하철역';
+      case 'BK9':
+        return '은행';
+      case 'CT1':
+        return '문화시설';
+      case 'AG2':
+        return '중개업소';
+      case 'PO3':
+        return '공공기관';
+      case 'AT4':
+        return '관광명소';
+      case 'AD5':
+        return '숙박';
+      case 'FD6':
+        return '음식점';
+      case 'CE7':
+        return '카페';
+      case 'HP8':
+        return '병원';
+      case 'PM9':
+        return '약국';
+      default:
+        return '장소';
     }
   }
 }
