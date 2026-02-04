@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <!-- 
+      TODO: Replace YOUR_KAKAO_JAVASCRIPT_KEY with your actual Kakao JavaScript Key.
+      Ensure you have registered the domain used in WebView's baseUrl (e.g., https://gilbeot.app) in the Kakao Developers Console.
+    -->
+    <script type="text/javascript"
+        src="//dapi.kakao.com/v2/maps/sdk.js?appkey=d5a4056985c26347c6d957dbd5e5a7ea"></script>
+    <style>
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            touch-action: manipulation;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+            touch-action: pan-x pan-y;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="map"></div>
+    <script>
+        var container = document.getElementById('map');
+
+        // Function to get URL parameters
+        function getParameterByName(name) {
+            name = name.replace(/[\[\]]/g, '\\$&');
+            var regex = new RegExp('[?&]' + name + '(=([^&#]*)|&|#|$)'),
+                results = regex.exec(window.location.href);
+            if (!results) return null;
+            if (!results[2]) return '';
+            return decodeURIComponent(results[2].replace(/\+/g, ' '));
+        }
+
+        // Get lat/lng from URL or default to Seongsu Station
+        var latParam = getParameterByName('lat');
+        var lngParam = getParameterByName('lng');
+        var initialLat = latParam ? parseFloat(latParam) : 37.5445;
+        var initialLng = lngParam ? parseFloat(lngParam) : 127.0560;
+
+        var options = {
+            center: new kakao.maps.LatLng(initialLat, initialLng),
+            level: 3
+        };
+        var map = new kakao.maps.Map(container, options);
+        var currentMarker = null;
+
+        // If 'marker=true' is present, add a marker at the center
+        var markerParam = getParameterByName('marker');
+        if (markerParam === 'true') {
+            var markerPosition = new kakao.maps.LatLng(initialLat, initialLng);
+            currentMarker = new kakao.maps.Marker({
+                position: markerPosition
+            });
+            currentMarker.setMap(map);
+        }
+
+        function setCenter(lat, lng) {
+            var moveLatLon = new kakao.maps.LatLng(lat, lng);
+            map.relayout(); // Ensure map gets correct size
+            map.setCenter(moveLatLon);
+        }
+
+        function panTo(lat, lng) {
+            var moveLatLon = new kakao.maps.LatLng(lat, lng);
+            map.panTo(moveLatLon);
+        }
+
+        function setMarker(lat, lng) {
+            if (currentMarker) {
+                currentMarker.setMap(null);
+            }
+            var markerPosition = new kakao.maps.LatLng(lat, lng);
+            currentMarker = new kakao.maps.Marker({
+                position: markerPosition
+            });
+            currentMarker.setMap(map);
+        }
+
+        var currentPolyline = null;
+
+        function drawRoute(pathCoordinates) {
+            if (currentPolyline) {
+                currentPolyline.setMap(null);
+            }
+
+            var linePath = [];
+            for (var i = 0; i < pathCoordinates.length; i++) {
+                linePath.push(new kakao.maps.LatLng(pathCoordinates[i][0], pathCoordinates[i][1]));
+            }
+
+            currentPolyline = new kakao.maps.Polyline({
+                path: linePath,
+                strokeWeight: 5,
+                strokeColor: '#00C853', // Gilbeot Green
+                strokeOpacity: 0.8,
+                strokeStyle: 'solid'
+            });
+
+            currentPolyline.setMap(map);
+            
+            // Adjust bounds to show the whole route
+            if (linePath.length > 0) {
+                var bounds = new kakao.maps.LatLngBounds();
+                for (var i = 0; i < linePath.length; i++) {
+                    bounds.extend(linePath[i]);
+                }
+                map.setBounds(bounds);
+            }
+        }
+
+        function setStaticMode(isStatic) {
+            map.setDraggable(!isStatic);
+            map.setZoomable(!isStatic);
+        }
+
+        // Notify Flutter when drag ends (for Location Adjust)
+        kakao.maps.event.addListener(map, 'dragend', function () {
+            var center = map.getCenter();
+            var message = JSON.stringify({
+                type: 'dragend',
+                lat: center.getLat(),
+                lng: center.getLng()
+            });
+
+            // For mobile (JavaScript channel)
+            if (window.MapChannel) {
+                MapChannel.postMessage(message);
+            }
+
+            // For Web (postMessage to parent)
+            if (window.parent && window.parent !== window) {
+                window.parent.postMessage(message, '*');
+            }
+        });
+
+        // Listen for postMessage from Flutter (for Web compatibility and Mobile controller calls)
+        window.addEventListener('message', function (event) {
+            try {
+                var data = event.data;
+                if (typeof data === 'string') {
+                    data = JSON.parse(data);
+                }
+                
+                if (data.action === 'setCenter' && data.lat && data.lng) {
+                    setCenter(data.lat, data.lng);
+                } else if (data.action === 'panTo' && data.lat && data.lng) {
+                    panTo(data.lat, data.lng);
+                } else if (data.action === 'setMarker' && data.lat && data.lng) {
+                    setMarker(data.lat, data.lng);
+                } else if (data.action === 'setStaticMode') {
+                    setStaticMode(data.isStatic);
+                } else if (data.action === 'drawRoute' && data.path) {
+                    drawRoute(data.path);
+                }
+            } catch (e) {
+                console.error('Error handling postMessage:', e);
+            }
+        });
+    </script>
+</body>
+
+</html>
