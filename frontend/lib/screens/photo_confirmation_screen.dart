@@ -24,8 +24,8 @@ class PhotoConfirmationScreen extends StatelessWidget {
           // 1. 이미지 미리보기
           Positioned.fill(
             child: kIsWeb
-                ? Image.network(imagePath, fit: BoxFit.cover)
-                : Image.file(File(imagePath), fit: BoxFit.cover),
+                ? Image.network(imagePath, fit: BoxFit.contain)
+                : Image.file(File(imagePath), fit: BoxFit.contain),
           ),
 
           // 2. 하단 컨트롤러 (재촬영 / 사용하기)

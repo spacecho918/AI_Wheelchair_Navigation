@@ -115,8 +115,8 @@ class _ObstacleCheckScreenState extends State<ObstacleCheckScreen> {
           Positioned.fill(
             child: widget.imagePath.isNotEmpty
                 ? (kIsWeb
-                      ? Image.network(widget.imagePath, fit: BoxFit.cover)
-                      : Image.file(File(widget.imagePath), fit: BoxFit.cover))
+                      ? Image.network(widget.imagePath, fit: BoxFit.contain)
+                      : Image.file(File(widget.imagePath), fit: BoxFit.contain))
                 : Container(color: Colors.black), // 사진 없을 때
           ),
 
