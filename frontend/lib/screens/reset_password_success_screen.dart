@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'new_password_screen.dart';
+import 'package:gilbeot/screens/login_screen.dart';
 
 class ResetPasswordSuccessScreen extends StatefulWidget {
   final String email;
@@ -14,25 +14,14 @@ class ResetPasswordSuccessScreen extends StatefulWidget {
 
 class _ResetPasswordSuccessScreenState
     extends State<ResetPasswordSuccessScreen> {
-  final TextEditingController _codeController = TextEditingController();
-  bool _isCodeValid = false;
-
   @override
   void initState() {
     super.initState();
-    _codeController.addListener(_validateCode);
   }
 
   @override
   void dispose() {
-    _codeController.dispose();
     super.dispose();
-  }
-
-  void _validateCode() {
-    setState(() {
-      _isCodeValid = _codeController.text.length == 6;
-    });
   }
 
   @override
@@ -112,7 +101,7 @@ class _ResetPasswordSuccessScreenState
                     child: Column(
                       children: [
                         const Text(
-                          '인증 번호 입력',
+                          '비밀번호 재설정 메일 발송',
                           style: TextStyle(
                             color: Color(0xFF101727),
                             fontSize: 16,
@@ -121,7 +110,7 @@ class _ResetPasswordSuccessScreenState
                         ),
                         const SizedBox(height: 8),
                         const Text(
-                          '이메일로 전송된 인증 번호를 입력하세요',
+                          '메일함에서 재설정 링크를 클릭해주세요',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             color: Color(0xFF495565),
@@ -148,7 +137,7 @@ class _ResetPasswordSuccessScreenState
                         const SizedBox(height: 24),
 
                         const Text(
-                          '인증 메일을 보냈습니다!',
+                          '재설정 메일을 보냈습니다!',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -157,7 +146,7 @@ class _ResetPasswordSuccessScreenState
                         ),
                         const SizedBox(height: 8),
                         const Text(
-                          '메일함을 확인하고 인증 번호를 입력해주세요',
+                          '링크를 클릭하여 비밀번호를 변경해주세요',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             color: Color(0xFF697282),
@@ -176,56 +165,20 @@ class _ResetPasswordSuccessScreenState
 
                         const SizedBox(height: 32),
 
-                        // Code Input
-                        TextField(
-                          controller: _codeController,
-                          keyboardType: TextInputType.number,
-                          textAlign: TextAlign.center,
-                          maxLength: 6,
-                          style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 8,
-                          ),
-                          decoration: InputDecoration(
-                            counterText: "",
-                            hintText: "000000",
-                            hintStyle: const TextStyle(
-                              color: Color(0xFFD1D5DB),
-                              fontSize: 24,
-                              letterSpacing: 8,
-                            ),
-                            filled: true,
-                            fillColor: const Color(0xFFF3F3F5),
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 14,
-                            ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide.none,
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(height: 24),
-
-                        // Verify Button
+                        // Verify Button -> Login Button
                         SizedBox(
                           width: double.infinity,
                           height: 48,
                           child: ElevatedButton(
-                            onPressed: _isCodeValid
-                                ? () {
-                                    Navigator.pushReplacement(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            const NewPasswordScreen(),
-                                      ),
-                                    );
-                                  }
-                                : null,
+                            onPressed: () {
+                              Navigator.pushAndRemoveUntil(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const LoginScreen(),
+                                ),
+                                (route) => false,
+                              );
+                            },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFF00C853),
                               disabledBackgroundColor: const Color(0xFFE5E7EB),
@@ -237,7 +190,7 @@ class _ResetPasswordSuccessScreenState
                               ),
                             ),
                             child: const Text(
-                              '인증하기',
+                              '로그인하러 가기',
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 14,
@@ -262,7 +215,7 @@ class _ResetPasswordSuccessScreenState
                               onPressed: () {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
-                                    content: Text('인증 번호를 다시 보냈습니다.'),
+                                    content: Text('재설정 링크를 다시 보냈습니다.'),
                                   ),
                                 );
                               },

@@ -23,6 +23,7 @@ class _SignupScreenState extends State<SignupScreen> {
   // State Variables
   String? _selectedWheelchairType; // 'Electric', 'Manual', 'None'
   bool _isEmailValid = true;
+  bool _isPasswordFormatValid = true;
   bool _isPasswordMatch = true;
   bool _isFormValid = false;
 
@@ -54,6 +55,12 @@ class _SignupScreenState extends State<SignupScreen> {
         emailRegex.hasMatch(_emailController.text);
 
     // Password Validation
+    // At least 8 chars, must contain at least one letter and one number
+    final password = _passwordController.text;
+    final passwordRegex = RegExp(r'^(?=.*[A-Za-z])(?=.*\d).{8,}$');
+    final isPasswordFormatValid =
+        password.isEmpty || passwordRegex.hasMatch(password);
+
     final isPasswordMatch =
         _passwordController.text == _confirmPasswordController.text;
 
@@ -67,6 +74,7 @@ class _SignupScreenState extends State<SignupScreen> {
 
     setState(() {
       _isEmailValid = isEmailValid;
+      _isPasswordFormatValid = isPasswordFormatValid;
       _isPasswordMatch = isPasswordMatch;
       _isFormValid =
           isNameFilled &&
@@ -76,6 +84,7 @@ class _SignupScreenState extends State<SignupScreen> {
           isConfirmFilled &&
           isWheelchairSelected &&
           isEmailValid &&
+          isPasswordFormatValid &&
           isPasswordMatch;
     });
   }
@@ -211,6 +220,9 @@ class _SignupScreenState extends State<SignupScreen> {
                           '비밀번호를 생성하세요',
                           _passwordController,
                           isPassword: true,
+                          errorText: _isPasswordFormatValid
+                              ? null
+                              : '영어, 숫자 포함 8자리 이상 입력해주세요',
                         ),
                         const SizedBox(height: 16),
 
