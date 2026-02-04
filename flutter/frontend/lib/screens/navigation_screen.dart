@@ -17,6 +17,7 @@ class NavigationScreen extends StatefulWidget {
   final String totalDistance;
   final LatLng? startLocation;
   final LatLng? endLocation;
+  final List<List<double>>? routeGeometry;
 
   const NavigationScreen({
     super.key,
@@ -25,6 +26,7 @@ class NavigationScreen extends StatefulWidget {
     required this.totalDistance,
     this.startLocation,
     this.endLocation,
+    this.routeGeometry,
   });
 
   @override
@@ -142,6 +144,9 @@ class _NavigationScreenState extends State<NavigationScreen> {
           widget.startLocation!.latitude,
           widget.startLocation!.longitude,
         );
+      }
+      if (widget.routeGeometry != null) {
+        KakaoMapHelper.drawRoute(_mapController, widget.routeGeometry!);
       }
     });
   }

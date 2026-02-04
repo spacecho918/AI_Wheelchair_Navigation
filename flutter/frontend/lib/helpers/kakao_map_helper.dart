@@ -46,6 +46,20 @@ class KakaoMapHelper {
     }
   }
 
+  static void drawRoute(WebViewController? controller, List<List<double>> path) {
+    if (kIsWeb) {
+      platform.sendMapCommand({
+        'action': 'drawRoute',
+        'path': path,
+      });
+    } else {
+      final jsonPath = path.toString(); // List<List<double>> to string might need better formatting for JS
+      // Better to use jsonEncode if possible, but for simple list of list of doubles, string interpolation might be tricky in JS key.
+      // Actually `path.toString()` in Dart for `[[1.1, 2.2], [3.3, 4.4]]` produces `[[1.1, 2.2], [3.3, 4.4]]` which is valid JS array syntax.
+      controller?.runJavaScript('drawRoute($jsonPath)');
+    }
+  }
+
   /// Listen for map events (like dragend) on Web.
   /// On Mobile, use JavaScript channel instead.
   static void listenForMapEvents(
