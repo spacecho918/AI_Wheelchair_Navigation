@@ -3,7 +3,6 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'email_verification_screen.dart';
 import 'login_screen.dart';
 import 'reset_password_screen.dart';
-import '../services/auth_service.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -24,6 +23,7 @@ class _SignupScreenState extends State<SignupScreen> {
   // State Variables
   String? _selectedWheelchairType; // 'Electric', 'Manual', 'None'
   bool _isEmailValid = true;
+  bool _isPasswordFormatValid = true;
   bool _isPasswordMatch = true;
   bool _isFormValid = false;
 
@@ -55,6 +55,12 @@ class _SignupScreenState extends State<SignupScreen> {
         emailRegex.hasMatch(_emailController.text);
 
     // Password Validation
+    // At least 8 chars, must contain at least one letter and one number
+    final password = _passwordController.text;
+    final passwordRegex = RegExp(r'^(?=.*[A-Za-z])(?=.*\d).{8,}$');
+    final isPasswordFormatValid =
+        password.isEmpty || passwordRegex.hasMatch(password);
+
     final isPasswordMatch =
         _passwordController.text == _confirmPasswordController.text;
 
@@ -68,6 +74,7 @@ class _SignupScreenState extends State<SignupScreen> {
 
     setState(() {
       _isEmailValid = isEmailValid;
+      _isPasswordFormatValid = isPasswordFormatValid;
       _isPasswordMatch = isPasswordMatch;
       _isFormValid =
           isNameFilled &&
@@ -77,6 +84,7 @@ class _SignupScreenState extends State<SignupScreen> {
           isConfirmFilled &&
           isWheelchairSelected &&
           isEmailValid &&
+          isPasswordFormatValid &&
           isPasswordMatch;
     });
   }
@@ -212,6 +220,9 @@ class _SignupScreenState extends State<SignupScreen> {
                           '비밀번호를 생성하세요',
                           _passwordController,
                           isPassword: true,
+                          errorText: _isPasswordFormatValid
+                              ? null
+                              : '영어, 숫자 포함 8자리 이상 입력해주세요',
                         ),
                         const SizedBox(height: 16),
 
@@ -292,51 +303,17 @@ class _SignupScreenState extends State<SignupScreen> {
                           width: double.infinity,
                           height: 48,
                           child: ElevatedButton(
-                                    onPressed: _isFormValid
-                                ? () async {
-                                    final email = _emailController.text.trim();
-                                    final password = _passwordController.text.trim();
-                                    
-                                    try {
-                                      showDialog(
-                                        context: context,
-                                        barrierDismissible: false,
-                                        builder: (context) => const Center(child: CircularProgressIndicator()),
-                                      );
-
-                                      // 메타데이터 준비 (닉네임, 이름, 휠체어 타입)
-                                      final metadata = {
-                                        'name': _nameController.text.trim(),
-                                        'nickname': _nicknameController.text.trim(),
-                                        'wheelchair_type': _selectedWheelchairType,
-                                      };
-
-                                      await AuthService.signUp(
-                                        email: email, 
-                                        password: password,
-                                        metadata: metadata
-                                      );
-
-                                      if (context.mounted) {
-                                        Navigator.pop(context); // 로딩 닫기
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) =>
-                                                EmailVerificationScreen(
-                                                  email: _emailController.text,
-                                                ),
-                                          ),
-                                        );
-                                      }
-                                    } catch (e) {
-                                      if (context.mounted) {
-                                        Navigator.pop(context); // 로딩 닫기
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(content: Text('회원가입 실패: 이미 사용 중인 이메일이거나 오류가 발생했습니다.')),
-                                        );
-                                      }
-                                    }
+                            onPressed: _isFormValid
+                                ? () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            EmailVerificationScreen(
+                                              email: _emailController.text,
+                                            ),
+                                      ),
+                                    );
                                   }
                                 : null,
                             style: ElevatedButton.styleFrom(

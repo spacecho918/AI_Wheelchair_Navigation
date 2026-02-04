@@ -17,7 +17,6 @@ class NavigationScreen extends StatefulWidget {
   final String totalDistance;
   final LatLng? startLocation;
   final LatLng? endLocation;
-  final List<dynamic>? routeGeometry; // [[lat, lng], [lat, lng], ...]
 
   const NavigationScreen({
     super.key,
@@ -26,7 +25,6 @@ class NavigationScreen extends StatefulWidget {
     required this.totalDistance,
     this.startLocation,
     this.endLocation,
-    this.routeGeometry,
   });
 
   @override
@@ -145,34 +143,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
           widget.startLocation!.longitude,
         );
       }
-      
-      // Draw Route if geometry exists
-      if (widget.routeGeometry != null && widget.routeGeometry!.isNotEmpty) {
-        _drawRoute();
-      }
     });
-  }
-  
-  void _drawRoute() {
-    if (_mapController == null) return;
-    
-    // Construct JSON message
-    // HTML expects: { "action": "drawRoute", "path": [[lat, lng], ...] }
-    final message = jsonEncode({
-      "action": "drawRoute",
-      "path": widget.routeGeometry,
-    });
-    
-    // Send message to WebView
-    if (kIsWeb) {
-      // For web, we might use a different approach or verify if runJavaScript works for posting message.
-      // Usually WebViewController.runJavaScript works on Flutter Web too.
-      // Alternatively, access the iframe contentWindow.postMessage via js interactions.
-      // But standard way:
-      _mapController!.runJavaScript('window.postMessage($message, "*")');
-    } else {
-       _mapController!.runJavaScript('window.postMessage($message, "*")');
-    }
   }
 
   Future<void> _moveToCurrentLocation() async {
@@ -192,6 +163,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
+        settings: const RouteSettings(name: 'navigation_end'),
         builder: (context) => NavigationEndScreen(
           routeType: widget.routeType,
           estimatedTime: widget.estimatedTime,
@@ -305,248 +277,259 @@ class _NavigationScreenState extends State<NavigationScreen> {
             ),
           ),
 
-          // 3. 하단 플로팅 버튼들
+          // 3. 하단 UI (플로팅 버튼 + 정보창)
           Positioned(
-            left: 16,
-            bottom: 150, // 간격 줄임
+            left: 0,
+            right: 0,
+            bottom: 0,
             child: PointerInterceptor(
-              child: Container(
-                height: 50, // 현위치 버튼과 동일
-                decoration: BoxDecoration(
-                  color: const Color(0xFF00C853),
-                  borderRadius: BorderRadius.circular(30),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.2),
-                      blurRadius: 8,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              const CameraScreen(fromNavigation: true),
-                        ),
-                      );
-                    },
-                    borderRadius: BorderRadius.circular(30),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 15,
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          SvgPicture.asset(
-                            'assets/camera_icon.svg',
-                            colorFilter: const ColorFilter.mode(
-                              Colors.white,
-                              BlendMode.srcIn,
-                            ),
-                            width: 24,
-                          ),
-                          const SizedBox(width: 6),
-                          const Text(
-                            '장애물 제보',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-
-          // 현위치 버튼
-          Positioned(
-            right: 16,
-            bottom: 150, // 간격 줄임
-            child: PointerInterceptor(
-              child: Container(
-                width: 50,
-                height: 50,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.15),
-                      blurRadius: 8,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    customBorder: const CircleBorder(),
-                    onTap: _moveToCurrentLocation,
-                    child: Center(
-                      child: SvgPicture.asset(
-                        'assets/target_icon.svg',
-                        width: 18,
-                        height: 18,
-                        colorFilter: const ColorFilter.mode(
-                          Color(0xFF354152),
-                          BlendMode.srcIn,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-
-          // 4. 하단 정보 바
-          Positioned(
-            left: 16,
-            right: 16,
-            bottom: MediaQuery.of(context).padding.bottom + 16,
-            child: PointerInterceptor(
-              child: Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.1),
-                      blurRadius: 20,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // 시간/거리 + 안내 종료 버튼
-                    Row(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // 플로팅 버튼들 (장애물 제보 + 현위치)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        // 남은 시간
-                        Text(
-                          widget.estimatedTime,
-                          style: const TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF101727),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        // 남은 거리
-                        Text(
-                          widget.totalDistance,
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Color(0xFF4A5565),
-                          ),
-                        ),
-                        const Spacer(),
-                        // 안내 종료 버튼
-                        GestureDetector(
-                          onTapDown: (_) =>
-                              setState(() => _isEndNavPressed = true),
-                          onTapUp: (_) =>
-                              setState(() => _isEndNavPressed = false),
-                          onTapCancel: () =>
-                              setState(() => _isEndNavPressed = false),
-                          onTap: _endNavigation,
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.close,
-                                size: 16,
-                                color: _isEndNavPressed
-                                    ? const Color(0xFFFF3B30)
-                                    : Colors.grey[500],
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                '안내 종료',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: _isEndNavPressed
-                                      ? const Color(0xFFFF3B30)
-                                      : Colors.grey[500],
-                                ),
+                        // 장애물 제보 버튼
+                        Container(
+                          height: 50,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF00C853),
+                            borderRadius: BorderRadius.circular(30),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.2),
+                                blurRadius: 8,
+                                offset: const Offset(0, 4),
                               ),
                             ],
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    // Progress Bar
-                    Stack(
-                      children: [
-                        Container(
-                          height: 6,
-                          width: double.infinity,
-                          decoration: BoxDecoration(
-                            color: Colors.grey[200],
-                            borderRadius: BorderRadius.circular(3),
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const CameraScreen(
+                                      fromNavigation: true,
+                                    ),
+                                  ),
+                                );
+                              },
+                              borderRadius: BorderRadius.circular(30),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 15,
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    SvgPicture.asset(
+                                      'assets/camera_icon.svg',
+                                      colorFilter: const ColorFilter.mode(
+                                        Colors.white,
+                                        BlendMode.srcIn,
+                                      ),
+                                      width: 24,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    const Text(
+                                      '장애물 제보',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
                           ),
                         ),
-                        FractionallySizedBox(
-                          widthFactor: 0.35, // 35% 진행 상태 예시
-                          child: Container(
-                            height: 6,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF00C853),
-                              borderRadius: BorderRadius.circular(3),
+
+                        // 현위치 버튼
+                        Container(
+                          width: 50,
+                          height: 50,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.15),
+                                blurRadius: 8,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              customBorder: const CircleBorder(),
+                              onTap: _moveToCurrentLocation,
+                              child: Center(
+                                child: SvgPicture.asset(
+                                  'assets/target_icon.svg',
+                                  width: 18,
+                                  height: 18,
+                                  colorFilter: const ColorFilter.mode(
+                                    Color(0xFF354152),
+                                    BlendMode.srcIn,
+                                  ),
+                                ),
+                              ),
                             ),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 12),
-                    // 요약 정보
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.check_circle,
-                          size: 14,
-                          color: Colors.grey[500],
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '3번 회전 남음',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Color(0xFF9EA6B8),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Icon(
-                          Icons.accessible,
-                          size: 14,
-                          color: Colors.grey[500],
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '숲 알뜰 경사로 2개',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Color(0xFF9EA6B8),
-                          ),
+                  ),
+
+                  const SizedBox(height: 16), // 버튼과 정보창 사이 고정 간격
+                  // 하단 정보창
+                  Container(
+                    width: double.infinity,
+                    margin: EdgeInsets.only(
+                      left: 16,
+                      right: 16,
+                      bottom: MediaQuery.of(context).padding.bottom + 16,
+                    ),
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.1),
+                          blurRadius: 20,
+                          offset: const Offset(0, 4),
                         ),
                       ],
                     ),
-                  ],
-                ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // 시간/거리 + 안내 종료 버튼
+                        Row(
+                          children: [
+                            // 남은 시간
+                            Text(
+                              widget.estimatedTime,
+                              style: const TextStyle(
+                                fontSize: 28,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF101727),
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            // 남은 거리
+                            Text(
+                              widget.totalDistance,
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Color(0xFF4A5565),
+                              ),
+                            ),
+                            const Spacer(),
+                            // 안내 종료 버튼
+                            GestureDetector(
+                              onTapDown: (_) =>
+                                  setState(() => _isEndNavPressed = true),
+                              onTapUp: (_) =>
+                                  setState(() => _isEndNavPressed = false),
+                              onTapCancel: () =>
+                                  setState(() => _isEndNavPressed = false),
+                              onTap: _endNavigation,
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.close,
+                                    size: 16,
+                                    color: _isEndNavPressed
+                                        ? const Color(0xFFFF3B30)
+                                        : Colors.grey[500],
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '안내 종료',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: _isEndNavPressed
+                                          ? const Color(0xFFFF3B30)
+                                          : Colors.grey[500],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        // Progress Bar
+                        Stack(
+                          children: [
+                            Container(
+                              height: 6,
+                              width: double.infinity,
+                              decoration: BoxDecoration(
+                                color: Colors.grey[200],
+                                borderRadius: BorderRadius.circular(3),
+                              ),
+                            ),
+                            FractionallySizedBox(
+                              widthFactor: 0.35, // 35% 진행 상태 예시
+                              child: Container(
+                                height: 6,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF00C853),
+                                  borderRadius: BorderRadius.circular(3),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        // 요약 정보
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.check_circle,
+                              size: 14,
+                              color: Colors.grey[500],
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '3번 회전 남음',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFF9EA6B8),
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Icon(
+                              Icons.accessible,
+                              size: 14,
+                              color: Colors.grey[500],
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '숲 알뜰 경사로 2개',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFF9EA6B8),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
           ),

@@ -2,10 +2,8 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
-import 'package:flutter/scheduler.dart';
 import 'package:gilbeot/screens/location_adjust_screen.dart';
 import 'package:gilbeot/screens/report_confirm_screen.dart';
-import 'package:gilbeot/services/api_service.dart';
 import 'package:latlong2/latlong.dart' as latlong;
 
 class ObstacleCheckScreen extends StatefulWidget {
@@ -13,6 +11,7 @@ class ObstacleCheckScreen extends StatefulWidget {
   final String initialObstacle; // AI가 예측한 장애물 (예: 'stairs')
   final bool fromConfirm; // 제보 확인 화면에서 수정하러 왔는지 여부
   final bool fromNavigation;
+  final bool fromNavigationEnd;
 
   const ObstacleCheckScreen({
     super.key,
@@ -20,6 +19,7 @@ class ObstacleCheckScreen extends StatefulWidget {
     this.initialObstacle = 'stairs',
     this.fromConfirm = false,
     this.fromNavigation = false,
+    this.fromNavigationEnd = false,
   });
 
   @override
@@ -31,7 +31,6 @@ class _ObstacleCheckScreenState extends State<ObstacleCheckScreen> {
 
   // 현재 선택된 장애물 IDs
   late Set<String> _selectedIds;
-  bool _isLoading = false;
 
   // 기타 입력 관리
   final List<TextEditingController> _otherControllers = [];
@@ -59,77 +58,16 @@ class _ObstacleCheckScreenState extends State<ObstacleCheckScreen> {
     // 기본적으로 기타 입력창 하나 추가
     _addOtherInput();
 
-    // 이미지 분석 실행 (fromConfirm이 아닐 때만, 즉 처음 찍었을 때만)
-    if (!widget.fromConfirm && widget.imagePath.isNotEmpty) {
-      _analyzeImage();
+    final exists = obstacles.any((e) => e['id'] == widget.initialObstacle);
+    if (exists) {
+      _selectedIds.add(widget.initialObstacle);
     } else {
-      // 기존 로직 유지 (initialObstacle 사용)
-       final exists = obstacles.any((e) => e['id'] == widget.initialObstacle);
-       if (exists) {
-         _selectedIds.add(widget.initialObstacle);
-       } else {
-         if (widget.initialObstacle.isNotEmpty && widget.initialObstacle != 'stairs') {
-           // 기본값 계단 제외
-           _selectedIds.add('stairs');
-         } else {
-          _selectedIds.add('stairs');
-         }
-       }
+      if (widget.initialObstacle.isNotEmpty) {
+        _selectedIds.add('stairs');
+      }
     }
-  }
-
-  Future<void> _analyzeImage() async {
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      final result = await ApiService.analyzeImage(widget.imagePath);
-      
-      if (!mounted) return;
-
-      if (result['success'] == true && result['detected_type'] != null) {
-        String detected = result['detected_type'];
-        
-        // 매핑 (YOLO 클래스명 -> 앱 ID)
-        // YOLO 클래스: stairs, bollard, cone, etc. (소문자 가정)
-        // 앱 ID: stairs, bollard, cone, slope, curb, other
-        
-        String mappedId = 'other';
-        bool matched = false;
-        
-        for (var item in obstacles) {
-          if (item['id'] == detected.toLowerCase()) {
-            mappedId = item['id']!;
-            matched = true;
-            break;
-          }
-        }
-        
-        setState(() {
-          _selectedIds.clear(); // 기존 선택 초기화
-          _selectedIds.add(mappedId);
-          
-          if (!matched && detected.isNotEmpty) {
-             // 기타로 분류된 경우 텍스트 필드에 YOLO 결과 넣어주기? (선택)
-             if (_otherControllers.isNotEmpty) {
-               _otherControllers[0].text = detected;
-             }
-          }
-        });
-        
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('AI가 장애물을 감지했습니다: $detected')),
-        );
-      }
-    } catch (e) {
-      debugPrint("분석 오류: $e");
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+    if (!exists) {
+      _selectedIds.add('stairs');
     }
   }
 
@@ -226,26 +164,13 @@ class _ObstacleCheckScreenState extends State<ObstacleCheckScreen> {
                       ),
 
                       // 타이틀
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Text(
-                            '해당하는 장애물을 선택해주세요',
-                            style: TextStyle(
-                              fontSize: 21,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF101727),
-                            ),
-                          ),
-                          if (_isLoading) ...[
-                            const SizedBox(width: 10),
-                            const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            ),
-                          ],
-                        ],
+                      const Text(
+                        '해당하는 장애물을 선택해주세요',
+                        style: TextStyle(
+                          fontSize: 21,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF101727),
+                        ),
                       ),
                       const SizedBox(height: 8),
                       // Subtitle removed or kept? "AI가 감지한 결과입니다..." might not fit "Multi-select".
@@ -516,6 +441,8 @@ class _ObstacleCheckScreenState extends State<ObstacleCheckScreen> {
                                               obstacleId: joinedIds,
                                               fromNavigation:
                                                   widget.fromNavigation,
+                                              fromNavigationEnd:
+                                                  widget.fromNavigationEnd,
                                             ),
                                       ),
                                     );

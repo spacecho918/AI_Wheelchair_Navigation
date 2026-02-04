@@ -439,7 +439,9 @@ class _NavigationEndScreenState extends State<NavigationEndScreen> {
                                                 context,
                                                 MaterialPageRoute(
                                                   builder: (context) =>
-                                                      const CameraScreen(),
+                                                      const CameraScreen(
+                                                        fromNavigationEnd: true,
+                                                      ),
                                                 ),
                                               );
                                             },

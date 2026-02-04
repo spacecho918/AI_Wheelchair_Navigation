@@ -10,7 +10,6 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:latlong2/latlong.dart' as latlong;
 import 'package:gilbeot/helpers/kakao_map_helper.dart';
-import 'package:gilbeot/services/api_service.dart';
 
 class ReportConfirmScreen extends StatefulWidget {
   final latlong.LatLng location;
@@ -19,6 +18,7 @@ class ReportConfirmScreen extends StatefulWidget {
   final String? obstacleType;
   final String? obstacleId;
   final bool fromNavigation;
+  final bool fromNavigationEnd;
 
   const ReportConfirmScreen({
     super.key,
@@ -28,6 +28,7 @@ class ReportConfirmScreen extends StatefulWidget {
     this.obstacleType,
     this.obstacleId,
     this.fromNavigation = false,
+    this.fromNavigationEnd = false,
   });
 
   @override
@@ -501,75 +502,32 @@ class _ReportConfirmScreenState extends State<ReportConfirmScreen> {
 
   Widget _buildSubmitButton() {
     return ElevatedButton(
-      onPressed: _isSubmitting ? null : _submitReport,
+      onPressed: () {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ReportSuccessScreen(
+              fromNavigation: widget.fromNavigation,
+              fromNavigationEnd: widget.fromNavigationEnd,
+            ),
+          ),
+        );
+      },
       style: ElevatedButton.styleFrom(
         backgroundColor: const Color(0xFF00C853),
         padding: const EdgeInsets.symmetric(vertical: 16),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         elevation: 0,
       ),
-      child: _isSubmitting 
-        ? const SizedBox(
-            height: 20, 
-            width: 20, 
-            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
-          )
-        : const Text(
-            '제보하기',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+      child: const Text(
+        '제보하기',
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
     );
-  }
-
-  bool _isSubmitting = false;
-
-  Future<void> _submitReport() async {
-    setState(() {
-      _isSubmitting = true;
-    });
-
-    try {
-      // API 호출
-      final result = await ApiService.submitReport(
-        latitude: _currentLocation.latitude,
-        longitude: _currentLocation.longitude,
-        obstacleType: _currentObstacleId ?? 'other', // ID가 실제 타입 코드와 일치한다고 가정
-        description: _descriptionController.text,
-        imagePath: _currentImagePath,
-      );
-
-      if (!mounted) return;
-
-      if (result['success'] == true) {
-        // 성공 시 성공 화면으로 이동
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) =>
-                ReportSuccessScreen(fromNavigation: widget.fromNavigation),
-          ),
-        );
-      } else {
-        // 실패 시 에러 메시지
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('제보 실패: ${result['message']}')),
-        );
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('오류 발생: $e')),
-      );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isSubmitting = false;
-        });
-      }
-    }
   }
 
   Future<void> _editPhoto(BuildContext context) async {
