@@ -7,12 +7,14 @@ class PhotoConfirmationScreen extends StatelessWidget {
   final String imagePath;
   final bool fromConfirm;
   final bool fromNavigation;
+  final bool fromNavigationEnd;
 
   const PhotoConfirmationScreen({
     super.key,
     required this.imagePath,
     this.fromConfirm = false,
     this.fromNavigation = false,
+    this.fromNavigationEnd = false,
   });
 
   @override
@@ -84,6 +86,7 @@ class PhotoConfirmationScreen extends StatelessWidget {
                             initialObstacle: 'stairs',
                             fromConfirm: fromConfirm,
                             fromNavigation: fromNavigation,
+                            fromNavigationEnd: fromNavigationEnd,
                           ),
                         ),
                       );

@@ -11,6 +11,7 @@ class ObstacleCheckScreen extends StatefulWidget {
   final String initialObstacle; // AI가 예측한 장애물 (예: 'stairs')
   final bool fromConfirm; // 제보 확인 화면에서 수정하러 왔는지 여부
   final bool fromNavigation;
+  final bool fromNavigationEnd;
 
   const ObstacleCheckScreen({
     super.key,
@@ -18,6 +19,7 @@ class ObstacleCheckScreen extends StatefulWidget {
     this.initialObstacle = 'stairs',
     this.fromConfirm = false,
     this.fromNavigation = false,
+    this.fromNavigationEnd = false,
   });
 
   @override
@@ -439,6 +441,8 @@ class _ObstacleCheckScreenState extends State<ObstacleCheckScreen> {
                                               obstacleId: joinedIds,
                                               fromNavigation:
                                                   widget.fromNavigation,
+                                              fromNavigationEnd:
+                                                  widget.fromNavigationEnd,
                                             ),
                                       ),
                                     );

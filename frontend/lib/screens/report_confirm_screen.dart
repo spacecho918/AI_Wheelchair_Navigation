@@ -18,6 +18,7 @@ class ReportConfirmScreen extends StatefulWidget {
   final String? obstacleType;
   final String? obstacleId;
   final bool fromNavigation;
+  final bool fromNavigationEnd;
 
   const ReportConfirmScreen({
     super.key,
@@ -27,6 +28,7 @@ class ReportConfirmScreen extends StatefulWidget {
     this.obstacleType,
     this.obstacleId,
     this.fromNavigation = false,
+    this.fromNavigationEnd = false,
   });
 
   @override
@@ -504,8 +506,10 @@ class _ReportConfirmScreenState extends State<ReportConfirmScreen> {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) =>
-                ReportSuccessScreen(fromNavigation: widget.fromNavigation),
+            builder: (context) => ReportSuccessScreen(
+              fromNavigation: widget.fromNavigation,
+              fromNavigationEnd: widget.fromNavigationEnd,
+            ),
           ),
         );
       },

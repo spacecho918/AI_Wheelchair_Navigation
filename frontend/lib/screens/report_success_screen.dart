@@ -3,8 +3,13 @@ import 'package:gilbeot/screens/my_reports_screen.dart';
 
 class ReportSuccessScreen extends StatelessWidget {
   final bool fromNavigation;
+  final bool fromNavigationEnd;
 
-  const ReportSuccessScreen({super.key, this.fromNavigation = false});
+  const ReportSuccessScreen({
+    super.key,
+    this.fromNavigation = false,
+    this.fromNavigationEnd = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -40,7 +45,11 @@ class ReportSuccessScreen extends StatelessWidget {
                   child: GestureDetector(
                     onTap: () {
                       final nav = Navigator.of(context);
-                      if (fromNavigation) {
+                      if (fromNavigationEnd) {
+                        nav.popUntil(
+                          (route) => route.settings.name == 'navigation_end',
+                        );
+                      } else if (fromNavigation) {
                         nav.popUntil(
                           (route) => route.settings.name == 'navigation',
                         );
@@ -95,81 +104,110 @@ class ReportSuccessScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 32),
                 // Buttons
-                SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      if (fromNavigation) {
-                        Navigator.pushAndRemoveUntil(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const MyReportsScreen(),
-                          ),
-                          (route) => route.settings.name == 'navigation',
-                        );
-                      } else {
-                        Navigator.pushAndRemoveUntil(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const MyReportsScreen(),
-                          ),
-                          (route) => route.isFirst,
-                        );
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF00C853),
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: const Text(
-                      '나의 제보 확인하기',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      if (fromNavigation) {
+                if (fromNavigationEnd)
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton(
+                      onPressed: () {
                         Navigator.of(context).popUntil(
-                          (route) => route.settings.name == 'navigation',
+                          (route) => route.settings.name == 'navigation_end',
                         );
-                      } else {
-                        Navigator.of(
-                          context,
-                        ).popUntil((route) => route.isFirst);
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      elevation: 0,
-                      shadowColor: Colors.black.withValues(alpha: 0.1),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        side: const BorderSide(color: Color(0xFFE5E7EB)),
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF00C853),
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        '완료',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
-                    child: Text(
-                      fromNavigation ? '경로 안내로 돌아가기' : '지도로 돌아가기',
-                      style: const TextStyle(
-                        color: Color(0xFF4A5565),
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
+                  )
+                else ...[
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        if (fromNavigation) {
+                          Navigator.pushAndRemoveUntil(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const MyReportsScreen(),
+                            ),
+                            (route) => route.settings.name == 'navigation',
+                          );
+                        } else {
+                          Navigator.pushAndRemoveUntil(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const MyReportsScreen(),
+                            ),
+                            (route) => route.isFirst,
+                          );
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF00C853),
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        '나의 제보 확인하기',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),
-                ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        if (fromNavigation) {
+                          Navigator.of(context).popUntil(
+                            (route) => route.settings.name == 'navigation',
+                          );
+                        } else {
+                          Navigator.of(
+                            context,
+                          ).popUntil((route) => route.isFirst);
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        elevation: 0,
+                        shadowColor: Colors.black.withValues(alpha: 0.1),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: const BorderSide(color: Color(0xFFE5E7EB)),
+                        ),
+                      ),
+                      child: Text(
+                        fromNavigation ? '경로 안내로 돌아가기' : '지도로 돌아가기',
+                        style: const TextStyle(
+                          color: Color(0xFF4A5565),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
