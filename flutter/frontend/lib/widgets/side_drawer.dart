@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
+import '../services/api_service.dart';
+import '../models/user_model.dart';
 import '../screens/login_screen.dart';
 import '../screens/wheelchair_settings_screen.dart';
 import '../screens/community_screen.dart';
@@ -10,13 +12,74 @@ import '../screens/history_screen.dart';
 import '../screens/saved_places_screen.dart';
 import '../screens/settings_screen.dart';
 
-class SideDrawer extends StatelessWidget {
+class SideDrawer extends StatefulWidget {
   const SideDrawer({super.key});
 
+  @override
+  State<SideDrawer> createState() => _SideDrawerState();
+}
+
+class _SideDrawerState extends State<SideDrawer> {
   // 색상 상수 (디자인에 맞춘 색상)
   final Color primaryGreen = const Color(0xFF00C853);
   final Color textDark = const Color(0xFF354152);
   final Color textGrey = const Color(0xFF99A1AE);
+
+  User? _userProfile;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserProfile();
+  }
+
+  Future<void> _loadUserProfile() async {
+    final user = await ApiService.getUserProfile();
+    if (mounted) {
+      setState(() {
+        _userProfile = user;
+      });
+    }
+  }
+
+  String _getWheelchairDisplayText(String? type) {
+    switch (type) {
+      case 'Electric':
+        return '전동 휠체어';
+      case 'Manual':
+        return '수동 휠체어';
+      case 'CaregiverManual':
+        return '보호자 동반';
+      case 'None':
+        return '사용 안함';
+      default:
+        return '휠체어 설정';
+    }
+  }
+
+  Widget _getWheelchairIcon(String? type, Color color) {
+    switch (type) {
+      case 'Electric':
+      case 'Manual':
+        return SvgPicture.asset(
+          'assets/wheelchair_icon.svg',
+          width: 16,
+          height: 16,
+          colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
+        );
+      case 'CaregiverManual':
+        return Icon(Icons.person, size: 16, color: color);
+      case 'None':
+        return Image.asset('assets/x.png', width: 14, height: 14, color: color);
+      default:
+        return SvgPicture.asset(
+          'assets/wheelchair_icon.svg',
+          width: 16,
+          height: 16,
+          colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
+        );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -185,13 +248,14 @@ class SideDrawer extends StatelessWidget {
               color: Colors.white,
               shape: BoxShape.circle,
             ),
+            // TODO: Display profile image if available
           ),
           const SizedBox(height: 14),
 
           // 이름
-          const Text(
-            '김사라',
-            style: TextStyle(
+          Text(
+            _userProfile?.nickname ?? '사용자',
+            style: const TextStyle(
               color: Colors.white,
               fontSize: 22,
               fontWeight: FontWeight.w600,
@@ -211,7 +275,7 @@ class SideDrawer extends StatelessWidget {
                   MaterialPageRoute(
                     builder: (context) => const WheelchairSettingsScreen(),
                   ),
-                );
+                ).then((_) => _loadUserProfile()); // Refresh on return
               },
               child: Container(
                 padding: const EdgeInsets.symmetric(
@@ -224,18 +288,13 @@ class SideDrawer extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    SvgPicture.asset(
-                      'assets/wheelchair_icon.svg',
-                      width: 16,
-                      height: 16,
-                      colorFilter: ColorFilter.mode(
-                        primaryGreen,
-                        BlendMode.srcIn,
-                      ),
+                    _getWheelchairIcon(
+                      _userProfile?.wheelchairType,
+                      primaryGreen,
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      '전동 휠체어',
+                      _getWheelchairDisplayText(_userProfile?.wheelchairType),
                       style: TextStyle(
                         color: primaryGreen,
                         fontSize: 13,
@@ -261,8 +320,9 @@ class SideDrawer extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 5),
+              // Level logic can be added later, static for now or based on driveCount?
               const Text(
-                '레벨 3',
+                '레벨 1',
                 style: TextStyle(color: Colors.white, fontSize: 13),
               ),
               const Padding(
@@ -278,9 +338,9 @@ class SideDrawer extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 5),
-              const Text(
-                '15건의 제보',
-                style: TextStyle(color: Colors.white, fontSize: 13),
+              Text(
+                '${_userProfile?.reportCount ?? 0}건의 제보',
+                style: const TextStyle(color: Colors.white, fontSize: 13),
               ),
             ],
           ),

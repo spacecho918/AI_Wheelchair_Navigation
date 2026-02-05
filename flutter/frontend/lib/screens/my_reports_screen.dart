@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'community_detail_screen.dart';
 import 'package:gilbeot/widgets/custom_back_button.dart';
+import '../services/api_service.dart';
+import '../models/user_model.dart';
+import '../models/report_summary.dart';
 
 class MyReportsScreen extends StatefulWidget {
   const MyReportsScreen({super.key});
@@ -18,10 +21,31 @@ class _MyReportsScreenState extends State<MyReportsScreen>
   final Color textGrey = const Color(0xFF4A5565);
   final Color bgLight = Colors.white;
 
+  bool _isLoading = true;
+  List<ReportSummary> _reports = [];
+  List<ReportSummary> _comments = [];
+  User? _userProfile;
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    final user = await ApiService.getUserProfile();
+    final reports = await ApiService.getUserReports();
+    final comments = await ApiService.getUserComments();
+
+    if (mounted) {
+      setState(() {
+        _userProfile = user;
+        _reports = reports;
+        _comments = comments;
+        _isLoading = false;
+      });
+    }
   }
 
   @override
@@ -32,23 +56,22 @@ class _MyReportsScreenState extends State<MyReportsScreen>
 
   // Navigation Helper
   void _navigateToDetail(Map<String, dynamic> item, {bool isComment = false}) {
-    // Construct a full dummy report object compatible with CommunityDetailScreen
+    // Construct a full report object compatible with CommunityDetailScreen
     final fullReport = {
-      'id': 999, // Dummy ID
-      'user': '김사라', // Current user
-      'time': item['date'],
-      'timestamp': DateTime.now(), // Dummy timestamp
+      'id': item['id'],
+      'user': item['user'],
+      'time': item['time'],
+      'timestamp': item['date'], // Using DateTime object
       'address': item['location'],
       'content': isComment
-          ? '이 제보글에 대한 원본 내용입니다.' // Placeholder for original report content if clicking a comment
-          : '제보한 내용입니다. ${item['title']}', // Placeholder
+          ? (item['commentContent'] ??
+                item['content']) // Use comment content if available
+          : item['content'], // Use actual report content
       'likes': item['likes'],
-      'dislikes': 0,
+      'dislikes': 0, // Default as we might not track dislikes in summary
       'comments': item['comments'] ?? 0,
-      'tag': item['title'], // Using title as tag for now or we can map it
-      'commentContent': isComment
-          ? item['content']
-          : null, // Pass comment content if needed
+      'tag': item['title'], // Map title to tag
+      'commentContent': isComment ? item['content'] : null,
     };
 
     Navigator.push(
@@ -61,12 +84,18 @@ class _MyReportsScreenState extends State<MyReportsScreen>
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        backgroundColor: Colors.white,
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       backgroundColor: bgLight,
       body: SafeArea(
         child: Column(
           children: [
-            // Custom Header
             // Custom Header
             Container(
               height: 56,
@@ -81,7 +110,7 @@ class _MyReportsScreenState extends State<MyReportsScreen>
                   Text(
                     '나의 제보',
                     style: TextStyle(
-                      color: Color(0xFF354152), // Community Screen Header Color
+                      color: Color(0xFF354152),
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
@@ -96,11 +125,15 @@ class _MyReportsScreenState extends State<MyReportsScreen>
               padding: const EdgeInsets.symmetric(vertical: 24),
               child: Row(
                 children: [
-                  _buildStatItem('3', '작성한 글'),
+                  _buildStatItem('${_reports.length}', '작성한 글'),
                   _buildDivider(),
-                  _buildStatItem('4', '작성한 댓글'),
+                  _buildStatItem('${_comments.length}', '작성한 댓글'),
                   _buildDivider(),
-                  _buildStatItem('25', '총 좋아요', color: primaryGreen),
+                  _buildStatItem(
+                    '${_reports.fold(0, (sum, item) => sum + item.likeCount)}',
+                    '총 좋아요',
+                    color: primaryGreen,
+                  ),
                 ],
               ),
             ),
@@ -126,14 +159,14 @@ class _MyReportsScreenState extends State<MyReportsScreen>
                   fontSize: 14,
                   fontWeight: FontWeight.normal,
                 ),
-                tabs: const [
+                tabs: [
                   Tab(
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.description_outlined, size: 18),
-                        SizedBox(width: 8),
-                        Text('작성한 글 3'),
+                        const Icon(Icons.description_outlined, size: 18),
+                        const SizedBox(width: 8),
+                        Text('작성한 글'),
                       ],
                     ),
                   ),
@@ -141,9 +174,9 @@ class _MyReportsScreenState extends State<MyReportsScreen>
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.chat_bubble_outline, size: 18),
-                        SizedBox(width: 8),
-                        Text('작성한 댓글 4'),
+                        const Icon(Icons.chat_bubble_outline, size: 18),
+                        const SizedBox(width: 8),
+                        Text('작성한 댓글'),
                       ],
                     ),
                   ),
@@ -196,137 +229,220 @@ class _MyReportsScreenState extends State<MyReportsScreen>
   }
 
   Widget _buildReportList() {
-    final reports = [
-      {
-        'title': '경사로 파손',
-        'location': '강남역 2번 출구',
-        'date': '1월 1일',
-        'status': '확인됨',
-        'statusColor': const Color(0xFF00C853), // Green
-        'statusBg': const Color(0xFFE8F5E9), // Light Green
-        'comments': 8,
-        'likes': 12,
-      },
-      {
-        'title': '보도블럭 파손',
-        'location': '서초대로 인도',
-        'date': '12월 30일',
-        'status': '해결됨',
-        'statusColor': const Color(0xFF2979FF), // Blue
-        'statusBg': const Color(0xFFE3F2FD), // Light Blue
-        'comments': 5,
-        'likes': 8,
-      },
-      {
-        'title': '엘리베이터 고장',
-        'location': '서울대학교병원',
-        'date': '12월 28일',
-        'status': '검토중',
-        'statusColor': const Color(0xFFFF9100), // Orange
-        'statusBg': const Color(0xFFFFF3E0), // Light Orange
-        'comments': 3,
-        'likes': 5,
-      },
-    ];
+    if (_reports.isEmpty) {
+      return const Center(child: Text('작성한 제보가 없습니다.'));
+    }
 
     return ListView.builder(
       padding: const EdgeInsets.all(16),
-      itemCount: reports.length,
+      itemCount: _reports.length,
       itemBuilder: (context, index) {
-        final report = reports[index];
+        final report = _reports[index];
+
+        // Create a map for navigation
+        final reportMap = {
+          'id': report.id,
+          'user': _userProfile?.nickname ?? '나',
+          'time': '${report.date.month}월 ${report.date.day}일',
+          'location': report.location,
+          'title': report.title,
+          'content': report.content,
+          'likes': report.likeCount,
+          'comments': report.commentCount,
+          'status': report.status,
+          'date': report.date,
+        };
+
         return Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 600),
-            child: Container(
-              margin: const EdgeInsets.only(bottom: 12),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.1),
-                    blurRadius: 6,
-                    spreadRadius: -1,
-                    offset: const Offset(0, 4),
-                  ),
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.06),
-                    blurRadius: 4,
-                    spreadRadius: -1,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Material(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                child: InkWell(
+            child: GestureDetector(
+              onTap: () => _navigateToDetail(reportMap),
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
                   borderRadius: BorderRadius.circular(16),
-                  onTap: () => _navigateToDetail(report),
-                  child: Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.03),
+                      spreadRadius: 0,
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Tag
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: primaryGreen,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        report.title,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Image area
+                    if (report.imageUrl != null && report.imageUrl!.isNotEmpty)
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.network(
+                          report.imageUrl!.startsWith('http')
+                              ? report.imageUrl!
+                              : 'http://localhost:8000${report.imageUrl}',
+                          height: 150,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              height: 120,
+                              width: double.infinity,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFE5E7EB),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(
+                                Icons.image_not_supported,
+                                color: Colors.grey,
+                              ),
+                            );
+                          },
+                        ),
+                      )
+                    else
+                      Container(
+                        height: 120,
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE5E7EB),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(Icons.photo, color: Colors.grey),
+                      ),
+                    const SizedBox(height: 12),
+
+                    // User Info
+                    Row(
                       children: [
-                        Text(
-                          report['title'] as String,
-                          style: TextStyle(
-                            color: textDark,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
+                        CircleAvatar(
+                          backgroundColor: Colors.grey.shade200,
+                          radius: 14,
+                          child: Text(
+                            (_userProfile?.nickname ?? '나')[0],
+                            style: TextStyle(fontSize: 12, color: textDark),
                           ),
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          report['location'] as String,
-                          style: TextStyle(
-                            color: Color(0xFF9EA6B8),
-                            fontSize: 13,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          report['date'] as String,
-                          style: TextStyle(
-                            color: Color(0xFF9EA6B8),
-                            fontSize: 11,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
+                        const SizedBox(width: 8),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Icon(
-                              Icons.chat_bubble_outline,
-                              size: 14,
-                              color: textGrey,
-                            ),
-                            const SizedBox(width: 4),
                             Text(
-                              '${report['comments']}',
+                              _userProfile?.nickname ?? '나',
                               style: TextStyle(
-                                color: Color(0xFF9EA6B8),
-                                fontSize: 12,
+                                color: textDark,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
                               ),
                             ),
-                            const SizedBox(width: 12),
-                            Icon(
-                              Icons.thumb_up_outlined,
-                              size: 14,
-                              color: textGrey,
-                            ),
-                            const SizedBox(width: 4),
                             Text(
-                              '${report['likes']}',
-                              style: TextStyle(
-                                color: Color(0xFF9EA6B8),
-                                fontSize: 12,
-                              ),
+                              '${report.date.month}월 ${report.date.day}일',
+                              style: TextStyle(color: textGrey, fontSize: 10),
                             ),
                           ],
                         ),
                       ],
                     ),
-                  ),
+                    const SizedBox(height: 8),
+
+                    // Location
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.location_on_outlined,
+                          size: 14,
+                          color: primaryGreen,
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            report.location,
+                            style: TextStyle(
+                              color: const Color(0xFF4A5565),
+                              fontSize: 12,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+
+                    // Content
+                    Text(
+                      report.content,
+                      style: TextStyle(
+                        color: textDark,
+                        fontSize: 14,
+                        height: 1.5,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Footer
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.thumb_up_outlined,
+                          size: 16,
+                          color: textGrey,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${report.likeCount}',
+                          style: TextStyle(color: textGrey, fontSize: 12),
+                        ),
+                        const SizedBox(width: 12),
+                        Icon(
+                          Icons.thumb_down_outlined,
+                          size: 16,
+                          color: textGrey,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '0', // No dislike count in model
+                          style: TextStyle(color: textGrey, fontSize: 12),
+                        ),
+                        const Spacer(),
+                        Icon(
+                          Icons.chat_bubble_outline,
+                          size: 16,
+                          color: textGrey,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${report.commentCount}',
+                          style: TextStyle(color: textGrey, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -337,47 +453,34 @@ class _MyReportsScreenState extends State<MyReportsScreen>
   }
 
   Widget _buildCommentList() {
-    final comments = [
-      {
-        'title': '경사로 파손',
-        'location': '강남역 2번 출구',
-        'content': '저도 어제 이곳을 지나다가 같은 문제를 발견했습니다. 빠른 조치가 필요할 것 같아요.',
-        'date': '12월 31일',
-        'likes': 4,
-      },
-      {
-        'title': '보도블록 파손',
-        'location': '여의도역 3번 출구',
-        'content': '감사합니다. 이 정보 덕분에 다른 경로를 이용할 수 있었어요.',
-        'date': '12월 29일',
-        'likes': 2,
-      },
-      {
-        'title': '인도 공사',
-        'location': '신촌역 앞',
-        'content': '현재는 공사가 완료되어 정상적으로 이용 가능합니다.',
-        'date': '12월 27일',
-        'likes': 6,
-      },
-      {
-        'title': '엘리베이터 고장',
-        'location': '코엑스몰',
-        'content': '관리사무소에 문의해보니 내일 수리 예정이라고 합니다.',
-        'date': '12월 25일',
-        'likes': 3,
-      },
-    ];
+    if (_comments.isEmpty) {
+      return const Center(child: Text('작성한 댓글이 없습니다.'));
+    }
 
     return ListView.builder(
       padding: const EdgeInsets.all(16),
-      itemCount: comments.length,
+      itemCount: _comments.length,
       itemBuilder: (context, index) {
-        final comment = comments[index];
+        final comment = _comments[index];
+
+        final commentMap = {
+          'id': comment.id,
+          'user': _userProfile?.nickname ?? '나',
+          'time': '${comment.date.month}월 ${comment.date.day}일',
+          'location': comment.location,
+          'title': comment.title,
+          'content': comment.content,
+          'likes': comment.likeCount,
+          'comments': comment.commentCount,
+          'status': comment.status,
+          'date': comment.date,
+        };
+
         return Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 600),
             child: GestureDetector(
-              onTap: () => _navigateToDetail(comment, isComment: true),
+              onTap: () => _navigateToDetail(commentMap, isComment: true),
               child: Container(
                 margin: const EdgeInsets.only(bottom: 12),
                 padding: const EdgeInsets.all(20),
@@ -423,7 +526,7 @@ class _MyReportsScreenState extends State<MyReportsScreen>
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                comment['title'] as String,
+                                comment.title,
                                 style: TextStyle(
                                   color: textDark,
                                   fontSize: 14,
@@ -432,7 +535,7 @@ class _MyReportsScreenState extends State<MyReportsScreen>
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                comment['location'] as String,
+                                comment.location,
                                 style: TextStyle(
                                   color: Color(0xFF9EA6B8),
                                   fontSize: 12,
@@ -445,7 +548,7 @@ class _MyReportsScreenState extends State<MyReportsScreen>
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      comment['content'] as String,
+                      comment.content,
                       style: TextStyle(
                         color: textDark,
                         fontSize: 14,
@@ -457,7 +560,7 @@ class _MyReportsScreenState extends State<MyReportsScreen>
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          comment['date'] as String,
+                          '${comment.date.month}월 ${comment.date.day}일',
                           style: TextStyle(color: textGrey, fontSize: 12),
                         ),
                         Row(
@@ -469,7 +572,7 @@ class _MyReportsScreenState extends State<MyReportsScreen>
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              '${comment['likes']}',
+                              '${comment.likeCount}',
                               style: TextStyle(
                                 color: Color(0xFF9EA6B8),
                                 fontSize: 12,

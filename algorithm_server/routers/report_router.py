@@ -97,7 +97,10 @@ async def submit_report(
     longitude: float = Form(...),
     obstacle_type: str = Form(...),
     description: str = Form(""),
-    image: Optional[UploadFile] = File(None)
+    image: Optional[UploadFile] = File(None),
+    address: Optional[str] = Form(None),
+    reported_by: Optional[str] = Form(None),
+    reporter_name: Optional[str] = Form(None)
 ):
     """
     장애물 신고를 접수합니다. 이미지는 선택사항입니다.
@@ -156,16 +159,25 @@ async def submit_report(
             )
 
         # 2-3. DB 저장 (Supabase)
+        # 메타데이터를 description에 추가 (getCommunityReports에서 파싱함)
+        full_description = ""
+        if address:
+            full_description += f"[Location: {address}]\n"
+        if reporter_name:
+            full_description += f"[User: {reporter_name}]\n"
+        full_description += description
+
         if obstacle_manager.client:
             data = {
                 "latitude": latitude,
                 "longitude": longitude,
                 "obstacle_type": obstacle_type,
-                "description": description,
+                "description": full_description,
                 "image_url": image_url,
                 "is_active": True,
                 "radius": 15.0,
-                "severity": "high"
+                "severity": "high",
+                "reported_by": reported_by
             }
             # Supabase Insert
             try:

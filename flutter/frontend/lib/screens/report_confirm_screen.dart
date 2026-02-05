@@ -8,8 +8,12 @@ import 'package:webview_flutter/webview_flutter.dart';
 import 'package:flutter/services.dart';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
+import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart' as latlong;
 import 'package:gilbeot/helpers/kakao_map_helper.dart';
+import '../services/api_service.dart';
+import '../services/auth_service.dart';
 
 class ReportConfirmScreen extends StatefulWidget {
   final latlong.LatLng location;
@@ -500,9 +504,59 @@ class _ReportConfirmScreenState extends State<ReportConfirmScreen> {
     );
   }
 
-  Widget _buildSubmitButton() {
-    return ElevatedButton(
-      onPressed: () {
+  bool _isLoading = false;
+
+  Future<void> _submitReport() async {
+    if (_isLoading) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    final user = AuthService.currentUser;
+    if (user == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('제보를 하려면 로그인이 필요합니다.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        setState(() {
+          _isLoading = false;
+        });
+      }
+      return;
+    }
+
+    try {
+      // 웹에서 이미지 바이트 다운로드
+      Uint8List? imageBytes;
+      if (kIsWeb &&
+          _currentImagePath != null &&
+          _currentImagePath!.isNotEmpty) {
+        try {
+          final response = await http.get(Uri.parse(_currentImagePath!));
+          if (response.statusCode == 200) {
+            imageBytes = response.bodyBytes;
+          }
+        } catch (e) {
+          debugPrint('Web image download failed: $e');
+        }
+      }
+
+      final result = await ApiService.submitReport(
+        latitude: _currentLocation.latitude,
+        longitude: _currentLocation.longitude,
+        obstacleType: _currentObstacleType ?? '알 수 없음',
+        description: _descriptionController.text,
+        imagePath: _currentImagePath,
+        address: _currentAddress,
+        imageBytes: imageBytes,
+        imageName: 'report_${DateTime.now().millisecondsSinceEpoch}.jpg',
+      );
+
+      if (result['success'] == true) {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
@@ -512,20 +566,61 @@ class _ReportConfirmScreenState extends State<ReportConfirmScreen> {
             ),
           ),
         );
-      },
-      style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFF00C853),
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        elevation: 0,
-      ),
-      child: const Text(
-        '제보하기',
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: 16,
-          fontWeight: FontWeight.bold,
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? '제보 제출에 실패했습니다.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('오류가 발생했습니다: $e'), backgroundColor: Colors.red),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Widget _buildSubmitButton() {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        onPressed: _isLoading ? null : _submitReport,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFF00C853),
+          disabledBackgroundColor: const Color(
+            0xFF00C853,
+          ).withValues(alpha: 0.6),
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          elevation: 0,
         ),
+        child: _isLoading
+            ? const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2,
+                ),
+              )
+            : const Text(
+                '제보하기',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
       ),
     );
   }

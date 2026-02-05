@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gilbeot/screens/location_search_screen.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/auth_service.dart';
 
 class SavedPlacesScreen extends StatefulWidget {
   final int initialTabIndex;
@@ -13,37 +15,66 @@ class SavedPlacesScreen extends StatefulWidget {
 class _SavedPlacesScreenState extends State<SavedPlacesScreen> {
   // 0: 전체, 1: 내 장소, 2: 즐겨찾기
   int _selectedTabIndex = 0;
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
     _selectedTabIndex = widget.initialTabIndex;
+    _loadSavedPlaces();
   }
 
-  // Mock Data
-  final List<Map<String, dynamic>> _allPlaces = [
-    {
-      'type': 'home',
-      'name': '집',
-      'address': '서울시 강남구 역삼동 123-45',
-      'icon': 'assets/home_icon.svg',
-    },
-    {
-      'type': 'work',
-      'name': '회사',
-      'address': '서울시 서초구 서초동 567-89',
-      'icon':
-          'assets/document_icon.svg', // Using document as placeholder for work if no suitcase
-    },
-    {'type': 'saved', 'name': '강남역', 'address': '서울시 강남구 강남대로 지하 396'},
-    {'type': 'saved', 'name': '코엑스몰', 'address': '서울시 강남구 영동대로 513'},
-    {'type': 'saved', 'name': '서울대학교병원', 'address': '서울시 종로구 연건동 101'},
-    {'type': 'saved', 'name': '한강공원', 'address': '서울시 영등포구 여의도동'},
-    {'type': 'saved', 'name': '국립중앙박물관', 'address': '서울시 용산구 서빙고로 137'},
-  ];
+  // Saved places data (initialized empty, loaded from server)
+  List<Map<String, dynamic>> _allPlaces = [];
+
+  Future<void> _loadSavedPlaces() async {
+    final user = AuthService.currentUser;
+    if (user == null) {
+      setState(() => _isLoading = false);
+      return;
+    }
+
+    final metadata = user.userMetadata;
+    final savedPlaces = metadata?['saved_places'] as List<dynamic>?;
+
+    if (savedPlaces != null) {
+      setState(() {
+        _allPlaces = savedPlaces
+            .map((e) => Map<String, dynamic>.from(e))
+            .toList();
+        _isLoading = false;
+      });
+    } else {
+      // Initialize with default empty home/work slots
+      setState(() {
+        _allPlaces = [
+          {'type': 'home', 'name': '집', 'address': ''},
+          {'type': 'work', 'name': '회사', 'address': ''},
+        ];
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _savePlacesToServer() async {
+    try {
+      await Supabase.instance.client.auth.updateUser(
+        UserAttributes(data: {'saved_places': _allPlaces}),
+      );
+    } catch (e) {
+      debugPrint('Error saving places: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        backgroundColor: Colors.white,
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -141,6 +172,7 @@ class _SavedPlacesScreenState extends State<SavedPlacesScreen> {
                           'address': result['address'],
                         });
                       });
+                      await _savePlacesToServer();
                       _showToast('장소가 추가되었습니다.');
                     }
                   },
@@ -175,7 +207,7 @@ class _SavedPlacesScreenState extends State<SavedPlacesScreen> {
     );
   }
 
-  void _deletePlace(Map<String, dynamic> place) {
+  Future<void> _deletePlace(Map<String, dynamic> place) async {
     setState(() {
       if (place['type'] == 'home' || place['type'] == 'work') {
         final index = _allPlaces.indexOf(place);
@@ -187,6 +219,7 @@ class _SavedPlacesScreenState extends State<SavedPlacesScreen> {
       }
     });
 
+    await _savePlacesToServer();
     _showToast('장소가 삭제되었습니다.');
   }
 
@@ -259,124 +292,141 @@ class _SavedPlacesScreenState extends State<SavedPlacesScreen> {
         place['type'] == 'work' ||
         place['type'] == 'saved';
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        children: [
-          // Icon Box
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: isSaved
-                  ? const Color(0xFFFFF9C4)
-                  : const Color(0xFFE8FDF0), // Yellow (Saved) vs Green (Others)
-              shape: BoxShape.circle,
+    return InkWell(
+      onTap: () {
+        // Only return if the place has an address
+        if (place['address'] != null &&
+            place['address'].toString().isNotEmpty) {
+          Navigator.pop(context, {
+            'name': place['name'],
+            'address': place['address'],
+            'lat': place['lat'],
+            'lng': place['lng'],
+          });
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          children: [
+            // Icon Box
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: isSaved
+                    ? const Color(0xFFFFF9C4)
+                    : const Color(
+                        0xFFE8FDF0,
+                      ), // Yellow (Saved) vs Green (Others)
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                _getIconData(place),
+                color: isSaved
+                    ? const Color(0xFFFBC02D)
+                    : const Color(0xFF00C853),
+                size: 22,
+              ),
             ),
-            child: Icon(
-              _getIconData(place),
-              color: isSaved
-                  ? const Color(0xFFFBC02D)
-                  : const Color(0xFF00C853),
-              size: 22,
-            ),
-          ),
-          const SizedBox(width: 14),
-          // Info
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (isSaved && place['type'] == 'work')
-                  GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        place['name'] = place['name'] == '회사' ? '학교' : '회사';
-                      });
-                    },
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          place['name'],
-                          style: const TextStyle(
-                            color: Color(0xFF101727),
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
+            const SizedBox(width: 14),
+            // Info
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (isSaved && place['type'] == 'work')
+                    GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          place['name'] = place['name'] == '회사' ? '학교' : '회사';
+                        });
+                      },
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            place['name'],
+                            style: const TextStyle(
+                              color: Color(0xFF101727),
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 4),
-                        const Icon(
-                          Icons.swap_horiz,
-                          size: 14,
-                          color: Colors.grey,
-                        ),
-                      ],
+                          const SizedBox(width: 4),
+                          const Icon(
+                            Icons.swap_horiz,
+                            size: 14,
+                            color: Colors.grey,
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    Text(
+                      place['name'],
+                      style: const TextStyle(
+                        color: Color(0xFF101727),
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  )
-                else
-                  Text(
-                    place['name'],
-                    style: const TextStyle(
-                      color: Color(0xFF101727),
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
+                  const SizedBox(height: 2),
+                  if (place['address'] != null && place['address'].isNotEmpty)
+                    Text(
+                      place['address'],
+                      style: const TextStyle(
+                        color: Color(0xFF4A5565),
+                        fontSize: 12,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                const SizedBox(height: 2),
-                if (place['address'] != null && place['address'].isNotEmpty)
-                  Text(
-                    place['address'],
-                    style: const TextStyle(
-                      color: Color(0xFF4A5565),
-                      fontSize: 12,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-              ],
+                ],
+              ),
             ),
-          ),
-          // Edit Button
-          if (place['type'] == 'home' || place['type'] == 'work')
-            IconButton(
-              onPressed: () async {
-                final result = await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const LocationSearchScreen(),
-                  ),
-                );
+            // Edit Button
+            if (place['type'] == 'home' || place['type'] == 'work')
+              IconButton(
+                onPressed: () async {
+                  final result = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const LocationSearchScreen(),
+                    ),
+                  );
 
-                if (result != null && result is Map) {
-                  setState(() {
-                    final index = _allPlaces.indexOf(place);
-                    if (index != -1) {
-                      bool isHomeOrWork =
-                          place['type'] == 'home' || place['type'] == 'work';
-                      _allPlaces[index] = {
-                        ...place,
-                        'name': isHomeOrWork ? place['name'] : result['name'],
-                        'address': result['address'],
-                      };
-                    }
-                  });
-                  _showToast('장소가 수정되었습니다.');
-                }
-              },
-              icon: const Icon(Icons.edit, color: Color(0xFF9EA6B8)),
-            ),
-          // Delete Button
-          if (place['type'] == 'saved')
-            IconButton(
-              onPressed: () => _deletePlace(place),
-              icon: const Icon(Icons.close, color: Color(0xFF9EA6B8)),
-            ),
-        ],
+                  if (result != null && result is Map) {
+                    setState(() {
+                      final index = _allPlaces.indexOf(place);
+                      if (index != -1) {
+                        bool isHomeOrWork =
+                            place['type'] == 'home' || place['type'] == 'work';
+                        _allPlaces[index] = {
+                          ...place,
+                          'name': isHomeOrWork ? place['name'] : result['name'],
+                          'address': result['address'],
+                        };
+                      }
+                    });
+                    await _savePlacesToServer();
+                    _showToast('장소가 수정되었습니다.');
+                  }
+                },
+                icon: const Icon(Icons.edit, color: Color(0xFF9EA6B8)),
+              ),
+            // Delete Button
+            if (place['type'] == 'saved')
+              IconButton(
+                onPressed: () => _deletePlace(place),
+                icon: const Icon(Icons.close, color: Color(0xFF9EA6B8)),
+              ),
+          ],
+        ),
       ),
     );
   }

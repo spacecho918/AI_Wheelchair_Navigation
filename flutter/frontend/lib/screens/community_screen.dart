@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gilbeot/services/api_service.dart';
 import 'community_detail_screen.dart';
 import 'package:gilbeot/widgets/custom_back_button.dart';
 
@@ -24,61 +25,48 @@ class _CommunityScreenState extends State<CommunityScreen> {
   bool isFilterVisible = false;
   String sortOption = 'latest'; // 'latest' or 'popular'
 
-  // Dummy Data for Reports
-  final List<Map<String, dynamic>> reports = [
-    {
-      'id': 1,
-      'user': 'Sarah Kim',
-      'time': '2시간 전',
-      'timestamp': DateTime.now().subtract(const Duration(hours: 2)),
-      'address': '서울시 강남구 역삼동 123-45',
-      'content': '카페 입구에 15cm 높이의 턱이 있어 휠체어 진입이 어렵습니다.',
-      'likes': 12,
-      'dislikes': 1,
-      'comments': 1,
-      'tag': '높은 턱',
-    },
-    {
-      'id': 2,
-      'user': 'Mike Lee',
-      'time': '5시간 전',
-      'timestamp': DateTime.now().subtract(const Duration(hours: 5)),
-      'address': '서울시 강남구 삼성동 567-89',
-      'content': '지하철 출구에서 버스 정류장까지 통로가 좁아서 휠체어 통행이 불가능합니다.',
-      'likes': 8,
-      'dislikes': 0,
-      'comments': 0,
-      'tag': '좁은 통로',
-    },
-    {
-      'id': 3,
-      'user': 'Linda Choi',
-      'time': '1일 전',
-      'timestamp': DateTime.now().subtract(const Duration(days: 1)),
-      'address': '서울시 서초구 서초동 789-12',
-      'content': '건물 입구에 계단만 있고 경사로가 없습니다.',
-      'likes': 15,
-      'dislikes': 2,
-      'comments': 2,
-      'tag': '계단',
-    },
-    {
-      'id': 4,
-      'user': 'James Han',
-      'time': '30분 전',
-      'timestamp': DateTime.now().subtract(const Duration(minutes: 30)),
-      'address': '서울시 강남구 논현동 111-22',
-      'content': '장애인 화장실 문이 고장나서 열리지 않습니다.',
-      'likes': 2,
-      'dislikes': 0,
-      'comments': 0,
-      'tag': '좁은 통로', // Categorizing roughly
-    },
-  ];
+  List<Map<String, dynamic>> _reports = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadReports();
+  }
+
+  Future<void> _loadReports() async {
+    final data = await ApiService.getCommunityReports();
+    if (mounted) {
+      setState(() {
+        _reports = data;
+        _isLoading = false;
+      });
+    }
+  }
+
+  String _formatTimeAgo(String timestamp) {
+    try {
+      final date = DateTime.parse(timestamp);
+      final now = DateTime.now();
+      final difference = now.difference(date);
+
+      if (difference.inDays > 0) {
+        return '${difference.inDays}일 전';
+      } else if (difference.inHours > 0) {
+        return '${difference.inHours}시간 전';
+      } else if (difference.inMinutes > 0) {
+        return '${difference.inMinutes}분 전';
+      } else {
+        return '방금 전';
+      }
+    } catch (e) {
+      return '알 수 없음';
+    }
+  }
 
   List<Map<String, dynamic>> getFilteredAndSortedReports() {
     // 1. Filter
-    List<Map<String, dynamic>> filtered = reports.where((report) {
+    List<Map<String, dynamic>> filtered = _reports.where((report) {
       if (selectedFilter == '전체') return true;
       return report['tag'] == selectedFilter;
     }).toList();
@@ -86,9 +74,11 @@ class _CommunityScreenState extends State<CommunityScreen> {
     // 2. Sort
     filtered.sort((a, b) {
       if (sortOption == 'latest') {
-        return b['timestamp'].compareTo(a['timestamp']);
+        final tA = a['timestamp'].toString();
+        final tB = b['timestamp'].toString();
+        return tB.compareTo(tA);
       } else {
-        return b['likes'].compareTo(a['likes']);
+        return (b['likes'] as num).compareTo(a['likes'] as num);
       }
     });
 
@@ -331,7 +321,11 @@ class _CommunityScreenState extends State<CommunityScreen> {
             Expanded(
               child: Container(
                 color: const Color(0xFFF5F7FA), // Changed background color
-                child: displayReports.isEmpty
+                child: _isLoading
+                    ? Center(
+                        child: CircularProgressIndicator(color: primaryGreen),
+                      )
+                    : displayReports.isEmpty
                     ? Center(
                         child: Text(
                           '해당하는 제보가 없습니다.',
@@ -343,192 +337,249 @@ class _CommunityScreenState extends State<CommunityScreen> {
                         itemCount: displayReports.length,
                         itemBuilder: (context, index) {
                           final report = displayReports[index];
-                          return GestureDetector(
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      CommunityDetailScreen(report: report),
-                                ),
-                              );
-                            },
-                            child: Container(
-                              margin: const EdgeInsets.only(bottom: 16),
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(16),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.03),
-                                    spreadRadius: 0,
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // Tag
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 10,
-                                      vertical: 4,
+                          return Center(
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 600),
+                              child: GestureDetector(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          CommunityDetailScreen(report: report),
                                     ),
-                                    decoration: BoxDecoration(
-                                      color: primaryGreen,
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
-                                    child: Text(
-                                      report['tag'],
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
+                                  );
+                                },
+                                child: Container(
+                                  margin: const EdgeInsets.only(bottom: 16),
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(16),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(
+                                          alpha: 0.03,
+                                        ),
+                                        spreadRadius: 0,
+                                        blurRadius: 10,
+                                        offset: const Offset(0, 4),
                                       ),
-                                    ),
+                                    ],
                                   ),
-                                  const SizedBox(height: 12),
-
-                                  // Placeholder for Map/Image area
-                                  Container(
-                                    height: 120,
-                                    width: double.infinity,
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFE5E7EB),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 12),
-
-                                  // User Info
-                                  Row(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
-                                      CircleAvatar(
-                                        backgroundColor: Colors.grey.shade200,
-                                        radius: 14,
+                                      // Tag
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 10,
+                                          vertical: 4,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: primaryGreen,
+                                          borderRadius: BorderRadius.circular(
+                                            20,
+                                          ),
+                                        ),
                                         child: Text(
-                                          report['user'][0],
-                                          style: TextStyle(
+                                          report['tag'],
+                                          style: const TextStyle(
+                                            color: Colors.white,
                                             fontSize: 12,
-                                            color: textDark,
+                                            fontWeight: FontWeight.bold,
                                           ),
                                         ),
                                       ),
-                                      const SizedBox(width: 8),
-                                      Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            report['user'],
-                                            style: TextStyle(
-                                              color: textDark,
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 14,
+                                      const SizedBox(height: 12),
+
+                                      // Image area
+                                      if (report['imageUrl'] != null &&
+                                          report['imageUrl']
+                                              .toString()
+                                              .isNotEmpty)
+                                        ClipRRect(
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                          child: Image.network(
+                                            report['imageUrl']
+                                                    .toString()
+                                                    .startsWith('http')
+                                                ? report['imageUrl']
+                                                : 'http://localhost:8000${report['imageUrl']}',
+                                            height: 150,
+                                            width: double.infinity,
+                                            fit: BoxFit.cover,
+                                            errorBuilder:
+                                                (context, error, stackTrace) {
+                                                  return Container(
+                                                    height: 120,
+                                                    width: double.infinity,
+                                                    decoration: BoxDecoration(
+                                                      color: const Color(
+                                                        0xFFE5E7EB,
+                                                      ),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            8,
+                                                          ),
+                                                    ),
+                                                    child: const Icon(
+                                                      Icons.image_not_supported,
+                                                      color: Colors.grey,
+                                                    ),
+                                                  );
+                                                },
+                                          ),
+                                        )
+                                      else
+                                        Container(
+                                          height: 120,
+                                          width: double.infinity,
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFE5E7EB),
+                                            borderRadius: BorderRadius.circular(
+                                              8,
                                             ),
                                           ),
+                                          child: const Icon(
+                                            Icons.photo,
+                                            color: Colors.grey,
+                                          ),
+                                        ),
+                                      const SizedBox(height: 12),
+
+                                      // User Info
+                                      Row(
+                                        children: [
+                                          CircleAvatar(
+                                            backgroundColor:
+                                                Colors.grey.shade200,
+                                            radius: 14,
+                                            child: Text(
+                                              report['user'][0],
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: textDark,
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                report['user'],
+                                                style: TextStyle(
+                                                  color: textDark,
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 14,
+                                                ),
+                                              ),
+                                              Text(
+                                                _formatTimeAgo(report['time']),
+                                                style: TextStyle(
+                                                  color: textGrey,
+                                                  fontSize: 10,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 8),
+
+                                      // Location
+                                      Row(
+                                        children: [
+                                          Icon(
+                                            Icons.location_on_outlined,
+                                            size: 14,
+                                            color: primaryGreen,
+                                          ),
+                                          const SizedBox(width: 4),
                                           Text(
-                                            report['time'], // You might want to format timestamp if needed, but 'time' string works
+                                            report['address'],
+                                            style: TextStyle(
+                                              color: Color(0xFF4A5565),
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 8),
+
+                                      // Content
+                                      Text(
+                                        report['content'],
+                                        style: TextStyle(
+                                          color: textDark,
+                                          fontSize: 14,
+                                          height: 1.5,
+                                        ),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 12),
+
+                                      // Footer
+                                      Row(
+                                        children: [
+                                          Icon(
+                                            Icons.thumb_up_outlined,
+                                            size: 16,
+                                            color: textGrey,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            '${report['likes']}',
                                             style: TextStyle(
                                               color: textGrey,
-                                              fontSize: 10,
+                                              fontSize: 12,
                                             ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Icon(
+                                            Icons.thumb_down_outlined,
+                                            size: 16,
+                                            color: textGrey,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            '${report['dislikes']}',
+                                            style: TextStyle(
+                                              color: textGrey,
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                          const Spacer(),
+                                          Icon(
+                                            Icons.chat_bubble_outline,
+                                            size: 16,
+                                            color: textGrey,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            '${report['comments']}',
+                                            style: TextStyle(
+                                              color: textGrey,
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 2),
+                                          Icon(
+                                            Icons.keyboard_arrow_down,
+                                            size: 16,
+                                            color: textGrey,
                                           ),
                                         ],
                                       ),
                                     ],
                                   ),
-                                  const SizedBox(height: 8),
-
-                                  // Location
-                                  Row(
-                                    children: [
-                                      Icon(
-                                        Icons.location_on_outlined,
-                                        size: 14,
-                                        color: primaryGreen,
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        report['address'],
-                                        style: TextStyle(
-                                          color: Color(0xFF4A5565),
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 8),
-
-                                  // Content
-                                  Text(
-                                    report['content'],
-                                    style: TextStyle(
-                                      color: textDark,
-                                      fontSize: 14,
-                                      height: 1.5,
-                                    ),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  const SizedBox(height: 12),
-
-                                  // Footer
-                                  Row(
-                                    children: [
-                                      Icon(
-                                        Icons.thumb_up_outlined,
-                                        size: 16,
-                                        color: textGrey,
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        '${report['likes']}',
-                                        style: TextStyle(
-                                          color: textGrey,
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Icon(
-                                        Icons.thumb_down_outlined,
-                                        size: 16,
-                                        color: textGrey,
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        '${report['dislikes']}',
-                                        style: TextStyle(
-                                          color: textGrey,
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                      const Spacer(),
-                                      Icon(
-                                        Icons.chat_bubble_outline,
-                                        size: 16,
-                                        color: textGrey,
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        '${report['comments']}',
-                                        style: TextStyle(
-                                          color: textGrey,
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 2),
-                                      Icon(
-                                        Icons.keyboard_arrow_down,
-                                        size: 16,
-                                        color: textGrey,
-                                      ),
-                                    ],
-                                  ),
-                                ],
+                                ),
                               ),
                             ),
                           );

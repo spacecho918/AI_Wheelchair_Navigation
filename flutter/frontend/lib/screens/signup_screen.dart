@@ -3,6 +3,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'email_verification_screen.dart';
 import 'login_screen.dart';
 import 'reset_password_screen.dart';
+import '../services/auth_service.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -194,15 +195,6 @@ class _SignupScreenState extends State<SignupScreen> {
                         ),
                         const SizedBox(height: 30),
 
-                        _buildTextField('이름', '이름을 입력하세요', _nameController),
-                        const SizedBox(height: 16),
-                        _buildTextField(
-                          '닉네임',
-                          '닉네임을 입력하세요',
-                          _nicknameController,
-                        ),
-                        const SizedBox(height: 16),
-
                         _buildTextField(
                           '이메일 주소',
                           '이메일을 입력하세요',
@@ -236,6 +228,15 @@ class _SignupScreenState extends State<SignupScreen> {
                                   _confirmPasswordController.text.isEmpty
                               ? null
                               : '비밀번호가 일치하지 않습니다',
+                        ),
+                        const SizedBox(height: 16),
+
+                        _buildTextField('이름', '이름을 입력하세요', _nameController),
+                        const SizedBox(height: 16),
+                        _buildTextField(
+                          '닉네임',
+                          '닉네임을 입력하세요',
+                          _nicknameController,
                         ),
                         const SizedBox(height: 16),
 
@@ -304,16 +305,31 @@ class _SignupScreenState extends State<SignupScreen> {
                           height: 48,
                           child: ElevatedButton(
                             onPressed: _isFormValid
-                                ? () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            EmailVerificationScreen(
-                                              email: _emailController.text,
-                                            ),
-                                      ),
+                                ? () async {
+                                    // Sign up with Supabase (AuthService)
+                                    // includes storing metadata
+                                    await AuthService.signUp(
+                                      email: _emailController.text,
+                                      password: _passwordController.text,
+                                      metadata: {
+                                        'name': _nameController.text,
+                                        'nickname': _nicknameController.text,
+                                        'wheelchair_type':
+                                            _selectedWheelchairType ?? 'None',
+                                      },
                                     );
+
+                                    if (context.mounted) {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              EmailVerificationScreen(
+                                                email: _emailController.text,
+                                              ),
+                                        ),
+                                      );
+                                    }
                                   }
                                 : null,
                             style: ElevatedButton.styleFrom(

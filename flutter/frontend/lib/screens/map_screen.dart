@@ -16,6 +16,7 @@ import 'route_search_screen.dart'; // Import user's new screen
 import 'package:latlong2/latlong.dart' as latlong;
 import 'package:gilbeot/helpers/kakao_map_helper.dart';
 import 'wheelchair_settings_screen.dart';
+import '../services/api_service.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -37,9 +38,18 @@ class _MapScreenState extends State<MapScreen> {
     super.initState();
     _initMapController();
 
-    // Show wheelchair setting popup after frame load
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _showWheelchairSettingDialog();
+    // Show wheelchair setting popup after frame load, only if not already set
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final user = await ApiService.getUserProfile();
+      // Only show popup if user is not logged in or has no wheelchair_type in their Supabase metadata
+      // 'None' is a valid explicit choice ("사용 안함"), so we should NOT trigger popup for it
+      // We trigger if: no user profile OR wheelchairType is the default 'None' from User model default (meaning metadata was absent)
+      // However, distinguishing between "user chose None" vs "metadata absent, defaulted to None" is tricky.
+      // The safest approach: Only show popup if user is null.
+      // If user exists (logged in), they can always change settings from the sidebar.
+      if (user == null) {
+        _showWheelchairSettingDialog();
+      }
     });
   }
 

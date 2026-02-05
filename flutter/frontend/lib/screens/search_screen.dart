@@ -8,6 +8,7 @@ import 'package:latlong2/latlong.dart'; // 좌표 전달용
 import 'package:gilbeot/screens/saved_places_screen.dart';
 import 'package:gilbeot/screens/route_search_screen.dart';
 import 'package:geolocator/geolocator.dart';
+import '../services/recent_searches_service.dart';
 
 class SearchScreen extends StatefulWidget {
   final LatLng? searchLocation;
@@ -25,66 +26,32 @@ class _SearchScreenState extends State<SearchScreen> {
   // 검색 결과 리스트 (API 호출 결과)
   List<dynamic> _searchResults = [];
 
-  // 최근 검색어 더미 데이터 (시안과 동일하게 구성)
-  List<Map<String, dynamic>> _recentSearches = [
-    {
-      'name': '집',
-      'address': '서울 성동구 성수동 123',
-      'type': 'saved',
-      'lat': 37.5445,
-      'lng': 127.0560,
-      'category': 'ETC',
-      'phone': '',
-      'url': '',
-    },
-    {
-      'name': '서울시청',
-      'address': '서울 중구 세종대로 110',
-      'type': 'recent',
-      'lat': 37.5665,
-      'lng': 126.9780,
-      'category': 'PO3',
-      'phone': '02-120',
-      'url': 'https://www.seoul.go.kr',
-    },
-    {
-      'name': '스타벅스',
-      'address': '서울 성동구 성수1가',
-      'type': 'recent',
-      'lat': 37.541,
-      'lng': 127.054,
-      'category': 'CE7',
-      'phone': '1522-3232',
-      'url': 'https://www.starbucks.co.kr',
-    },
-    {
-      'name': '강남역',
-      'address': '서울 강남구 서초대로 396',
-      'type': 'recent',
-      'lat': 37.4979,
-      'lng': 127.0276,
-      'category': 'SW8',
-      'phone': '02-6110-2282',
-      'url': '',
-    },
-  ];
-
   bool _isLoading = false;
   Timer? _debounce;
 
   // Favorites Data
   final String _homeName = '집';
-  String _homeAddress = '서울 성동구 성수동 123';
+  String _homeAddress = '';
   String _workLabel = '회사'; // Can be '회사' or '학교'
-  String _workAddress = '서울 중구 세종대로 110';
+  String _workAddress = '';
 
   @override
   void initState() {
     super.initState();
+    _loadRecentSearches();
     // 화면이 열리면 바로 키보드 띄우기 (UX 편의성)
     WidgetsBinding.instance.addPostFrameCallback((_) {
       FocusScope.of(context).requestFocus(FocusNode());
     });
+  }
+
+  Future<void> _loadRecentSearches() async {
+    if (!RecentSearchesService.isLoaded) {
+      await RecentSearchesService.load();
+    }
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   // 검색 로직 (Kakao Local API)
@@ -359,10 +326,9 @@ class _SearchScreenState extends State<SearchScreen> {
               ),
             ),
             TextButton(
-              onPressed: () {
-                setState(() {
-                  _recentSearches.clear();
-                });
+              onPressed: () async {
+                await RecentSearchesService.clearAll();
+                setState(() {});
               },
               style: TextButton.styleFrom(
                 padding: EdgeInsets.zero,
@@ -379,8 +345,10 @@ class _SearchScreenState extends State<SearchScreen> {
 
         const SizedBox(height: 10),
 
-        // 최근 검색어 리스트 (더미 데이터)
-        ..._recentSearches.map((item) => _buildRecentItem(item)),
+        // 최근 검색어 리스트
+        ...RecentSearchesService.recentSearches.map(
+          (item) => _buildRecentItem(item),
+        ),
       ],
     );
   }
@@ -425,7 +393,8 @@ class _SearchScreenState extends State<SearchScreen> {
             child: Material(
               color: Colors.white,
               child: InkWell(
-                onTap: () {
+                onTap: () async {
+                  await RecentSearchesService.addSearch(place);
                   _showPlaceDetailSheet(context, place);
                 },
                 child: Padding(
@@ -603,10 +572,9 @@ class _SearchScreenState extends State<SearchScreen> {
                 ),
                 // 삭제 버튼 (X 아이콘)
                 InkWell(
-                  onTap: () {
-                    setState(() {
-                      _recentSearches.remove(item);
-                    });
+                  onTap: () async {
+                    await RecentSearchesService.removeSearch(item);
+                    setState(() {});
                   },
                   borderRadius: BorderRadius.circular(20),
                   child: Padding(

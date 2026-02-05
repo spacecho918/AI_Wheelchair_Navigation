@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gilbeot/widgets/custom_back_button.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/auth_service.dart';
 
 class NotificationSettingsScreen extends StatefulWidget {
   const NotificationSettingsScreen({super.key});
@@ -16,6 +18,9 @@ class _NotificationSettingsScreenState
   final Color textDark = const Color(0xFF101727);
   final Color textGrey = const Color(0xFF4A5565);
 
+  // Loading state
+  bool _isLoading = true;
+
   // Notification settings state
   bool _pushEnabled = true;
   bool _emailEnabled = true;
@@ -25,7 +30,67 @@ class _NotificationSettingsScreenState
   bool _marketingEmail = false;
 
   @override
+  void initState() {
+    super.initState();
+    _loadSettings();
+  }
+
+  Future<void> _loadSettings() async {
+    final user = AuthService.currentUser;
+    if (user == null) {
+      setState(() => _isLoading = false);
+      return;
+    }
+
+    final metadata = user.userMetadata;
+    final settings =
+        metadata?['notification_settings'] as Map<String, dynamic>?;
+
+    if (settings != null) {
+      setState(() {
+        _pushEnabled = settings['push_enabled'] ?? true;
+        _emailEnabled = settings['email_enabled'] ?? true;
+        _communityPush = settings['community_push'] ?? true;
+        _reportStatusPush = settings['report_status_push'] ?? true;
+        _routeAlertPush = settings['route_alert_push'] ?? true;
+        _marketingEmail = settings['marketing_email'] ?? false;
+        _isLoading = false;
+      });
+    } else {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _saveSettings() async {
+    try {
+      await Supabase.instance.client.auth.updateUser(
+        UserAttributes(
+          data: {
+            'notification_settings': {
+              'push_enabled': _pushEnabled,
+              'email_enabled': _emailEnabled,
+              'community_push': _communityPush,
+              'report_status_push': _reportStatusPush,
+              'route_alert_push': _routeAlertPush,
+              'marketing_email': _marketingEmail,
+            },
+          },
+        ),
+      );
+    } catch (e) {
+      debugPrint('Error saving notification settings: $e');
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        backgroundColor: Colors.white,
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -88,6 +153,7 @@ class _NotificationSettingsScreenState
                                   _routeAlertPush = true;
                                 }
                               });
+                              _saveSettings();
                             },
                           ),
                         ]),
@@ -104,6 +170,7 @@ class _NotificationSettingsScreenState
                                 setState(() {
                                   _communityPush = value;
                                 });
+                                _saveSettings();
                               },
                             ),
                             _buildDivider(),
@@ -116,6 +183,7 @@ class _NotificationSettingsScreenState
                                 setState(() {
                                   _reportStatusPush = value;
                                 });
+                                _saveSettings();
                               },
                             ),
                             _buildDivider(),
@@ -128,6 +196,7 @@ class _NotificationSettingsScreenState
                                 setState(() {
                                   _routeAlertPush = value;
                                 });
+                                _saveSettings();
                               },
                             ),
                           ]),
@@ -153,6 +222,7 @@ class _NotificationSettingsScreenState
                                   _marketingEmail = true;
                                 }
                               });
+                              _saveSettings();
                             },
                           ),
                         ]),
@@ -169,6 +239,7 @@ class _NotificationSettingsScreenState
                                 setState(() {
                                   _marketingEmail = value;
                                 });
+                                _saveSettings();
                               },
                             ),
                           ]),

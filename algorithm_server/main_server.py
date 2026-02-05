@@ -204,8 +204,12 @@ def initialize_system():
 @app.on_event("startup")
 async def startup_event():
     """서버 시작 시 초기화"""
-    # 초기화는 첫 요청 시 수행 (지연 로딩)
-    logger.info("서버 시작됨. 첫 요청 시 OSM 그래프 로드됩니다.")
+    logger.info("서버 시작 중... 시스템 초기화를 수행합니다.")
+    # 즉시 초기화 수행 (라우터들이 의존하는 객체들을 준비하기 위함)
+    if not initialize_system():
+        logger.error("시스템 초기화 실패")
+    else:
+        logger.info("시스템 초기화 완료")
 
 
 @app.get("/")

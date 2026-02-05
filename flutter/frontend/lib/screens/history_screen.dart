@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gilbeot/widgets/custom_back_button.dart';
+import '../services/api_service.dart';
+import '../models/driving_history.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -18,9 +20,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
   // State
   int _selectedFilterIndex = 0;
   final List<String> _filters = ['이번 주', '이번 달', '전체'];
+  bool _isLoading = true;
+  List<DrivingHistory> _historyItems = [];
 
-  // Dummy Data
-  final List<Map<String, dynamic>> _historyItems = [
+  // Dummy Data for fallback or if API fails
+  /*
+  final List<Map<String, dynamic>> _dummyHistory = [
     {
       'date': '1월 1일',
       'time': '14:30',
@@ -29,49 +34,39 @@ class _HistoryScreenState extends State<HistoryScreen> {
       'distance': '8.5km',
       'duration': '25분',
     },
-    {
-      'date': '12월 31일',
-      'time': '10:15',
-      'start': '집',
-      'end': '국립중앙박물관',
-      'distance': '5.2km',
-      'duration': '18분',
-    },
-    {
-      'date': '12월 30일',
-      'time': '16:45',
-      'start': '회사',
-      'end': '한강공원',
-      'distance': '3.8km',
-      'duration': '12분',
-    },
-    {
-      'date': '12월 29일',
-      'time': '09:00',
-      'start': '집',
-      'end': '회사',
-      'distance': '12.3km',
-      'duration': '35분',
-    },
-    {
-      'date': '12월 28일',
-      'time': '18:30',
-      'start': '회사',
-      'end': '집',
-      'distance': '12.3km',
-      'duration': '32분',
-    },
+    // ...
   ];
+  */
+
+  @override
+  void initState() {
+    super.initState();
+    _loadHistory();
+  }
+
+  Future<void> _loadHistory() async {
+    final history = await ApiService.getUserHistory();
+    setState(() {
+      _historyItems = history;
+      _isLoading = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        backgroundColor: Colors.white,
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
         child: Column(
           children: [
             // Header
-            // Custom Header
             Container(
               height: 56,
               padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -85,7 +80,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   Text(
                     '주행 기록',
                     style: TextStyle(
-                      color: Color(0xFF354152), // Community Screen Header Color
+                      color: Color(0xFF354152),
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
@@ -143,14 +138,15 @@ class _HistoryScreenState extends State<HistoryScreen> {
             const Divider(height: 1, thickness: 1, color: Color(0xFFF0F2F5)),
             const SizedBox(height: 20),
 
-            // 2. Summary Cards (Now Fixed)
+            // 2. Summary Cards
+            // TODO: Calculate real stats from _historyItems
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Row(
                 children: [
                   _buildSummaryCard(
                     '총 이동 거리',
-                    '42.1km',
+                    '${_historyItems.fold(0.0, (sum, item) => sum + item.distance).toStringAsFixed(1)}km',
                     '이번 주',
                     Icons.route_outlined,
                     isGreenIcon: true,
@@ -158,7 +154,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   const SizedBox(width: 6),
                   _buildSummaryCard(
                     '주행 횟수',
-                    '5회',
+                    '${_historyItems.length}회',
                     '이번 주',
                     Icons.trending_up_rounded,
                     isGreenIcon: true,
@@ -283,7 +279,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
-  Widget _buildHistoryCard(Map<String, dynamic> item) {
+  Widget _buildHistoryCard(DrivingHistory item) {
+    // Format Date: "1월 1일"
+    final dateStr = '${item.date.month}월 ${item.date.day}일';
+    // Format Time: "14:30"
+    final timeStr =
+        '${item.date.hour.toString().padLeft(2, '0')}:${item.date.minute.toString().padLeft(2, '0')}';
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(20),
@@ -316,7 +318,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
               Icon(Icons.calendar_today_outlined, size: 14, color: textGrey),
               const SizedBox(width: 6),
               Text(
-                '${item['date']} • ${item['time']}',
+                '$dateStr • $timeStr',
                 style: TextStyle(
                   color: textGrey,
                   fontSize: 13,
@@ -360,7 +362,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          item['start'],
+                          item.startLocation,
                           style: TextStyle(
                             color: textDark,
                             fontSize: 15,
@@ -388,7 +390,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          item['end'],
+                          item.endLocation,
                           style: TextStyle(
                             color: textDark,
                             fontSize: 15,
@@ -412,7 +414,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
               Icon(Icons.route, size: 14, color: textGrey),
               const SizedBox(width: 4),
               Text(
-                item['distance'],
+                '${item.distance}km',
                 style: TextStyle(
                   color: textGrey,
                   fontSize: 12,
@@ -423,7 +425,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
               Icon(Icons.access_time, size: 14, color: textGrey),
               const SizedBox(width: 4),
               Text(
-                item['duration'],
+                '${item.duration}분',
                 style: TextStyle(
                   color: textGrey,
                   fontSize: 12,

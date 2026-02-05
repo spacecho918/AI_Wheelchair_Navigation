@@ -5,8 +5,10 @@ import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 
 import 'package:gilbeot/screens/location_adjust_screen.dart';
+import 'package:gilbeot/screens/saved_places_screen.dart';
 
 import 'package:gilbeot/widgets/custom_back_button.dart';
+import '../services/recent_searches_service.dart';
 
 class LocationSearchScreen extends StatefulWidget {
   final LatLng? searchLocation;
@@ -29,45 +31,19 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
   List<dynamic> _searchResults = [];
   bool _isLoading = false;
 
-  // Recent searches synced with SearchScreen
-  List<Map<String, dynamic>> _recentSearches = [
-    {
-      'name': '집',
-      'address': '서울 성동구 성수동 123',
-      'type': 'saved',
-      'lat': 37.5445,
-      'lng': 127.0560,
-      'category': 'ETC',
-    },
-    {
-      'name': '서울시청',
-      'address': '서울 중구 세종대로 110',
-      'type': 'recent',
-      'lat': 37.5665,
-      'lng': 126.9780,
-      'category': 'PO3',
-    },
-    {
-      'name': '스타벅스',
-      'address': '서울 성동구 성수1가',
-      'type': 'recent',
-      'lat': 37.541,
-      'lng': 127.054,
-      'category': 'CE7',
-    },
-    {
-      'name': '강남역',
-      'address': '서울 강남구 서초대로 396',
-      'type': 'recent',
-      'lat': 37.4979,
-      'lng': 127.0276,
-      'category': 'SW8',
-    },
-  ];
-
   @override
   void initState() {
     super.initState();
+    _loadRecentSearches();
+  }
+
+  Future<void> _loadRecentSearches() async {
+    if (!RecentSearchesService.isLoaded) {
+      await RecentSearchesService.load();
+    }
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   // Search logic (Kakao Local API)
@@ -125,7 +101,7 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
       if (mounted) {
         Navigator.pop(context, {
           'latlng': LatLng(position.latitude, position.longitude),
-          'name': '현위치',
+          'name': '현위치: $formattedAddress',
           'address': formattedAddress,
         });
       }
@@ -264,8 +240,27 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
                       icon: Icons.bookmark_border,
                       label: '저장',
                       color: const Color(0xFFFFAB00),
-                      onTap: () {
-                        // TODO: Show saved
+                      onTap: () async {
+                        final result = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                const SavedPlacesScreen(initialTabIndex: 0),
+                          ),
+                        );
+
+                        if (result != null && result is Map && mounted) {
+                          Navigator.pop(context, {
+                            'latlng':
+                                result['latlng'] ??
+                                LatLng(
+                                  result['lat'] ?? 0.0,
+                                  result['lng'] ?? 0.0,
+                                ),
+                            'name': result['name'],
+                            'address': result['address'],
+                          });
+                        }
                       },
                     ),
                   ],
@@ -332,10 +327,9 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
               ),
             ),
             TextButton(
-              onPressed: () {
-                setState(() {
-                  _recentSearches.clear();
-                });
+              onPressed: () async {
+                await RecentSearchesService.clearAll();
+                setState(() {});
               },
               style: TextButton.styleFrom(
                 padding: EdgeInsets.zero,
@@ -350,7 +344,9 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
           ],
         ),
         const SizedBox(height: 16),
-        ..._recentSearches.map((item) => _buildRecentItem(item)),
+        ...RecentSearchesService.recentSearches.map(
+          (item) => _buildRecentItem(item),
+        ),
       ],
     );
   }
@@ -373,7 +369,8 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
           child: Material(
             color: Colors.white,
             child: InkWell(
-              onTap: () {
+              onTap: () async {
+                await RecentSearchesService.addSearch(place);
                 // Return result directly without showing detail sheet
                 Navigator.pop(context, {
                   'latlng': LatLng(place['lat'], place['lng']),
@@ -517,10 +514,9 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
                   ),
                 ),
                 InkWell(
-                  onTap: () {
-                    setState(() {
-                      _recentSearches.remove(item);
-                    });
+                  onTap: () async {
+                    await RecentSearchesService.removeSearch(item);
+                    setState(() {});
                   },
                   borderRadius: BorderRadius.circular(20),
                   child: Padding(

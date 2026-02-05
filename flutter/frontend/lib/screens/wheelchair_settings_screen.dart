@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gilbeot/widgets/custom_back_button.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import '../services/api_service.dart';
 
 class WheelchairSettingsScreen extends StatefulWidget {
   const WheelchairSettingsScreen({super.key});
@@ -12,10 +13,53 @@ class WheelchairSettingsScreen extends StatefulWidget {
 
 class _WheelchairSettingsScreenState extends State<WheelchairSettingsScreen> {
   // Default selection
-  String _selectedType = 'Electric'; // 'Electric', 'Manual', 'None'
+  String _selectedType =
+      'Electric'; // 'Electric', 'Manual', 'CaregiverManual', 'None'
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadWheelchairType();
+  }
+
+  Future<void> _loadWheelchairType() async {
+    final user = await ApiService.getUserProfile();
+    if (user != null) {
+      setState(() {
+        _selectedType = user.wheelchairType;
+        _isLoading = false;
+      });
+    } else {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _saveWheelchairType() async {
+    final success = await ApiService.updateWheelchairType(_selectedType);
+    if (success) {
+      if (mounted) Navigator.pop(context);
+    } else {
+      // Show error snackbar?
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('설정에 실패했습니다')));
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        backgroundColor: Colors.white,
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -44,10 +88,7 @@ class _WheelchairSettingsScreenState extends State<WheelchairSettingsScreen> {
                   Align(
                     alignment: Alignment.centerRight,
                     child: ElevatedButton(
-                      onPressed: () {
-                        // Save logic here
-                        Navigator.pop(context);
-                      },
+                      onPressed: _saveWheelchairType,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF00C853),
                         foregroundColor: Colors.white,

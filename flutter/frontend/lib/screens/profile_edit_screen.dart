@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gilbeot/widgets/custom_back_button.dart';
+import '../services/api_service.dart';
 
 class ProfileEditScreen extends StatefulWidget {
   const ProfileEditScreen({super.key});
@@ -27,10 +28,95 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   bool _isEditingNickname = false;
   bool _isEditingPassword = false;
 
+  bool _isLoading = true;
+
+  // Password validation state
+  bool _hasMinLength = false;
+  bool _hasLetterAndNumber = false;
+  bool _passwordsMatch = false;
+  bool _currentPasswordFilled = false;
+  bool _isDifferentFromCurrent = true;
+  String? _validationError;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserProfile();
+    // Add password validation listeners
+    _currentPasswordController.addListener(_validatePasswordForm);
+    _newPasswordController.addListener(_validatePasswordForm);
+    _confirmPasswordController.addListener(_validatePasswordForm);
+    // Trigger initial validation
+    _validatePasswordForm();
+  }
+
+  void _validatePasswordForm() {
+    final password = _newPasswordController.text;
+    final passwordRegex = RegExp(r'^(?=.*[A-Za-z])(?=.*\d).{8,}$');
+
+    setState(() {
+      _hasMinLength = password.length >= 8;
+      _hasLetterAndNumber = passwordRegex.hasMatch(password);
+      _passwordsMatch =
+          password.isNotEmpty && password == _confirmPasswordController.text;
+      _currentPasswordFilled = _currentPasswordController.text.isNotEmpty;
+      _isDifferentFromCurrent =
+          password != _currentPasswordController.text || password.isEmpty;
+
+      // Generate error message
+      if (_currentPasswordFilled &&
+          _newPasswordController.text.isNotEmpty &&
+          _confirmPasswordController.text.isNotEmpty) {
+        if (!_currentPasswordFilled) {
+          _validationError = '현재 비밀번호를 입력해주세요';
+        } else if (!_isDifferentFromCurrent) {
+          _validationError = '새 비밀번호는 현재 비밀번호와 달라야 합니다';
+        } else if (!_hasMinLength) {
+          _validationError = '비밀번호는 8자 이상이어야 합니다';
+        } else if (!_hasLetterAndNumber) {
+          _validationError = '영문, 숫자 조합이어야 합니다';
+        } else if (!_passwordsMatch) {
+          _validationError = '새 비밀번호가 일치하지 않습니다';
+        } else {
+          _validationError = null;
+        }
+      } else {
+        _validationError = null;
+      }
+    });
+  }
+
+  bool get _isPasswordFormValid =>
+      _currentPasswordFilled &&
+      _hasMinLength &&
+      _hasLetterAndNumber &&
+      _passwordsMatch &&
+      _isDifferentFromCurrent;
+
+  Future<void> _loadUserProfile() async {
+    final user = await ApiService.getUserProfile();
+    if (user != null) {
+      setState(() {
+        _nicknameController.text = user.nickname;
+        _emailController.text = user.email;
+        _isLoading = false;
+      });
+    } else {
+      // Fallback or error handling
+      setState(() {
+        _isLoading = false;
+      });
+      // Keep default values or show error
+    }
+  }
+
   @override
   void dispose() {
     _nicknameController.dispose();
     _emailController.dispose();
+    _currentPasswordController.removeListener(_validatePasswordForm);
+    _newPasswordController.removeListener(_validatePasswordForm);
+    _confirmPasswordController.removeListener(_validatePasswordForm);
     _currentPasswordController.dispose();
     _newPasswordController.dispose();
     _confirmPasswordController.dispose();
@@ -69,19 +155,26 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     });
   }
 
-  void _saveNickname() {
+  Future<void> _saveNickname() async {
     if (_nicknameController.text.isEmpty) {
       _showToast('닉네임을 입력해주세요');
       return;
     }
-    // TODO: Implement nickname save logic
-    _showToast('닉네임이 저장되었습니다');
-    setState(() {
-      _isEditingNickname = false;
-    });
+
+    final success = await ApiService.updateUserProfile(
+      _nicknameController.text,
+    );
+    if (success) {
+      _showToast('닉네임이 저장되었습니다');
+      setState(() {
+        _isEditingNickname = false;
+      });
+    } else {
+      _showToast('저장에 실패했습니다');
+    }
   }
 
-  void _savePassword() {
+  Future<void> _savePassword() async {
     if (_currentPasswordController.text.isEmpty) {
       _showToast('현재 비밀번호를 입력해주세요');
       return;
@@ -94,18 +187,31 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       _showToast('새 비밀번호가 일치하지 않습니다');
       return;
     }
-    // TODO: Implement password save logic
-    _showToast('비밀번호가 변경되었습니다');
-    setState(() {
-      _isEditingPassword = false;
-      _currentPasswordController.clear();
-      _newPasswordController.clear();
-      _confirmPasswordController.clear();
-    });
+
+    final result = await ApiService.updatePassword(_newPasswordController.text);
+
+    if (result['success'] == true) {
+      _showToast(result['message']);
+      setState(() {
+        _isEditingPassword = false;
+        _currentPasswordController.clear();
+        _newPasswordController.clear();
+        _confirmPasswordController.clear();
+      });
+    } else {
+      _showToast(result['message']);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        backgroundColor: Colors.white,
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -455,25 +561,58 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                                   ),
                                 ]),
                                 const SizedBox(height: 16),
+                                if (_validationError != null)
+                                  Padding(
+                                    padding: const EdgeInsets.only(
+                                      bottom: 16,
+                                      left: 4,
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        const Icon(
+                                          Icons.info_outline,
+                                          color: Color(0xFFEF4444),
+                                          size: 16,
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          _validationError!,
+                                          style: const TextStyle(
+                                            color: Color(0xFFEF4444),
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                const SizedBox(height: 16),
                                 // Password Save Button
                                 SizedBox(
                                   width: double.infinity,
                                   height: 48,
                                   child: ElevatedButton(
-                                    onPressed: _savePassword,
+                                    onPressed: _isPasswordFormValid
+                                        ? _savePassword
+                                        : null,
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: const Color(0xFF00C853),
+                                      backgroundColor: _isPasswordFormValid
+                                          ? const Color(0xFF00C853)
+                                          : const Color(0xFFE5E7EB),
                                       foregroundColor: Colors.white,
                                       elevation: 0,
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(12),
                                       ),
                                     ),
-                                    child: const Text(
+                                    child: Text(
                                       '비밀번호 변경',
                                       style: TextStyle(
                                         fontSize: 15,
                                         fontWeight: FontWeight.w600,
+                                        color: _isPasswordFormValid
+                                            ? Colors.white
+                                            : const Color(0xFF9CA3AF),
                                       ),
                                     ),
                                   ),
@@ -655,7 +794,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     String? Function(String?)? validator,
   }) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -667,13 +806,14 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
               fontWeight: FontWeight.w500,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           TextFormField(
             controller: controller,
             obscureText: obscureText,
             enabled: enabled,
             keyboardType: keyboardType,
             validator: validator,
+            textAlignVertical: TextAlignVertical.center,
             style: TextStyle(
               color: enabled
                   ? const Color(0xFF1F2937)
@@ -683,7 +823,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
             ),
             decoration: InputDecoration(
               isDense: true,
-              contentPadding: EdgeInsets.zero,
+              contentPadding: const EdgeInsets.symmetric(vertical: 8),
               border: InputBorder.none,
               suffixIcon: suffixIcon,
               suffixIconConstraints: const BoxConstraints(

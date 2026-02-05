@@ -32,11 +32,17 @@ class LoginScreen extends StatelessWidget {
   }
 }
 
-class Gilbeot extends StatelessWidget {
+class Gilbeot extends StatefulWidget {
+  const Gilbeot({super.key});
+
+  @override
+  State<Gilbeot> createState() => _GilbeotState();
+}
+
+class _GilbeotState extends State<Gilbeot> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-
-  Gilbeot({super.key});
+  bool _obscurePassword = true;
 
   @override
   Widget build(BuildContext context) {
@@ -146,6 +152,10 @@ class Gilbeot extends StatelessWidget {
                 '비밀번호를 입력하세요',
                 _passwordController,
                 isPassword: true,
+                obscureText: _obscurePassword,
+                onToggleObscure: () {
+                  setState(() => _obscurePassword = !_obscurePassword);
+                },
               ),
 
               const SizedBox(height: 20),
@@ -170,11 +180,15 @@ class Gilbeot extends StatelessWidget {
                       showDialog(
                         context: context,
                         barrierDismissible: false,
-                        builder: (context) => const Center(child: CircularProgressIndicator()),
+                        builder: (context) =>
+                            const Center(child: CircularProgressIndicator()),
                       );
 
-                      await AuthService.signIn(email: email, password: password);
-                      
+                      await AuthService.signIn(
+                        email: email,
+                        password: password,
+                      );
+
                       if (context.mounted) {
                         Navigator.pop(context); // 로딩 닫기
                         Navigator.pushReplacement(
@@ -186,9 +200,11 @@ class Gilbeot extends StatelessWidget {
                       }
                     } catch (e) {
                       if (context.mounted) {
-                         Navigator.pop(context); // 로딩 닫기
-                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('로그인 실패: 이메일 또는 비밀번호를 확인해주세요.')),
+                        Navigator.pop(context); // 로딩 닫기
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('로그인 실패: 이메일 또는 비밀번호를 확인해주세요.'),
+                          ),
                         );
                       }
                     }
@@ -349,6 +365,8 @@ class Gilbeot extends StatelessWidget {
     String placeholder,
     TextEditingController controller, {
     bool isPassword = false,
+    bool obscureText = false,
+    VoidCallback? onToggleObscure,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -360,7 +378,7 @@ class Gilbeot extends StatelessWidget {
         const SizedBox(height: 8),
         TextField(
           controller: controller,
-          obscureText: isPassword,
+          obscureText: isPassword ? obscureText : false,
           decoration: InputDecoration(
             hintText: placeholder,
             hintStyle: const TextStyle(color: Color(0xFF9EA6B8)),
@@ -374,6 +392,16 @@ class Gilbeot extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide.none,
             ),
+            suffixIcon: isPassword
+                ? IconButton(
+                    icon: Icon(
+                      obscureText ? Icons.visibility_off : Icons.visibility,
+                      color: const Color(0xFF9EA6B8),
+                      size: 20,
+                    ),
+                    onPressed: onToggleObscure,
+                  )
+                : null,
           ),
         ),
       ],

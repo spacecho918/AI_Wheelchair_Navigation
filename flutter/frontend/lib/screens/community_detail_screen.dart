@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:gilbeot/widgets/custom_back_button.dart';
 import 'package:gilbeot/screens/report_edit_screen.dart';
+import 'package:gilbeot/services/api_service.dart';
 
 class CommunityDetailScreen extends StatefulWidget {
   final Map<String, dynamic> report;
@@ -23,14 +24,30 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
   bool isLiked = false;
   bool isDisliked = false;
 
+  List<Map<String, dynamic>> comments = [];
+  bool isLoadingComments = false;
+
   @override
   void initState() {
     super.initState();
     likeCount = widget.report['likes'] ?? 0;
     dislikeCount = widget.report['dislikes'] ?? 0;
+    _fetchComments();
   }
 
-  void _toggleLike() {
+  Future<void> _fetchComments() async {
+    setState(() => isLoadingComments = true);
+    final data = await ApiService.getComments(widget.report['id']);
+    if (mounted) {
+      setState(() {
+        comments = data;
+        isLoadingComments = false;
+      });
+    }
+  }
+
+  Future<void> _toggleLike() async {
+    // Optimistic Update
     setState(() {
       if (isLiked) {
         likeCount--;
@@ -44,9 +61,17 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
         }
       }
     });
+
+    final success = await ApiService.toggleLike(widget.report['id'], true);
+    if (!success) {
+      // Revert if failed
+      _fetchComments(); // Or fetch post details again to sync
+      // Ideally revert counts
+    }
   }
 
-  void _toggleDislike() {
+  Future<void> _toggleDislike() async {
+    // Optimistic Update
     setState(() {
       if (isDisliked) {
         dislikeCount--;
@@ -60,6 +85,22 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
         }
       }
     });
+
+    await ApiService.toggleLike(widget.report['id'], false);
+  }
+
+  Future<void> _submitComment() async {
+    final text = _commentController.text.trim();
+    if (text.isEmpty) return;
+
+    _commentController.clear();
+    FocusScope.of(context).unfocus();
+
+    // Optimistic: Add locally (optional) or just wait for fetch
+    final success = await ApiService.postComment(widget.report['id'], text);
+    if (success) {
+      await _fetchComments();
+    }
   }
 
   @override
@@ -72,6 +113,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
+      resizeToAvoidBottomInset: true,
       body: SafeArea(
         child: Column(
           children: [
@@ -82,12 +124,10 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  // Back Button
                   const Align(
                     alignment: Alignment.centerLeft,
                     child: CustomBackButton(),
                   ),
-                  // Title
                   Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.center,
@@ -103,14 +143,13 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                       Text(
                         '상세 정보',
                         style: TextStyle(
-                          color: Color(0xFF4A5565),
+                          color: const Color(0xFF4A5565),
                           fontSize: 12,
                           fontWeight: FontWeight.normal,
                         ),
                       ),
                     ],
                   ),
-                  // Close Button
                   Align(
                     alignment: Alignment.centerRight,
                     child: IconButton(
@@ -136,14 +175,97 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                       // 1. Map/Image Placeholder
                       Stack(
                         children: [
-                          Container(
-                            height: 200,
-                            width: double.infinity,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFE5E7EB),
-                              borderRadius: BorderRadius.circular(16),
+                          if (widget.report['imageUrl'] != null &&
+                              widget.report['imageUrl'].toString().isNotEmpty)
+                            GestureDetector(
+                              onTap: () {
+                                final imageUrl =
+                                    widget.report['imageUrl']
+                                        .toString()
+                                        .startsWith('http')
+                                    ? widget.report['imageUrl']
+                                    : 'http://localhost:8000${widget.report['imageUrl']}';
+
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => Scaffold(
+                                      backgroundColor: Colors.black,
+                                      appBar: AppBar(
+                                        backgroundColor: Colors.black,
+                                        iconTheme: const IconThemeData(
+                                          color: Colors.white,
+                                        ),
+                                        elevation: 0,
+                                      ),
+                                      body: Center(
+                                        child: InteractiveViewer(
+                                          panEnabled: true,
+                                          boundaryMargin: const EdgeInsets.all(
+                                            20,
+                                          ),
+                                          minScale: 0.5,
+                                          maxScale: 4.0,
+                                          child: Image.network(
+                                            imageUrl,
+                                            fit: BoxFit.contain,
+                                            errorBuilder:
+                                                (context, error, stackTrace) {
+                                                  return const Icon(
+                                                    Icons.error,
+                                                    color: Colors.white,
+                                                    size: 50,
+                                                  );
+                                                },
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(16),
+                                child: Image.network(
+                                  widget.report['imageUrl']
+                                          .toString()
+                                          .startsWith('http')
+                                      ? widget.report['imageUrl']
+                                      : 'http://localhost:8000${widget.report['imageUrl']}',
+                                  height: 250,
+                                  width: double.infinity,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Container(
+                                      height: 250,
+                                      width: double.infinity,
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFE5E7EB),
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                      child: const Center(
+                                        child: Icon(
+                                          Icons.image_not_supported,
+                                          color: Colors.grey,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                            )
+                          else
+                            Container(
+                              height: 250,
+                              width: double.infinity,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFE5E7EB),
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: const Center(
+                                child: Icon(Icons.photo, color: Colors.grey),
+                              ),
                             ),
-                          ),
                           Positioned(
                             top: 12,
                             left: 12,
@@ -177,7 +299,9 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                             backgroundColor: Colors.grey.shade200,
                             radius: 20,
                             child: Text(
-                              widget.report['user'][0],
+                              widget.report['user'].isNotEmpty
+                                  ? widget.report['user'][0]
+                                  : '?',
                               style: TextStyle(fontSize: 16, color: textDark),
                             ),
                           ),
@@ -215,14 +339,13 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                           Text(
                             widget.report['address'],
                             style: TextStyle(
-                              color: Color(0xFF4A5565),
+                              color: const Color(0xFF4A5565),
                               fontSize: 14,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
                         ],
                       ),
-                      // Coordinates placeholder (Not in dummy data but in design)
                       Padding(
                         padding: const EdgeInsets.only(left: 28),
                         child: Text(
@@ -237,9 +360,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                         width: double.infinity,
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: const Color(
-                            0xFFF9FAFB,
-                          ), // Very light grey bg for text
+                          color: const Color(0xFFF9FAFB),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
@@ -367,7 +488,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                       ),
                       const SizedBox(height: 16),
 
-                      // 6. Edit Request Button
+                      // 6. Edit Request Button (Keep as is)
                       SizedBox(
                         width: double.infinity,
                         child: OutlinedButton.icon(
@@ -401,13 +522,18 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                       const SizedBox(height: 24),
 
                       // 7. Comments Section
-                      Text(
-                        '댓글 (${widget.report['comments']})',
-                        style: TextStyle(
-                          color: textDark,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            '댓글 (${comments.length})',
+                            style: TextStyle(
+                              color: textDark,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 16),
 
@@ -441,9 +567,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                             height: 48,
                             width: 48,
                             decoration: BoxDecoration(
-                              color: const Color(
-                                0xFF6EE7B7,
-                              ), // Light green send button
+                              color: const Color(0xFF6EE7B7),
                               borderRadius: BorderRadius.circular(16),
                             ),
                             child: IconButton(
@@ -452,71 +576,83 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                                 color: Colors.white,
                                 size: 20,
                               ),
-                              onPressed: () {},
+                              onPressed: _submitComment,
                             ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 20),
 
-                      // Single Comment Example (John Park)
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF9FAFB),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            CircleAvatar(
-                              backgroundColor: Colors.yellow.shade100,
-                              radius: 16,
-                              child: const Text(
-                                '😵‍💫',
-                                style: TextStyle(fontSize: 16),
-                              ), // Text emoji as generic avatar replacement
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
+                      // Comments List
+                      if (comments.isEmpty)
+                        const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(20.0),
+                            child: Text('아직 댓글이 없습니다.'),
+                          ),
+                        )
+                      else
+                        ListView.separated(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: comments.length,
+                          separatorBuilder: (context, index) =>
+                              const SizedBox(height: 12),
+                          itemBuilder: (context, index) {
+                            final comment = comments[index];
+                            // Assuming backend returns created_at etc.
+                            // Currently simple map from API logic
+                            return Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF9FAFB),
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        'John Park',
-                                        style: TextStyle(
-                                          color: textDark,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 14,
-                                        ),
-                                      ),
-                                      Text(
-                                        '1시간 전',
-                                        style: TextStyle(
-                                          color: textGrey,
-                                          fontSize: 11,
-                                        ),
-                                      ),
-                                    ],
+                                  CircleAvatar(
+                                    backgroundColor: Colors.grey.shade300,
+                                    radius: 16,
+                                    child: const Icon(
+                                      Icons.person,
+                                      size: 20,
+                                      color: Colors.white,
+                                    ),
                                   ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    '정보 감사합니다. 이 곳은 피해가야겠네요.',
-                                    style: TextStyle(
-                                      color: textDark,
-                                      fontSize: 13,
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        // We might not have user name if we only saved user_id in DB
+                                        // Ideally backend joins user table.
+                                        // For now show 'User' or user_id
+                                        Text(
+                                          '사용자',
+                                          style: TextStyle(
+                                            color: textDark,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          comment['content'] ?? '',
+                                          style: TextStyle(
+                                            color: textDark,
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ],
                               ),
-                            ),
-                          ],
+                            );
+                          },
                         ),
-                      ),
                     ],
                   ),
                 ),
