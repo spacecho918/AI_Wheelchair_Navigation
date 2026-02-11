@@ -29,6 +29,8 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   bool _isEditingPassword = false;
 
   bool _isLoading = true;
+  String _initialNickname = '';
+  String? _nicknameErrorMessage; // 닉네임 중복 등 차단 사유
 
   // Password validation state
   bool _hasMinLength = false;
@@ -97,6 +99,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     final user = await ApiService.getUserProfile();
     if (user != null) {
       setState(() {
+        _initialNickname = user.nickname;
         _nicknameController.text = user.nickname;
         _emailController.text = user.email;
         _isLoading = false;
@@ -156,21 +159,43 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   }
 
   Future<void> _saveNickname() async {
-    if (_nicknameController.text.isEmpty) {
-      _showToast('닉네임을 입력해주세요');
+    final newNickname = _nicknameController.text.trim();
+    setState(() => _nicknameErrorMessage = null);
+
+    if (newNickname.isEmpty) {
+      setState(() => _nicknameErrorMessage = '닉네임을 입력해주세요.');
       return;
     }
 
-    final success = await ApiService.updateUserProfile(
-      _nicknameController.text,
-    );
-    if (success) {
+    // 변경 없으면 저장만 닫기
+    if (newNickname == _initialNickname) {
+      setState(() => _isEditingNickname = false);
+      return;
+    }
+
+    // 다른 닉네임으로 변경 시 중복 검사 (실제 저장되는 user_profiles 기준)
+    final available =
+        await ApiService.isNicknameAvailableInUserProfiles(newNickname);
+    if (!available && mounted) {
+      setState(() => _nicknameErrorMessage =
+          '이미 사용 중인 닉네임입니다. 다른 닉네임을 입력해주세요.');
+      return;
+    }
+
+    final result = await ApiService.updateUserProfile(newNickname);
+    final success = result['success'] == true;
+    final error = result['error'] as String?;
+    if (success && mounted) {
       _showToast('닉네임이 저장되었습니다');
       setState(() {
+        _initialNickname = newNickname;
         _isEditingNickname = false;
+        _nicknameErrorMessage = null;
       });
-    } else {
-      _showToast('저장에 실패했습니다');
+    } else if (mounted) {
+      setState(() => _nicknameErrorMessage = error == 'duplicate'
+          ? '이미 사용 중인 닉네임입니다. 다른 닉네임을 입력해주세요.'
+          : '저장에 실패했습니다.');
     }
   }
 
@@ -338,6 +363,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                                 onPressed: () {
                                   setState(() {
                                     _isEditingNickname = !_isEditingNickname;
+                                    _nicknameErrorMessage = null;
                                   });
                                 },
                                 child: Text(
@@ -387,6 +413,18 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                                     ),
                                   ),
                                 ),
+                                // 닉네임 차단 사유 메시지 (회원가입과 동일하게 화면에 표시)
+                                if (_nicknameErrorMessage != null) ...[
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    _nicknameErrorMessage!,
+                                    style: const TextStyle(
+                                      color: Color(0xFFE53935),
+                                      fontSize: 13,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
                               ],
                             )
                           else

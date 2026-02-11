@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:gilbeot/screens/login_screen.dart';
-
+import 'package:gilbeot/screens/map_screen.dart';
+import 'package:gilbeot/services/auth_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   await Supabase.initialize(
     url: '***REMOVED***',
     anonKey: '***REMOVED***',
@@ -42,7 +43,14 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         fontFamily: 'Pretendard',
       ),
-      home: LoginScreen(),
+      home: StreamBuilder<AuthState>(
+        stream: AuthService.onAuthStateChange,
+        builder: (context, snapshot) {
+          final hasSession = AuthService.currentUser != null ||
+              (snapshot.hasData && snapshot.data!.session != null);
+          return hasSession ? const MapScreen() : const LoginScreen();
+        },
+      ),
     );
   }
 }

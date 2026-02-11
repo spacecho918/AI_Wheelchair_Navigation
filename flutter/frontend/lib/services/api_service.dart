@@ -355,14 +355,54 @@ class ApiService {
     }
   }
 
-  // User Profile stubs (already Supabase based in previous version? No, reusing Auth)
+  /// 프로필 조회: user_profiles 테이블 우선, 없으면 auth 메타데이터 사용 (OAuth 첫 로그인 시 DB 닉네임 표시)
   static Future<User?> getUserProfile() async {
-    return ApiService.getUserProfileSync(); // Logic migrated or call helper
-    // Reuse the logic from previous version but ensure it uses Auth Metadata
-    // ... (Same as before)
+    final user = AuthService.currentUser;
+    if (user == null) return null;
+    final metadata = user.userMetadata;
+
+    try {
+      final res = await _supabase
+          .from('user_profiles')
+          .select()
+          .eq('user_id', user.id)
+          .maybeSingle();
+      if (res != null) {
+        final nick = res['nickname'] as String?;
+        final wt = res['wheelchair_type'] as String?;
+        final reportLevel = res['report_level'];
+        final profileImageUrl = res['profile_image_url'] as String?;
+        return User(
+          nickname: nick?.isNotEmpty == true
+              ? nick
+              : (metadata?['nickname'] ?? '사용자'),
+          email: user.email ?? '',
+          profileImage: profileImageUrl?.isNotEmpty == true ? profileImageUrl : null,
+          wheelchairType: _normalizeWheelchairType(wt ?? metadata?['wheelchair_type'] ?? 'none'),
+          driveCount: metadata?['drive_count'] ?? 0,
+          reportCount: reportLevel is int ? reportLevel : (metadata?['report_count'] ?? 0),
+          likeCount: metadata?['like_count'] ?? 0,
+          commentCount: metadata?['comment_count'] ?? 0,
+        );
+      }
+    } catch (e) {
+      debugPrint('getUserProfile user_profiles fetch error: $e');
+    }
+
+    return getUserProfileSync();
   }
 
-  // Helper for existing synchronous profile extraction
+  static String _normalizeWheelchairType(String v) {
+    if (v.isEmpty) return 'None';
+    final lower = v.toLowerCase();
+    if (lower == 'none') return 'None';
+    if (lower == 'electric') return 'Electric';
+    if (lower == 'manual') return 'Manual';
+    if (lower == 'caregivermanual') return 'CaregiverManual';
+    return v;
+  }
+
+  /// 동기 폴백: auth 메타데이터만 사용 (DB 조회 실패 시)
   static User? getUserProfileSync() {
     final user = AuthService.currentUser;
     if (user == null) return null;
@@ -378,15 +418,80 @@ class ApiService {
     );
   }
 
-  // Update Profile, History etc... (Keep Supabase Auth usage)
-  static Future<bool> updateUserProfile(String nickname) async {
+  /// 닉네임 중복 여부 검사 (Supabase RPC check_nickname_available 사용)
+  /// RPC가 없으면 true 반환하여 가입이 막히지 않도록 함
+  static Future<bool> isNicknameAvailable(String nickname) async {
+    if (nickname.trim().isEmpty) return false;
+    try {
+      final res = await _supabase.rpc(
+        'check_nickname_available',
+        params: {'p_nickname': nickname.trim()},
+      );
+      return res == true;
+    } catch (e) {
+      debugPrint('Nickname check RPC error (assuming available): $e');
+      return true;
+    }
+  }
+
+  /// 회원가입용. user_profiles 테이블 기준 닉네임 중복 검사 (비로그인에서 호출, RPC 사용)
+  static Future<bool> isNicknameAvailableInUserProfilesForSignup(String nickname) async {
+    if (nickname.trim().isEmpty) return false;
+    try {
+      final res = await _supabase.rpc(
+        'check_nickname_available_user_profiles',
+        params: {'p_nickname': nickname.trim()},
+      );
+      return res == true;
+    } catch (e) {
+      debugPrint('check_nickname_available_user_profiles RPC error: $e');
+      return true;
+    }
+  }
+
+  /// 설정 > 닉네임 변경용. 실제 저장되는 user_profiles 테이블 기준으로 중복 검사
+  static Future<bool> isNicknameAvailableInUserProfiles(String nickname) async {
+    if (nickname.trim().isEmpty) return false;
+    final user = AuthService.currentUser;
+    if (user == null) return false;
+    try {
+      final res = await _supabase
+          .from('user_profiles')
+          .select('user_id')
+          .eq('nickname', nickname.trim())
+          .maybeSingle();
+      if (res == null) return true;
+      return res['user_id'] == user.id;
+    } catch (e) {
+      debugPrint('isNicknameAvailableInUserProfiles error: $e');
+      return true;
+    }
+  }
+
+  /// 닉네임 수정: auth 메타데이터 + user_profiles 테이블 모두 반영
+  /// Returns: { 'success': bool, 'error': String? } — error가 'duplicate'면 닉네임 중복으로 저장 실패
+  static Future<Map<String, dynamic>> updateUserProfile(String nickname) async {
+    final user = AuthService.currentUser;
+    if (user == null) return {'success': false, 'error': null};
     try {
       await _supabase.auth.updateUser(
         supabase.UserAttributes(data: {'nickname': nickname}),
       );
-      return true;
+      await _supabase
+          .from('user_profiles')
+          .update({'nickname': nickname, 'name': nickname})
+          .eq('user_id', user.id);
+      return {'success': true, 'error': null};
     } catch (e) {
-      return false;
+      debugPrint('updateUserProfile error: $e');
+      final msg = e.toString().toLowerCase();
+      final isDuplicate = msg.contains('23505') ||
+          msg.contains('unique') ||
+          msg.contains('duplicate');
+      return {
+        'success': false,
+        'error': isDuplicate ? 'duplicate' : null,
+      };
     }
   }
 

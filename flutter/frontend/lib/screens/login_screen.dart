@@ -44,6 +44,48 @@ class _GilbeotState extends State<Gilbeot> {
   final TextEditingController _passwordController = TextEditingController();
   bool _obscurePassword = true;
 
+  Future<void> _handleGoogleLogin(BuildContext context) async {
+    try {
+      await AuthService.signInWithGoogle();
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('구글 로그인 창을 엽니다. 완료 후 앱으로 돌아오세요.'),
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Google 로그인 실패: ${e.toString().replaceFirst('Exception: ', '')}')),
+      );
+    }
+  }
+
+  Future<void> _handleKakaoLogin(BuildContext context) async {
+    try {
+      await AuthService.signInWithKakao();
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('카카오 로그인 창을 엽니다. 완료 후 앱으로 돌아오세요.'),
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('카카오 로그인 실패: ${e.toString().replaceFirst('Exception: ', '')}')),
+      );
+    }
+  }
+
+  void _showLoading(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -131,14 +173,14 @@ class _GilbeotState extends State<Gilbeot> {
               ),
               const SizedBox(height: 24),
 
-              // [1, 2] 소셜 로그인 버튼 (누르면 물결 효과 발생)
+              // [1, 2] 소셜 로그인 버튼
               _buildSocialButton(
                 'Google 계정으로 로그인',
                 'assets/google_icon.svg',
-                () => debugPrint("구글 로그인 클릭됨"),
+                () => _handleGoogleLogin(context),
               ),
               const SizedBox(height: 10),
-              _buildKakaoButton(() => debugPrint("카카오 로그인 클릭됨")),
+              _buildKakaoButton(() => _handleKakaoLogin(context)),
 
               const SizedBox(height: 20),
               const Text('또는', style: TextStyle(color: Color(0xFF9EA6B8))),

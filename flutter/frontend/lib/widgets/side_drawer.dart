@@ -11,6 +11,7 @@ import '../screens/notification_screen.dart';
 import '../screens/history_screen.dart';
 import '../screens/saved_places_screen.dart';
 import '../screens/settings_screen.dart';
+import '../services/auth_service.dart';
 
 class SideDrawer extends StatefulWidget {
   const SideDrawer({super.key});
@@ -395,7 +396,9 @@ class _SideDrawerState extends State<SideDrawer> {
               MaterialPageRoute(builder: (context) => const SettingsScreen()),
             );
           }, false),
-          _buildFooterItem(Icons.logout, '로그아웃', () {
+          _buildFooterItem(Icons.logout, '로그아웃', () async {
+            await AuthService.signOut();
+            if (!context.mounted) return;
             Navigator.pushAndRemoveUntil(
               context,
               MaterialPageRoute(builder: (context) => const LoginScreen()),

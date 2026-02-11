@@ -4,6 +4,7 @@ import 'email_verification_screen.dart';
 import 'login_screen.dart';
 import 'reset_password_screen.dart';
 import '../services/auth_service.dart';
+import '../services/api_service.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -27,6 +28,7 @@ class _SignupScreenState extends State<SignupScreen> {
   bool _isPasswordFormatValid = true;
   bool _isPasswordMatch = true;
   bool _isFormValid = false;
+  String? _signupErrorMessage; // 닉네임 중복 또는 기존 이메일 존재 메시지
 
   @override
   void initState() {
@@ -77,6 +79,7 @@ class _SignupScreenState extends State<SignupScreen> {
       _isEmailValid = isEmailValid;
       _isPasswordFormatValid = isPasswordFormatValid;
       _isPasswordMatch = isPasswordMatch;
+      _signupErrorMessage = null; // 입력 변경 시 에러 메시지 초기화
       _isFormValid =
           isNameFilled &&
           isNicknameFilled &&
@@ -299,6 +302,19 @@ class _SignupScreenState extends State<SignupScreen> {
 
                         const SizedBox(height: 24),
 
+                        // 하단 에러 메시지 (닉네임 중복 / 기존 이메일 존재)
+                        if (_signupErrorMessage != null) ...[
+                          const SizedBox(height: 12),
+                          Text(
+                            _signupErrorMessage!,
+                            style: const TextStyle(
+                              color: Color(0xFFE53935),
+                              fontSize: 13,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 12),
+                        ],
                         // Button
                         SizedBox(
                           width: double.infinity,
@@ -306,29 +322,69 @@ class _SignupScreenState extends State<SignupScreen> {
                           child: ElevatedButton(
                             onPressed: _isFormValid
                                 ? () async {
-                                    // Sign up with Supabase (AuthService)
-                                    // includes storing metadata
-                                    await AuthService.signUp(
-                                      email: _emailController.text,
-                                      password: _passwordController.text,
-                                      metadata: {
-                                        'name': _nameController.text,
-                                        'nickname': _nicknameController.text,
-                                        'wheelchair_type':
-                                            _selectedWheelchairType ?? 'None',
-                                      },
-                                    );
-
-                                    if (context.mounted) {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) =>
-                                              EmailVerificationScreen(
-                                                email: _emailController.text,
-                                              ),
-                                        ),
+                                    setState(() => _signupErrorMessage = null);
+                                    // 1) 닉네임 중복 검사 (실제 저장되는 user_profiles 기준)
+                                    final nicknameOk = await ApiService
+                                        .isNicknameAvailableInUserProfilesForSignup(
+                                            _nicknameController.text.trim());
+                                    if (!nicknameOk && mounted) {
+                                      setState(() => _signupErrorMessage =
+                                          '이미 사용 중인 닉네임입니다. 다른 닉네임을 입력해주세요.');
+                                      return;
+                                    }
+                                    try {
+                                      final response = await AuthService.signUp(
+                                        email: _emailController.text.trim(),
+                                        password: _passwordController.text,
+                                        metadata: {
+                                          'name': _nameController.text.trim(),
+                                          'nickname': _nicknameController.text
+                                              .trim(),
+                                          'wheelchair_type':
+                                              _selectedWheelchairType ?? 'None',
+                                        },
                                       );
+                                      // Supabase는 이메일 중복 시 예외 대신 identities가 비어 있을 수 있음
+                                      final identities = response.user?.identities;
+                                      if (identities == null || identities.isEmpty) {
+                                        if (context.mounted) {
+                                          setState(() => _signupErrorMessage =
+                                              '기존 이메일 존재로 가입 불가능합니다.');
+                                        }
+                                        return;
+                                      }
+                                      if (context.mounted) {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) =>
+                                                EmailVerificationScreen(
+                                                  email: _emailController.text,
+                                                ),
+                                          ),
+                                        );
+                                      }
+                                    } catch (e) {
+                                      if (!context.mounted) return;
+                                      final msg = e.toString().toLowerCase();
+                                      if (msg.contains('already registered') ||
+                                          msg.contains('user already registered') ||
+                                          msg.contains('already exists')) {
+                                        setState(() => _signupErrorMessage =
+                                            '기존 이메일 존재로 가입 불가능합니다.');
+                                      } else if (msg.contains('23505') ||
+                                          msg.contains('unique') ||
+                                          msg.contains('nickname')) {
+                                        setState(() => _signupErrorMessage =
+                                            '이미 사용 중인 닉네임입니다. 다른 닉네임을 입력해주세요.');
+                                      } else if (msg.contains('database error saving new user') ||
+                                          msg.contains('unexpected_failure')) {
+                                        setState(() => _signupErrorMessage =
+                                            '이미 사용 중인 닉네임입니다. 다른 닉네임을 입력해주세요.');
+                                      } else {
+                                        setState(() => _signupErrorMessage =
+                                            '가입에 실패했습니다. 다시 시도해주세요.');
+                                      }
                                     }
                                   }
                                 : null,
