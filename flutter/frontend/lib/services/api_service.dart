@@ -355,7 +355,8 @@ class ApiService {
     }
   }
 
-  /// 프로필 조회: user_profiles 테이블 우선, 없으면 auth 메타데이터 사용 (OAuth 첫 로그인 시 DB 닉네임 표시)
+  /// 프로필 조회: user_profiles 테이블 우선, 없으면 auth 메타데이터 사용.
+  /// 로그인 직후(회원가입 직후) metadata에만 휠체어 타입이 있을 수 있으므로, 한 번 user_profiles에 동기화 시도.
   static Future<User?> getUserProfile() async {
     final user = AuthService.currentUser;
     if (user == null) return null;
@@ -369,13 +370,22 @@ class ApiService {
           .maybeSingle();
       if (res != null) {
         final nick = res['nickname'] as String?;
-        final wt = res['wheelchair_type'] as String?;
+        var wt = res['wheelchair_type'] as String?;
+        final metaWt = metadata?['wheelchair_type'] as String?;
+        // 회원가입 직후: 트리거가 metadata를 안 넣었을 수 있음 → metadata로 user_profiles 동기화
+        if (metaWt != null && metaWt.isNotEmpty && _toDbWheelchairType(metaWt) != wt) {
+          try {
+            await _supabase
+                .from('user_profiles')
+                .update({'wheelchair_type': _toDbWheelchairType(metaWt)})
+                .eq('user_id', user.id);
+            wt = _toDbWheelchairType(metaWt);
+          } catch (_) {}
+        }
         final reportLevel = res['report_level'];
         final profileImageUrl = res['profile_image_url'] as String?;
         return User(
-          nickname: nick?.isNotEmpty == true
-              ? nick
-              : (metadata?['nickname'] ?? '사용자'),
+          nickname: nick?.isNotEmpty == true ? nick : (metadata?['nickname'] ?? '사용자'),
           email: user.email ?? '',
           profileImage: profileImageUrl?.isNotEmpty == true ? profileImageUrl : null,
           wheelchairType: _normalizeWheelchairType(wt ?? metadata?['wheelchair_type'] ?? 'none'),
@@ -388,7 +398,6 @@ class ApiService {
     } catch (e) {
       debugPrint('getUserProfile user_profiles fetch error: $e');
     }
-
     return getUserProfileSync();
   }
 
@@ -398,40 +407,17 @@ class ApiService {
     if (lower == 'none') return 'None';
     if (lower == 'electric') return 'Electric';
     if (lower == 'manual') return 'Manual';
-    if (lower == 'caregivermanual') return 'CaregiverManual';
+    if (lower == 'caregivermanual' || lower == 'assisted_manual') return 'CaregiverManual';
     return v;
   }
 
-  /// 동기 폴백: auth 메타데이터만 사용 (DB 조회 실패 시)
-  static User? getUserProfileSync() {
-    final user = AuthService.currentUser;
-    if (user == null) return null;
-    final metadata = user.userMetadata;
-    return User(
-      nickname: metadata?['nickname'] ?? '사용자',
-      email: user.email ?? '',
-      wheelchairType: metadata?['wheelchair_type'] ?? 'None',
-      driveCount: metadata?['drive_count'] ?? 0,
-      reportCount: metadata?['report_count'] ?? 0,
-      likeCount: metadata?['like_count'] ?? 0,
-      commentCount: metadata?['comment_count'] ?? 0,
-    );
-  }
-
-  /// 닉네임 중복 여부 검사 (Supabase RPC check_nickname_available 사용)
-  /// RPC가 없으면 true 반환하여 가입이 막히지 않도록 함
-  static Future<bool> isNicknameAvailable(String nickname) async {
-    if (nickname.trim().isEmpty) return false;
-    try {
-      final res = await _supabase.rpc(
-        'check_nickname_available',
-        params: {'p_nickname': nickname.trim()},
-      );
-      return res == true;
-    } catch (e) {
-      debugPrint('Nickname check RPC error (assuming available): $e');
-      return true;
-    }
+  static String _toDbWheelchairType(String frontendType) {
+    final lower = frontendType.toString().toLowerCase();
+    if (lower == 'electric') return 'electric';
+    if (lower == 'manual') return 'manual';
+    if (lower == 'caregivermanual' || lower == 'assisted_manual') return 'assisted_manual';
+    if (lower == 'none') return 'none';
+    return 'manual';
   }
 
   /// 회원가입용. user_profiles 테이블 기준 닉네임 중복 검사 (비로그인에서 호출, RPC 사용)
@@ -449,7 +435,7 @@ class ApiService {
     }
   }
 
-  /// 설정 > 닉네임 변경용. 실제 저장되는 user_profiles 테이블 기준으로 중복 검사
+  /// 설정 > 닉네임 변경용. user_profiles 기준으로 중복 검사 (본인 닉네임이면 사용 가능)
   static Future<bool> isNicknameAvailableInUserProfiles(String nickname) async {
     if (nickname.trim().isEmpty) return false;
     final user = AuthService.currentUser;
@@ -468,8 +454,23 @@ class ApiService {
     }
   }
 
-  /// 닉네임 수정: auth 메타데이터 + user_profiles 테이블 모두 반영
-  /// Returns: { 'success': bool, 'error': String? } — error가 'duplicate'면 닉네임 중복으로 저장 실패
+  // Helper for existing synchronous profile extraction
+  static User? getUserProfileSync() {
+    final user = AuthService.currentUser;
+    if (user == null) return null;
+    final metadata = user.userMetadata;
+    return User(
+      nickname: metadata?['nickname'] ?? '사용자',
+      email: user.email ?? '',
+      wheelchairType: metadata?['wheelchair_type'] ?? 'None',
+      driveCount: metadata?['drive_count'] ?? 0,
+      reportCount: metadata?['report_count'] ?? 0,
+      likeCount: metadata?['like_count'] ?? 0,
+      commentCount: metadata?['comment_count'] ?? 0,
+    );
+  }
+
+  /// 닉네임 수정: auth 메타데이터 + user_profiles 테이블 반영. Returns: { 'success': bool, 'error': String? } — 'duplicate' 시 닉네임 중복
   static Future<Map<String, dynamic>> updateUserProfile(String nickname) async {
     final user = AuthService.currentUser;
     if (user == null) return {'success': false, 'error': null};
@@ -477,10 +478,12 @@ class ApiService {
       await _supabase.auth.updateUser(
         supabase.UserAttributes(data: {'nickname': nickname}),
       );
-      await _supabase
-          .from('user_profiles')
-          .update({'nickname': nickname, 'name': nickname})
-          .eq('user_id', user.id);
+      try {
+        await _supabase
+            .from('user_profiles')
+            .update({'nickname': nickname, 'name': nickname})
+            .eq('user_id', user.id);
+      } catch (_) {}
       return {'success': true, 'error': null};
     } catch (e) {
       debugPrint('updateUserProfile error: $e');
@@ -524,13 +527,23 @@ class ApiService {
     return [];
   }
 
+  /// 휠체어 타입 수정: auth 메타데이터 + user_profiles 테이블 모두 반영.
+  /// type: 'Electric' | 'Manual' | 'CaregiverManual' | 'None'
   static Future<bool> updateWheelchairType(String type) async {
+    final user = AuthService.currentUser;
+    if (user == null) return false;
+    final dbType = _toDbWheelchairType(type);
     try {
       await _supabase.auth.updateUser(
         supabase.UserAttributes(data: {'wheelchair_type': type}),
       );
+      await _supabase
+          .from('user_profiles')
+          .update({'wheelchair_type': dbType})
+          .eq('user_id', user.id);
       return true;
     } catch (e) {
+      debugPrint('updateWheelchairType error: $e');
       return false;
     }
   }

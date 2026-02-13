@@ -1,15 +1,25 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:gilbeot/screens/login_screen.dart';
 import 'package:gilbeot/screens/map_screen.dart';
 import 'package:gilbeot/services/auth_service.dart';
+import 'package:gilbeot/services/session_storage_local_storage.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  const supabaseUrl = '***REMOVED***';
+  final persistKey =
+      'sb-${Uri.parse(supabaseUrl).host.split('.').first}-auth-token';
+
   await Supabase.initialize(
-    url: '***REMOVED***',
+    url: supabaseUrl,
     anonKey: '***REMOVED***',
+    authOptions: FlutterAuthClientOptions(
+      localStorage: SessionStorageLocalStorage(persistSessionKey: persistKey),
+    ),
   );
 
   runApp(const MyApp());
@@ -43,14 +53,47 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         fontFamily: 'Pretendard',
       ),
-      home: StreamBuilder<AuthState>(
-        stream: AuthService.onAuthStateChange,
-        builder: (context, snapshot) {
-          final hasSession = AuthService.currentUser != null ||
-              (snapshot.hasData && snapshot.data!.session != null);
-          return hasSession ? const MapScreen() : const LoginScreen();
-        },
-      ),
+      home: const LoginScreenWrapper(),
     );
   }
+}
+
+/// 첫 화면은 항상 로그인. 세션이 있으면 한 프레임 후 지도로 이동.
+class LoginScreenWrapper extends StatefulWidget {
+  const LoginScreenWrapper({super.key});
+
+  @override
+  State<LoginScreenWrapper> createState() => _LoginScreenWrapperState();
+}
+
+class _LoginScreenWrapperState extends State<LoginScreenWrapper> {
+  StreamSubscription<AuthState>? _authSub;
+
+  @override
+  void initState() {
+    super.initState();
+    // 첫 프레임 이후에만 세션 확인 → 항상 로그인 화면이 먼저 보이도록
+    WidgetsBinding.instance.addPostFrameCallback((_) => _redirectIfSession());
+    _authSub = AuthService.onAuthStateChange.listen((data) {
+      if (data.session != null) _redirectIfSession();
+    });
+  }
+
+  void _redirectIfSession() {
+    if (!mounted) return;
+    if (AuthService.currentUser != null) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const MapScreen()),
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _authSub?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => const LoginScreen();
 }
