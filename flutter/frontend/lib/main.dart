@@ -5,7 +5,9 @@ import 'package:gilbeot/screens/login_screen.dart';
 import 'package:gilbeot/screens/map_screen.dart';
 import 'package:gilbeot/services/auth_service.dart';
 import 'package:gilbeot/services/session_storage_local_storage.dart';
+import 'package:gilbeot/services/theme_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -25,15 +27,47 @@ void main() async {
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
+  static _MyAppState? of(BuildContext context) =>
+      context.findAncestorStateOfType<_MyAppState>();
   // This widget is the root of your application.
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  ThemeMode _themeMode = ThemeMode.system;
+  ThemeMode get currentThemeMode => _themeMode;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTheme();
+  }
+
+  Future<void> _loadTheme() async {
+    final mode = await ThemeService.loadTheme();
+    setState(() {
+      _themeMode = mode;
+    });
+  }
+
+  Future<void> changeTheme(ThemeMode mode) async {
+    await ThemeService.saveTheme(mode);
+    setState(() {
+      _themeMode = mode;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Flutter Demo',
+      themeMode: _themeMode,
+
       theme: ThemeData(
         // This is the theme of your application.
         //
@@ -50,9 +84,27 @@ class MyApp extends StatelessWidget {
         //
         // This works for code too, not just values: Most code changes can be
         // tested with just a hot reload.
+        brightness: Brightness.light,
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        inputDecorationTheme: const InputDecorationTheme(
+          border: OutlineInputBorder(),
+        ),
+
         fontFamily: 'Pretendard',
       ),
+
+      darkTheme: ThemeData(
+        brightness: Brightness.dark,
+        scaffoldBackgroundColor: const Color(0xFF121212),
+        cardColor: const Color(0xFF1E1E1E),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.deepPurple,
+          brightness: Brightness.dark,
+        ),
+        textTheme: const TextTheme(),
+        fontFamily: 'Pretendard',
+      ),
+
       home: const LoginScreenWrapper(),
     );
   }

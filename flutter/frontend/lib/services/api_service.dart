@@ -263,20 +263,20 @@ class ApiService {
 
       return (data as List)
           .map((item) {
-            final obs = item['obstacles'];
-            if (obs == null) return null;
+        final obs = item['obstacles'];
+        if (obs == null) return null;
 
-            return ReportSummary(
-              id: obs['id'].toString(),
-              title: obs['obstacle_type'],
-              location: "댓글: ${item['content']}", // Show comment content ?
-              status: 'confirmed',
-              commentCount: 0,
-              likeCount: 0,
-              date: DateTime.parse(item['created_at']),
-              content: item['content'],
-            );
-          })
+        return ReportSummary(
+          id: obs['id'].toString(),
+          title: obs['obstacle_type'],
+          location: "댓글: ${item['content']}", // Show comment content ?
+          status: 'confirmed',
+          commentCount: 0,
+          likeCount: 0,
+          date: DateTime.parse(item['created_at']),
+          content: item['content'],
+        );
+      })
           .whereType<ReportSummary>()
           .toList();
     } catch (e) {
@@ -522,9 +522,23 @@ class ApiService {
   }
 
   static Future<List<DrivingHistory>> getUserHistory() async {
-    // Assuming 'driving_history' table exists?
-    // If not, return empty.
-    return [];
+    final user = AuthService.currentUser;
+    if (user == null) return [];
+
+    try {
+      final data = await _supabase
+          .from('drive_logs') // 주행기록 테이블
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', ascending: false); // date 기준 정렬
+
+      return (data as List)
+          .map((item) => DrivingHistory.fromJson(item))
+          .toList();
+    } catch (e) {
+      debugPrint('History Load Error: $e');
+      return [];
+    }
   }
 
   /// 휠체어 타입 수정: auth 메타데이터 + user_profiles 테이블 모두 반영.

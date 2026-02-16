@@ -19,6 +19,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   // State
   int _selectedFilterIndex = 0;
+  String _selectedFilter = '이번 주';
   final List<String> _filters = ['이번 주', '이번 달', '전체'];
   bool _isLoading = true;
   List<DrivingHistory> _historyItems = [];
@@ -44,12 +45,103 @@ class _HistoryScreenState extends State<HistoryScreen> {
     _loadHistory();
   }
 
+  // Dummy Data
+/*
+    DateTime now = DateTime.now();
+
+    _historyItems = [
+
+      // 오늘
+      DrivingHistory(
+        id: 1,
+        startLocation: '정왕동',
+        endLocation: '한국공학대학교',
+        distance: 3.2,
+        duration: 12,
+        date: now,
+      ),
+
+      // 이번주
+      DrivingHistory(
+        id: 2,
+        startLocation: '배곧신도시',
+        endLocation: '오이도역',
+        distance: 5.5,
+        duration: 20,
+        date: now.subtract(Duration(days: 2)),
+      ),
+
+      // 이번달
+      DrivingHistory(
+        id: 3,
+        startLocation: '정왕시장',
+        endLocation: '이마트',
+        distance: 2.1,
+        duration: 8,
+        date: DateTime(now.year, now.month, 3),
+      ),
+
+      // 지난달
+      DrivingHistory(
+        id: 4,
+        startLocation: '시흥시청',
+        endLocation: '정왕동',
+        distance: 6.8,
+        duration: 25,
+        date: DateTime(now.year, now.month - 1, 15),
+      ),
+
+
+    ];
+
+    _isLoading = false;
+*/
+
   Future<void> _loadHistory() async {
-    final history = await ApiService.getUserHistory();
-    setState(() {
-      _historyItems = history;
-      _isLoading = false;
-    });
+    try {
+      final history = await ApiService.getUserHistory();
+      setState(() {
+        _historyItems = history;
+        _isLoading = false;
+      });
+    } catch (e, stackTrace) {
+      debugPrint('History Load Error: $e');
+      debugPrint('$stackTrace');
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  List<DrivingHistory> get _filteredHistoryItems {
+    DateTime now = DateTime.now();
+
+    if (_selectedFilter == '이번 주') {
+      // 이번 주 시작 (월요일 기준)
+      DateTime startOfWeek =
+      DateTime(now.year, now.month, now.day)
+          .subtract(Duration(days: now.weekday - 1));
+
+      DateTime endOfWeek = startOfWeek.add(Duration(days: 7));
+
+      return _historyItems.where((item) {
+        return item.date.isAfter(startOfWeek.subtract(Duration(seconds: 1))) &&
+            item.date.isBefore(endOfWeek);
+      }).toList();
+    }
+
+    if (_selectedFilter == '이번 달') {
+      DateTime startOfMonth = DateTime(now.year, now.month, 1);
+      DateTime endOfMonth =
+      DateTime(now.year, now.month + 1, 1);
+
+      return _historyItems.where((item) {
+        return item.date.isAfter(startOfMonth.subtract(Duration(seconds: 1))) &&
+            item.date.isBefore(endOfMonth);
+      }).toList();
+    }
+
+    return _historyItems; // 전체
   }
 
   @override
@@ -101,6 +193,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       onTap: () {
                         setState(() {
                           _selectedFilterIndex = index;
+                          _selectedFilter = _filters[index];
                         });
                       },
                       child: Container(
@@ -139,14 +232,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
             const SizedBox(height: 20),
 
             // 2. Summary Cards
-            // TODO: Calculate real stats from _historyItems
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Row(
                 children: [
                   _buildSummaryCard(
                     '총 이동 거리',
-                    '${_historyItems.fold(0.0, (sum, item) => sum + item.distance).toStringAsFixed(1)}km',
+                    '${_filteredHistoryItems.fold(0.0, (sum, item) => sum + item.distance).toStringAsFixed(1)}km',
                     '이번 주',
                     Icons.route_outlined,
                     isGreenIcon: true,
@@ -154,7 +246,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   const SizedBox(width: 6),
                   _buildSummaryCard(
                     '주행 횟수',
-                    '${_historyItems.length}회',
+                    '${_filteredHistoryItems.length}회',
                     '이번 주',
                     Icons.trending_up_rounded,
                     isGreenIcon: true,
@@ -187,9 +279,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       padding: const EdgeInsets.symmetric(horizontal: 20),
                       physics: const NeverScrollableScrollPhysics(),
                       shrinkWrap: true,
-                      itemCount: _historyItems.length,
+                      itemCount: _filteredHistoryItems.length,
                       itemBuilder: (context, index) {
-                        return _buildHistoryCard(_historyItems[index]);
+                        return _buildHistoryCard(_filteredHistoryItems[index]);
                       },
                     ),
                     const SizedBox(height: 20),
@@ -204,12 +296,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   Widget _buildSummaryCard(
-    String label,
-    String value,
-    String subLabel,
-    IconData icon, {
-    bool isGreenIcon = false,
-  }) {
+      String label,
+      String value,
+      String subLabel,
+      IconData icon, {
+        bool isGreenIcon = false,
+      }) {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.all(14),
@@ -337,7 +429,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 top: 10,
                 bottom: 15,
                 left:
-                    7.5, // Center of 16px width is 8. Line width 1. Left = 7.5
+                7.5, // Center of 16px width is 8. Line width 1. Left = 7.5
                 child: Container(width: 1, color: Colors.grey[300]),
               ),
               Column(

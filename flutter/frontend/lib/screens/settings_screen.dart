@@ -3,6 +3,7 @@ import 'package:gilbeot/widgets/custom_back_button.dart';
 import 'profile_edit_screen.dart';
 import 'notification_settings_screen.dart';
 import 'terms_screen.dart';
+import '../main.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -19,23 +20,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final Color bgLight = Colors.white;
 
   // Theme mode state
-  String _selectedTheme = 'system'; // 'light', 'dark', 'system'
-
+  // String _selectedTheme = 'system'; // 'light', 'dark', 'system'
+  // main.dart의 theme값 가져옴
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       body: SafeArea(
         child: Column(
           children: [
             // Header
             Container(
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.surface,
               height: 56,
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Stack(
                 alignment: Alignment.center,
-                children: const [
+                children: [
                   Align(
                     alignment: Alignment.centerLeft,
                     child: CustomBackButton(),
@@ -43,7 +44,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   Text(
                     '설정',
                     style: TextStyle(
-                      color: Color(0xFF354152),
+                      color: Theme.of(context).colorScheme.onSurface,
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
@@ -76,7 +77,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 context,
                                 MaterialPageRoute(
                                   builder: (context) =>
-                                      const ProfileEditScreen(),
+                                  const ProfileEditScreen(),
                                 ),
                               );
                             },
@@ -98,7 +99,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 context,
                                 MaterialPageRoute(
                                   builder: (context) =>
-                                      const NotificationSettingsScreen(),
+                                  const NotificationSettingsScreen(),
                                 ),
                               );
                             },
@@ -141,7 +142,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 context,
                                 MaterialPageRoute(
                                   builder: (context) =>
-                                      const TermsScreen(isPrivacyPolicy: true),
+                                  const TermsScreen(isPrivacyPolicy: true),
                                 ),
                               );
                             },
@@ -175,7 +176,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       child: Text(
         title,
         style: TextStyle(
-          color: textGrey,
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
           fontSize: 13,
           fontWeight: FontWeight.w600,
         ),
@@ -186,7 +187,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget _buildSettingsCard(List<Widget> children) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surfaceContainer,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -220,10 +221,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF3F4F6),
+                  color: Theme.of(context).colorScheme.surfaceContainerHigh,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(icon, color: textDark, size: 22),
+                child: Icon(icon, color: Theme.of(context).colorScheme.onSurface, size: 22),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -233,7 +234,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     Text(
                       title,
                       style: TextStyle(
-                        color: textDark,
+                        color: Theme.of(context).colorScheme.onSurface,
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
                       ),
@@ -241,8 +242,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     const SizedBox(height: 2),
                     Text(
                       subtitle,
-                      style: const TextStyle(
-                        color: Color(0xFF9CA3AF),
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                         fontSize: 13,
                       ),
                     ),
@@ -263,9 +264,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _buildDivider() {
-    return const Padding(
+    return Padding(
       padding: EdgeInsets.symmetric(horizontal: 20),
-      child: Divider(height: 1, color: Color(0xFFF3F4F6)),
+      child: Divider(height: 1, color: Theme.of(context).colorScheme.outlineVariant),
     );
   }
 
@@ -273,7 +274,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surfaceContainer,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -292,20 +293,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF3F4F6),
+                  color: Theme.of(context).colorScheme.surfaceContainerHigh,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.palette_outlined,
-                  color: Color(0xFF374151),
+                  color: Theme.of(context).colorScheme.onSurface,
                   size: 22,
                 ),
               ),
               const SizedBox(width: 16),
-              const Text(
+              Text(
                 '테마',
                 style: TextStyle(
-                  color: Color(0xFF101727),
+                  color: Theme.of(context).colorScheme.onSurface,
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
                 ),
@@ -344,23 +345,51 @@ class _SettingsScreenState extends State<SettingsScreen> {
     required String label,
     required String value,
   }) {
-    final isSelected = _selectedTheme == value;
+
+    final currentMode = MyApp.of(context)?.currentThemeMode;
+
+    bool isSelected = false;
+
+    if (value == 'light' && currentMode == ThemeMode.light) {
+      isSelected = true;
+    } else if (value == 'dark' && currentMode == ThemeMode.dark) {
+      isSelected = true;
+    } else if (value == 'system' && currentMode == ThemeMode.system) {
+      isSelected = true;
+    }
 
     return Expanded(
       child: GestureDetector(
         onTap: () {
-          setState(() {
-            _selectedTheme = value;
-          });
-          // TODO: Actually apply theme
+
+          ThemeMode mode;
+
+          switch (value) {
+            case 'light':
+              mode = ThemeMode.light;
+              break;
+            case 'dark':
+              mode = ThemeMode.dark;
+              break;
+            default:
+              mode = ThemeMode.system;
+          }
+
+          MyApp.of(context)?.changeTheme(mode);
+
+          setState(() {});
         },
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 16),
           decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFFE8F5E9) : Colors.white,
+            color: isSelected
+                ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.12)
+                : Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: isSelected ? primaryGreen : const Color(0xFFE5E7EB),
+              color: isSelected
+                  ? Theme.of(context).colorScheme.primary
+                  : Theme.of(context).colorScheme.outlineVariant,
               width: isSelected ? 1.5 : 1,
             ),
             boxShadow: [
@@ -379,7 +408,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Text(
                 label,
                 style: TextStyle(
-                  color: isSelected ? primaryGreen : textDark,
+                  color: isSelected ? primaryGreen : Theme.of(context).colorScheme.onSurface,
                   fontSize: 14,
                   fontWeight: FontWeight.normal,
                 ),
