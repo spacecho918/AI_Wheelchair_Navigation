@@ -1,10 +1,19 @@
 import 'dart:ui';
+import 'dart:convert';
+import 'package:flutter/foundation.dart'; // for kIsWeb
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // rootBundle
+import 'package:webview_flutter/webview_flutter.dart';
+import 'package:pointer_interceptor/pointer_interceptor.dart';
+// Import conditional helper
+import 'package:gilbeot/helpers/kakao_map_helper.dart';
+
 import 'package:gilbeot/screens/location_search_screen.dart'; // 장소 검색 화면
 import 'package:gilbeot/screens/navigation_screen.dart';
 import 'package:gilbeot/services/kakao_service.dart';
 import 'package:gilbeot/services/api_service.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:gilbeot/widgets/common_toast.dart';
 
 class RouteSearchScreen extends StatefulWidget {
   final LatLng? userLocation;
@@ -31,6 +40,20 @@ class _RouteSearchScreenState extends State<RouteSearchScreen> {
   int _selectedRouteIndex = 0; // 0: 추천, 1: 최단, 2: 안전
   PageController? _pageController;
   double? _currentViewportFraction;
+  final DraggableScrollableController _sheetController =
+      DraggableScrollableController();
+
+  // 경로 비교 데이터
+  Map<String, dynamic>? _comparisonData; // /route/compare 결과
+  bool _isLoadingRoutes = false;
+  String? _routeError;
+  String? _mapInitError;
+
+  // 지도 컨트롤러 및 ID
+  WebViewController? _mapController;
+  // 각 인스턴스마다 고유 ID 생성 (타임스탬프 활용)
+  final String _mapId =
+      'route_preview_${DateTime.now().millisecondsSinceEpoch}';
 
   @override
   void dispose() {
@@ -48,6 +71,155 @@ class _RouteSearchScreenState extends State<RouteSearchScreen> {
     // 2. 도착지가 전달되었으면 설정
     if (widget.destination != null) {
       _endPlace = widget.destination;
+    }
+
+    // 3. 지도 로드
+    _loadMap();
+
+    // 4. 출발지+도착지 모두 있으면 경로 비교 자동 조회
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _tryFetchRouteComparison();
+    });
+  }
+
+  Future<void> _loadMap() async {
+    try {
+      // 웹뷰 컨트롤러 초기화
+      final controller = WebViewController();
+
+      if (!kIsWeb) {
+        controller
+          ..setJavaScriptMode(JavaScriptMode.unrestricted)
+          ..setBackgroundColor(const Color(0x00000000))
+          ..addJavaScriptChannel(
+            'MapChannel',
+            onMessageReceived: (JavaScriptMessage message) {
+              // 필요 시 메시지 처리
+            },
+          );
+      }
+
+      _mapController = controller;
+
+      // IMPORTANT: setState FIRST to add WebViewWidget to the widget tree,
+      // creating the iframe in DOM. Then load the URL.
+      // (MapScreen does this same pattern and it works.)
+      if (mounted) setState(() {});
+
+      // Small delay to let the iframe element be created in DOM
+      await Future.delayed(const Duration(milliseconds: 100));
+
+      if (kIsWeb) {
+        // 웹: URL 파라미터로 초기화
+        // mapId 전달, level=3 적당한 줌
+        var url = '${Uri.base.origin}/kakao_map.html?mapId=$_mapId&level=3';
+
+        // 출발지 좌표가 있으면 거기를 중심으로 (없으면 기본 서울)
+        final startLatLng = _getPlaceLatLng(_startPlace);
+        if (startLatLng != null) {
+          url += '&lat=${startLatLng.latitude}&lng=${startLatLng.longitude}';
+        }
+
+        debugPrint('Map URL: $url');
+        _mapController!.loadRequest(Uri.parse(url));
+      } else {
+        // 모바일: HTML 직접 로드
+        controller.setNavigationDelegate(
+          NavigationDelegate(
+            onPageStarted: (String url) {
+              debugPrint('WebView: Page started loading: $url');
+            },
+            onPageFinished: (String url) {
+              debugPrint('WebView: Page finished loading: $url');
+            },
+            onWebResourceError: (WebResourceError error) {
+              debugPrint('WebView Error: ${error.description}');
+            },
+          ),
+        );
+
+        String fileText = await rootBundle.loadString('assets/kakao_map.html');
+        _mapController!.loadRequest(
+          Uri.dataFromString(
+            fileText,
+            mimeType: 'text/html',
+            encoding: Encoding.getByName('utf-8'),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Map Init Error: $e');
+      if (mounted) {
+        setState(() {
+          _mapInitError = e.toString();
+        });
+      }
+    }
+  }
+
+  /// 지도 그리기 헬퍼
+  Widget _buildMap() {
+    if (_mapController == null) {
+      if (_mapInitError != null) {
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, color: Colors.red, size: 48),
+              const SizedBox(height: 16),
+              Text(
+                '지도 초기화 오류\n$_mapInitError',
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.red),
+              ),
+            ],
+          ),
+        );
+      }
+      return const Center(child: CircularProgressIndicator());
+    }
+    return SizedBox(
+      width: double.infinity,
+      height: double.infinity,
+      child: WebViewWidget(controller: _mapController!),
+    );
+  }
+
+  /// 선택된 경로를 지도에 그리기
+  void _drawRoute(int index) {
+    if (_comparisonData == null || _mapController == null) return;
+
+    final modes = ['optimal', 'short', 'safe'];
+    if (index < 0 || index >= modes.length) return;
+
+    final mode = modes[index];
+    final routeData = _comparisonData![mode];
+
+    if (routeData != null && routeData['geometry'] != null) {
+      try {
+        final rawGeometry = routeData['geometry'] as List;
+
+        // API 리턴(GeoJSON)은 [lng, lat] 순서일 가능성 높음.
+        // kakao_map.html의 drawRoute는 받은 좌표를 그대로 new LatLng(x, y) 하므로
+        // Dart에서 [lat, lng] 순서로 맞춰서 보내야 함.
+        final List<List<double>> path = rawGeometry
+            .map((coord) {
+              final c = (coord as List)
+                  .map((e) => (e as num).toDouble())
+                  .toList();
+              if (c.length >= 2) {
+                // c[0]=lng, c[1]=lat  -->  [lat, lng]
+                return [c[1], c[0]];
+              }
+              return null;
+            })
+            .whereType<List<double>>()
+            .toList();
+
+        KakaoMapHelper.drawRoute(_mapController, path, mapId: _mapId);
+      } catch (e) {
+        debugPrint('Error drawing route preview: $e');
+      }
     }
   }
 
@@ -89,6 +261,19 @@ class _RouteSearchScreenState extends State<RouteSearchScreen> {
           _endPlace = result.cast<String, dynamic>();
         }
       });
+      // 장소 변경 시 경로 비교 자동 조회
+      _tryFetchRouteComparison();
+
+      // 지도 이동 로직 추가
+      final latLng = _getPlaceLatLng(isStart ? _startPlace : _endPlace);
+      if (latLng != null && _mapController != null) {
+        KakaoMapHelper.panTo(
+          _mapController!,
+          latLng.latitude,
+          latLng.longitude,
+          mapId: _mapId,
+        );
+      }
     }
   }
 
@@ -99,6 +284,63 @@ class _RouteSearchScreenState extends State<RouteSearchScreen> {
       _startPlace = _endPlace;
       _endPlace = temp;
     });
+    _tryFetchRouteComparison();
+  }
+
+  /// 출발지/도착지 좌표 추출 헬퍼
+  LatLng? _getPlaceLatLng(Map<String, dynamic>? place) {
+    if (place == null) return null;
+    if (place['latlng'] != null) return place['latlng'] as LatLng;
+    if (place['isCurrentLocation'] == true && widget.userLocation != null) {
+      return widget.userLocation!;
+    }
+    return null;
+  }
+
+  /// 출발지+도착지 모두 설정되면 경로 비교 API 호출
+  Future<void> _tryFetchRouteComparison() async {
+    final startLatLng = _getPlaceLatLng(_startPlace);
+    final endLatLng = _getPlaceLatLng(_endPlace);
+    if (startLatLng == null || endLatLng == null) return;
+
+    setState(() {
+      _isLoadingRoutes = true;
+      _routeError = null;
+      _comparisonData = null;
+    });
+
+    try {
+      final result = await ApiService.compareRoutes(
+        startLat: startLatLng.latitude,
+        startLon: startLatLng.longitude,
+        endLat: endLatLng.latitude,
+        endLon: endLatLng.longitude,
+      );
+
+      if (!mounted) return;
+
+      if (result['success'] == true) {
+        setState(() {
+          _comparisonData = result['comparison'] as Map<String, dynamic>?;
+          _isLoadingRoutes = false;
+        });
+        // 결과 나오면 현재 선택된 인덱스 경로 그리기
+        Future.delayed(const Duration(milliseconds: 500), () {
+          _drawRoute(_selectedRouteIndex);
+        });
+      } else {
+        setState(() {
+          _routeError = result['message'] ?? '경로 조회 실패';
+          _isLoadingRoutes = false;
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _routeError = '경로 조회 중 오류 발생';
+        _isLoadingRoutes = false;
+      });
+    }
   }
 
   @override
@@ -123,459 +365,488 @@ class _RouteSearchScreenState extends State<RouteSearchScreen> {
     }
 
     return Scaffold(
-      backgroundColor: Colors.white, // 배경색 (흰색)
-      body: SafeArea(
-        child: Column(
-          children: [
-            // 상단 입력 카드 영역
-            Container(
-              color: Colors.white,
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-              child: Column(
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Stack(
-                          children: [
-                            Column(
-                              children: [
-                                // 출발지 입력 필드
-                                _buildLocationField(
-                                  isStart: true,
-                                  place: _startPlace,
-                                  onTap: () => _selectLocation(true),
-                                ),
-                                const SizedBox(height: 8),
-                                // 도착지 입력 필드
-                                _buildLocationField(
-                                  isStart: false,
-                                  place: _endPlace,
-                                  onTap: () => _selectLocation(false),
-                                ),
-                              ],
-                            ),
-
-                            // 3. switch 아이콘 (오른쪽 떠있는 버튼)
-                            Positioned(
-                              right: 24,
-                              top: 31, // 상하 중앙 정렬 (출발지+도착지 필드 중앙)
-                              child: Container(
-                                width: 36, // 조금 더 키움
-                                height: 36,
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  shape: BoxShape.circle,
-                                  border: Border.all(color: Colors.grey[300]!),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withValues(
-                                        alpha: 0.05,
-                                      ),
-                                      blurRadius: 4,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                                child: Material(
-                                  color: Colors.transparent,
-                                  child: InkWell(
-                                    borderRadius: BorderRadius.circular(20),
-                                    onTap: _swapLocations,
-                                    child: Center(
-                                      child: Icon(
-                                        Icons.swap_vert,
-                                        color: Colors.grey[600],
-                                        size: 20,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      // 4. x 아이콘 (닫기)
-                      IconButton(
-                        onPressed: () => Navigator.pop(context),
-                        icon: const Icon(Icons.close, color: Colors.black54),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                        style: IconButton.styleFrom(
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-            // 최근 검색 (더미 UI)
-            // 조건부 렌더링: 출발지/도착지 모두 설정되면 경로 카드 표시
-            // 그렇지 않으면 최근 검색 표시
-            if (_startPlace != null && _endPlace != null)
-              Expanded(
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    // 고정 높이 350px 기준으로 비율 계산
-                    // 가로 넓은 화면에서도 최소한 버튼이 보이도록 최소값 보장
-                    final fixedHeight = 350.0;
-                    final initialSize = (fixedHeight / constraints.maxHeight)
-                        .clamp(0.4, 0.9); // 최소 40%는 보이도록
-                    final minSize = (250.0 / constraints.maxHeight).clamp(
-                      0.35, // 최소 35% 보장
-                      0.5,
-                    );
-
-                    return DraggableScrollableSheet(
-                      initialChildSize: initialSize,
-                      minChildSize: minSize,
-                      maxChildSize: 0.95,
-                      snap: true,
-                      snapSizes: [minSize, initialSize, 0.8],
-                      builder: (context, scrollController) {
-                        return Container(
-                          decoration: const BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.vertical(
-                              top: Radius.circular(24),
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black12,
-                                blurRadius: 20,
-                                offset: Offset(0, -5),
-                              ),
-                            ],
-                          ),
-                          child: SingleChildScrollView(
-                            controller: scrollController,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const SizedBox(height: 8),
-                                // Handle Bar
-                                Center(
-                                  child: Container(
-                                    width: 40,
-                                    height: 4,
-                                    decoration: BoxDecoration(
-                                      color: Colors.grey[300],
-                                      borderRadius: BorderRadius.circular(2),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 16),
-                                // Title & Subtitle
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 24,
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      const Text(
-                                        '경로 선택',
-                                        style: TextStyle(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.bold,
-                                          color: Color(0xFF101727),
+      backgroundColor: Colors.white,
+      resizeToAvoidBottomInset: false,
+      body: Stack(
+        children: [
+          // 1. Map Layer (Background)
+          // Use Positioned.fill ensures it covers the area
+          // 1. Map Layer (Background)
+          Positioned.fill(child: _buildMap()),
+          // 2. UI Layer
+          SafeArea(
+            child: Column(
+              children: [
+                // Top Fixed Inputs
+                PointerInterceptor(
+                  child: Container(
+                    color: Colors.white,
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Column(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: Stack(
+                                  children: [
+                                    Column(
+                                      children: [
+                                        // 출발지 입력 필드
+                                        _buildLocationField(
+                                          isStart: true,
+                                          place: _startPlace,
+                                          onTap: () => _selectLocation(true),
                                         ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        '휠체어 접근 가능한 경로를 선택하세요',
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          color: Color(
-                                            0xFF4A5565,
-                                          ), // Unified textGrey
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-
-                                // 경로 카드 캐러셀
-                                Padding(
-                                  padding: const EdgeInsets.only(left: 12),
-                                  child: SizedBox(
-                                    height: 140,
-                                    child: useRowLayout
-                                        ? Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.center,
-                                            children: List.generate(3, (index) {
-                                              return Padding(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      horizontal: 6,
-                                                    ),
-                                                child: SizedBox(
-                                                  width: 320,
-                                                  child:
-                                                      _buildSelectableRouteCard(
-                                                        index,
-                                                      ),
-                                                ),
-                                              );
-                                            }),
-                                          )
-                                        : ScrollConfiguration(
-                                            behavior:
-                                                ScrollConfiguration.of(
-                                                  context,
-                                                ).copyWith(
-                                                  dragDevices: {
-                                                    PointerDeviceKind.touch,
-                                                    PointerDeviceKind.mouse,
-                                                  },
-                                                ),
-                                            child: PageView.builder(
-                                              controller: _pageController,
-                                              padEnds: false, // 왼쪽 정렬
-                                              physics:
-                                                  const BouncingScrollPhysics(),
-                                              itemCount: 3,
-                                              onPageChanged: (index) {
-                                                setState(() {
-                                                  _selectedRouteIndex = index;
-                                                });
-                                              },
-                                              itemBuilder: (context, index) {
-                                                return _buildSelectableRouteCard(
-                                                  index,
-                                                );
-                                              },
-                                            ),
-                                          ),
-                                  ),
-                                ),
-                                const SizedBox(height: 16),
-
-                                // 인디케이터 (Dots)
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: List.generate(3, (index) {
-                                    return AnimatedContainer(
-                                      duration: const Duration(
-                                        milliseconds: 300,
-                                      ),
-                                      margin: const EdgeInsets.symmetric(
-                                        horizontal: 4,
-                                      ),
-                                      width: 6,
-                                      height: 6,
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        color: _selectedRouteIndex == index
-                                            ? const Color(0xFF00C853)
-                                            : Colors.grey[300],
-                                      ),
-                                    );
-                                  }),
-                                ),
-
-                                const SizedBox(height: 12),
-
-                                // 경로 안내 시작 버튼
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 20,
-                                  ),
-                                  child: Container(
-                                    width: double.infinity,
-                                    height: 50, // 높이 약간 줄임
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF00C853),
-                                      borderRadius: BorderRadius.circular(25),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: const Color(
-                                            0xFF00C853,
-                                          ).withValues(alpha: 0.3),
-                                          blurRadius: 20,
-                                          offset: const Offset(0, 8),
+                                        const SizedBox(height: 8),
+                                        // 도착지 입력 필드
+                                        _buildLocationField(
+                                          isStart: false,
+                                          place: _endPlace,
+                                          onTap: () => _selectLocation(false),
                                         ),
                                       ],
                                     ),
-                                    child: Material(
-                                      color: Colors.transparent,
-                                      child: InkWell(
-                                        borderRadius: BorderRadius.circular(25),
-                                        onTap: () async {
-                                          // 출발/도착지 데이터 유효성 검사
-                                          if (_startPlace == null || _endPlace == null) {
-                                             ScaffoldMessenger.of(context).showSnackBar(
-                                                const SnackBar(content: Text('출발지와 도착지를 모두 설정해주세요.')),
-                                              );
-                                              return;
-                                          }
 
-                                          // 1. 필요한 파라미터 준비
-                                          final startLat = (_startPlace!['latlng'] as LatLng).latitude;
-                                          final startLon = (_startPlace!['latlng'] as LatLng).longitude;
-                                          final endLat = (_endPlace!['latlng'] as LatLng).latitude;
-                                          final endLon = (_endPlace!['latlng'] as LatLng).longitude;
-                                          
-                                          String mode;
-                                          if (_selectedRouteIndex == 0) mode = 'optimal'; // 추천
-                                          else if (_selectedRouteIndex == 1) mode = 'short'; // 최단
-                                          else mode = 'safe'; // 안전
-
-                                          // 2. 로딩 표시
-                                          showDialog(
-                                            context: context,
-                                            barrierDismissible: false,
-                                            builder: (context) => const Center(child: CircularProgressIndicator()),
-                                          );
-
-                                          // 3. API 호출
-                                          try {
-                                            final result = await ApiService.findRoute(
-                                              startLat: startLat,
-                                              startLon: startLon,
-                                              endLat: endLat,
-                                              endLon: endLon,
-                                              mode: mode,
-                                            );
-                                            
-                                            // 로딩 닫기
-                                            if (context.mounted) Navigator.pop(context);
-
-                                            if (result['success'] == true) {
-                                              // 4. 경로 데이터 파싱 및 네비게이션 화면 이동
-                                              final time = '${result['estimated_time']}분';
-                                              final distance = '${(result['distance'] / 1000).toStringAsFixed(1)}km';
-                                              final geometry = (result['geometry'] as List)
-                                                  .map((e) => [e[0] as double, e[1] as double])
-                                                  .toList();
-                                              
-                                              String routeTitle;
-                                              if (_selectedRouteIndex == 0) routeTitle = '추천 경로';
-                                              else if (_selectedRouteIndex == 1) routeTitle = '최단 경로';
-                                              else routeTitle = '안전 경로';
-
-                                              if (mounted) {
-                                                Navigator.push(
-                                                  context,
-                                                  MaterialPageRoute(
-                                                    builder: (context) =>
-                                                        NavigationScreen(
-                                                          routeType: routeTitle,
-                                                          estimatedTime: time,
-                                                          totalDistance: distance,
-                                                          startLocation: LatLng(startLat, startLon),
-                                                          endLocation: LatLng(endLat, endLon),
-                                                          routeGeometry: geometry, // 경로 좌표 전달
-                                                        ),
-                                                    settings: const RouteSettings(
-                                                      name: 'navigation',
-                                                    ),
-                                                  ),
-                                                );
-                                              }
-                                            } else {
-                                              // 실패 처리
-                                              if (context.mounted) {
-                                                ScaffoldMessenger.of(context).showSnackBar(
-                                                  SnackBar(content: Text('경로 탐색 실패: ${result['message']}')),
-                                                );
-                                              }
-                                            }
-                                          } catch (e) {
-                                            if (context.mounted) {
-                                              Navigator.pop(context); // 로딩 닫기
-                                              ScaffoldMessenger.of(context).showSnackBar(
-                                                SnackBar(content: Text('오류 발생: $e')),
-                                              );
-                                            }
-                                          }
-                                        },
-                                        child: Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: const [
-                                            Icon(
-                                              Icons.navigation_rounded,
-                                              color: Colors.white,
-                                              size: 20,
-                                            ),
-                                            SizedBox(width: 8),
-                                            Text(
-                                              '경로 안내 시작',
-                                              style: TextStyle(
-                                                color: Colors.white,
-                                                fontSize: 16,
-                                                fontWeight: FontWeight.bold,
+                                    // switch 아이콘
+                                    Positioned(
+                                      right: 24,
+                                      top: 31,
+                                      child: Container(
+                                        width: 36,
+                                        height: 36,
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          shape: BoxShape.circle,
+                                          border: Border.all(
+                                            color: Colors.grey[300]!,
+                                          ),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.black.withValues(
+                                                alpha: 0.05,
                                               ),
+                                              blurRadius: 4,
+                                              offset: const Offset(0, 2),
                                             ),
                                           ],
                                         ),
+                                        child: Material(
+                                          color: Colors.transparent,
+                                          child: InkWell(
+                                            borderRadius: BorderRadius.circular(
+                                              20,
+                                            ),
+                                            onTap: _swapLocations,
+                                            child: Center(
+                                              child: Icon(
+                                                Icons.swap_vert,
+                                                color: Colors.grey[600],
+                                                size: 20,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
                                       ),
                                     ),
-                                  ),
+                                  ],
                                 ),
-                                const SizedBox(height: 12),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    );
-                  },
-                ),
-              )
-            else
-              Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 12,
-                  ),
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          '최근 검색',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Color(0xFF101727),
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        TextButton(
-                          onPressed: () {},
-                          style: TextButton.styleFrom(
-                            padding: EdgeInsets.zero,
-                            minimumSize: Size.zero,
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          ),
-                          child: Text(
-                            '모두 지우기',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Color(0xFF9EA6B8),
-                            ),
+                              ),
+                              const SizedBox(width: 8),
+                              // x 아이콘 (닫기)
+                              IconButton(
+                                onPressed: () => Navigator.pop(context),
+                                icon: const Icon(
+                                  Icons.close,
+                                  color: Colors.black54,
+                                ),
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
+                                style: IconButton.styleFrom(
+                                  tapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
-                    // 여기에 최근 검색 목록 추가 가능
-                  ],
+                  ),
                 ),
-              ),
+
+                // Bottom Draggable Sheet Area
+                Expanded(
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      // Start/End are set? Show dashboard.
+                      final hasRoute = _startPlace != null && _endPlace != null;
+
+                      if (!hasRoute) return const SizedBox.shrink();
+
+                      // Draggable Sheet Logic
+                      return DraggableScrollableSheet(
+                        controller: _sheetController,
+                        initialChildSize: hasRoute ? 0.6 : 0.4,
+                        minChildSize: 0.15,
+                        maxChildSize: 1.0,
+                        snap: true,
+                        snapSizes: const [0.15, 0.6, 1.0],
+                        builder: (context, scrollController) {
+                          return PointerInterceptor(
+                            child: Container(
+                              decoration: const ShapeDecoration(
+                                color: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.only(
+                                    topLeft: Radius.circular(28),
+                                    topRight: Radius.circular(28),
+                                  ),
+                                ),
+                                shadows: [
+                                  BoxShadow(
+                                    color: Color(0x19000000),
+                                    blurRadius: 20,
+                                    offset: Offset(0, -4),
+                                  ),
+                                ],
+                              ),
+                              child: ListView(
+                                controller: scrollController,
+                                physics: const ClampingScrollPhysics(),
+                                padding: const EdgeInsets.fromLTRB(
+                                  21,
+                                  10,
+                                  21,
+                                  30,
+                                ),
+                                children: [
+                                  // Drag Handle
+                                  GestureDetector(
+                                    behavior: HitTestBehavior.opaque,
+                                    onVerticalDragUpdate: (details) {
+                                      // Custom drag logic
+                                      final sheetHeight = constraints.maxHeight;
+                                      final delta =
+                                          -details.delta.dy / sheetHeight;
+                                      final currentSize = _sheetController.size;
+                                      final newSize = (currentSize + delta)
+                                          .clamp(0.15, 1.0);
+                                      _sheetController.jumpTo(newSize);
+                                    },
+                                    child: Container(
+                                      width: double.infinity,
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 12,
+                                      ),
+                                      child: Center(
+                                        child: Container(
+                                          width: 42,
+                                          height: 5,
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFD1D5DC),
+                                            borderRadius: BorderRadius.circular(
+                                              100,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+
+                                  // Content
+                                  if (!hasRoute)
+                                    // Empty state or History
+                                    Column(
+                                      children: [
+                                        // History logic here
+                                        Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            const Text(
+                                              '최근 검색',
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                color: Color(0xFF101727),
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                            TextButton(
+                                              onPressed: () {},
+                                              child: const Text(
+                                                '모두 지우기',
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: Color(0xFF9EA6B8),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        // TODO: Recent searches list
+                                      ],
+                                    )
+                                  else if (_isLoadingRoutes)
+                                    const Center(
+                                      child: Padding(
+                                        padding: EdgeInsets.all(40.0),
+                                        child: CircularProgressIndicator(),
+                                      ),
+                                    )
+                                  else if (_routeError != null)
+                                    Padding(
+                                      padding: const EdgeInsets.all(20),
+                                      child: Text(
+                                        _routeError!,
+                                        style: const TextStyle(
+                                          color: Colors.red,
+                                        ),
+                                      ),
+                                    )
+                                  else if (_comparisonData != null)
+                                    // Route Carousel & Button
+                                    Column(
+                                      children: [
+                                        // Carousel
+                                        SizedBox(
+                                          height: 140,
+                                          child: useRowLayout
+                                              ? Row(
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment.center,
+                                                  children: List.generate(3, (
+                                                    index,
+                                                  ) {
+                                                    return Padding(
+                                                      padding:
+                                                          const EdgeInsets.symmetric(
+                                                            horizontal: 6,
+                                                          ),
+                                                      child: SizedBox(
+                                                        width: 320,
+                                                        child:
+                                                            _buildSelectableRouteCard(
+                                                              index,
+                                                            ),
+                                                      ),
+                                                    );
+                                                  }),
+                                                )
+                                              : PageView.builder(
+                                                  controller: _pageController,
+                                                  padEnds: false,
+                                                  itemCount: 3,
+                                                  onPageChanged: (index) {
+                                                    setState(() {
+                                                      _selectedRouteIndex =
+                                                          index;
+                                                    });
+                                                    _drawRoute(index);
+                                                  },
+                                                  itemBuilder: (context, index) {
+                                                    return SizedBox(
+                                                      width: 320,
+                                                      child:
+                                                          _buildSelectableRouteCard(
+                                                            index,
+                                                          ),
+                                                    );
+                                                  },
+                                                ),
+                                        ),
+                                        const SizedBox(height: 16),
+                                        // Dots
+                                        Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: List.generate(3, (index) {
+                                            return AnimatedContainer(
+                                              duration: const Duration(
+                                                milliseconds: 300,
+                                              ),
+                                              margin:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 4,
+                                                  ),
+                                              width: 6,
+                                              height: 6,
+                                              decoration: BoxDecoration(
+                                                shape: BoxShape.circle,
+                                                color:
+                                                    _selectedRouteIndex == index
+                                                    ? const Color(0xFF00C853)
+                                                    : Colors.grey[300],
+                                              ),
+                                            );
+                                          }),
+                                        ),
+                                        const SizedBox(height: 24),
+                                        // Start Navigation Button
+                                        _buildStartNavigationButton(),
+                                        const SizedBox(
+                                          height: 24,
+                                        ), // Bottom padding
+                                      ],
+                                    ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStartNavigationButton() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Container(
+        width: double.infinity,
+        height: 50,
+        decoration: BoxDecoration(
+          color: const Color(0xFF00C853),
+          borderRadius: BorderRadius.circular(25),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF00C853).withValues(alpha: 0.3),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+            ),
           ],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(25),
+            onTap: _onStartNavigation,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: const [
+                Icon(Icons.navigation_rounded, color: Colors.white, size: 20),
+                SizedBox(width: 8),
+                Text(
+                  '경로 안내 시작',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
+  }
+
+  Future<void> _onStartNavigation() async {
+    if (_startPlace == null || _endPlace == null) {
+      CommonToast.show(context, '출발지와 도착지를 모두 설정해주세요.');
+      return;
+    }
+
+    final startLatLng = _getPlaceLatLng(_startPlace);
+    final endLatLng = _getPlaceLatLng(_endPlace);
+    if (startLatLng == null || endLatLng == null) {
+      CommonToast.show(context, '위치 정보를 불러올 수 없습니다.');
+      return;
+    }
+
+    final startLat = startLatLng.latitude;
+    final startLon = startLatLng.longitude;
+    final endLat = endLatLng.latitude;
+    final endLon = endLatLng.longitude;
+
+    String mode;
+    if (_selectedRouteIndex == 0)
+      mode = 'optimal';
+    else if (_selectedRouteIndex == 1)
+      mode = 'short';
+    else
+      mode = 'safe';
+
+    int avoidedObstacles = 0;
+    if (_comparisonData != null) {
+      final modes = ['optimal', 'short', 'safe'];
+      final modeData = _comparisonData![modes[_selectedRouteIndex]];
+      if (modeData != null) {
+        avoidedObstacles = modeData['avoided_obstacles'] ?? 0;
+      }
+    }
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final result = await ApiService.findRoute(
+        startLat: startLat,
+        startLon: startLon,
+        endLat: endLat,
+        endLon: endLon,
+        mode: mode,
+      );
+
+      if (context.mounted) Navigator.pop(context);
+
+      if (result['success'] == true) {
+        final routeData = result['route'] ?? result;
+        final time = '${routeData['estimated_time']}분';
+        final distance =
+            '${(routeData['distance'] / 1000).toStringAsFixed(1)}km';
+        final geometry = (routeData['geometry'] as List)
+            .map((e) => (e as List).map((c) => c as double).toList())
+            .toList();
+
+        String routeTitle = _selectedRouteIndex == 0
+            ? '추천 경로'
+            : _selectedRouteIndex == 1
+            ? '최단 경로'
+            : '안전 경로';
+
+        if (mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => NavigationScreen(
+                routeType: routeTitle,
+                estimatedTime: time,
+                totalDistance: distance,
+                startLocation: LatLng(startLat, startLon),
+                endLocation: LatLng(endLat, endLon),
+                routeGeometry: geometry,
+                avoidedObstacles: avoidedObstacles,
+              ),
+              settings: const RouteSettings(name: 'navigation'),
+            ),
+          );
+        }
+      } else {
+        if (context.mounted) {
+          CommonToast.show(context, '경로 탐색 실패: ${result['message']}');
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.pop(context);
+        CommonToast.show(context, '오류 발생: $e');
+      }
+    }
   }
 
   Widget _buildLocationField({
@@ -816,37 +1087,65 @@ class _RouteSearchScreenState extends State<RouteSearchScreen> {
   }
 
   Map<String, dynamic> _getRouteInfo(int index) {
-    if (index == 0) {
-      return {
-        'title': '추천 경로',
-        'icon': Icons.star_outline_rounded,
-        'themeColor': const Color(0xFF00C853),
-        'time': '15분',
-        'distance': '2.4km',
-        'obstacleCount': 1,
-        'tags': ['넓은 인도', '경사로 있음', '횡단보도 많음'],
-      };
-    } else if (index == 1) {
-      return {
-        'title': '최단 경로',
-        'icon': Icons.bolt_rounded,
-        'themeColor': const Color(0xFF2979FF),
-        'time': '12분',
-        'distance': '1.8km',
-        'obstacleCount': 3,
-        'tags': ['좁은 구간 있음', '계단 우회 필요'],
-      };
+    // 모드 매핑: 0=optimal(추천), 1=short(최단), 2=safe(안전)
+    final modes = ['optimal', 'short', 'safe'];
+    final titles = ['추천 경로', '최단 경로', '안전 경로'];
+    final icons = [
+      Icons.star_outline_rounded,
+      Icons.bolt_rounded,
+      Icons.accessible_forward,
+    ];
+    final colors = [
+      const Color(0xFF00C853),
+      const Color(0xFF2979FF),
+      const Color(0xFF9C27B0),
+    ];
+
+    String time = '--분';
+    String distance = '--km';
+    int obstacleCount = 0;
+    List<String> tags = [];
+
+    if (_comparisonData != null) {
+      final modeKey = modes[index];
+      final modeData = _comparisonData![modeKey];
+      if (modeData != null && modeData['success'] == true) {
+        final estTime = modeData['estimated_time'];
+        final dist = modeData['distance'];
+        obstacleCount = modeData['avoided_obstacles'] ?? 0;
+
+        if (estTime != null) time = '${estTime}분';
+        if (dist != null) {
+          distance = '${(dist / 1000).toStringAsFixed(1)}km';
+        }
+
+        // 태그 생성
+        if (obstacleCount == 0) {
+          tags.add('장애물 없음');
+        } else {
+          tags.add('장애물 $obstacleCount개 회피');
+        }
+        if (index == 2) tags.add('안전 우선');
+        if (index == 1) tags.add('최단 거리');
+        if (index == 0) tags.add('균형 잡힌 경로');
+      } else {
+        tags.add('경로 없음');
+      }
+    } else if (_isLoadingRoutes) {
+      tags.add('조회 중...');
     } else {
-      return {
-        'title': '안전 경로',
-        'icon': Icons.accessible_forward,
-        'themeColor': const Color(0xFF9C27B0),
-        'time': '18분',
-        'distance': '3.1km',
-        'obstacleCount': 0,
-        'tags': ['장애물 없음', '평평한 길', '넓은 인도'],
-      };
+      tags.add('경로 미조회');
     }
+
+    return {
+      'title': titles[index],
+      'icon': icons[index],
+      'themeColor': colors[index],
+      'time': time,
+      'distance': distance,
+      'obstacleCount': obstacleCount,
+      'tags': tags,
+    };
   }
 
   Widget _buildSelectableRouteCard(int index) {

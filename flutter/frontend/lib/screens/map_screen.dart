@@ -17,6 +17,8 @@ import 'package:latlong2/latlong.dart' as latlong;
 import 'package:gilbeot/helpers/kakao_map_helper.dart';
 import 'wheelchair_settings_screen.dart';
 import '../services/api_service.dart';
+import '../models/driving_history.dart';
+import 'package:gilbeot/widgets/common_toast.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -33,10 +35,16 @@ class _MapScreenState extends State<MapScreen> {
   latlong.LatLng? _mapCenter;
   latlong.LatLng? _currentLocation;
 
+  // Dashboard data
+  List<DrivingHistory> _recentDrives = [];
+  List<Map<String, dynamic>> _latestPosts = [];
+  bool _isDashboardLoading = true;
+
   @override
   void initState() {
     super.initState();
     _initMapController();
+    _loadDashboardData();
 
     // Show wheelchair setting popup after frame load, only if not already set
     WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -53,7 +61,35 @@ class _MapScreenState extends State<MapScreen> {
     });
   }
 
-  // ... (rest of initState or methods)
+  Future<void> _loadDashboardData() async {
+    try {
+      final drives = await ApiService.getUserHistory();
+      final posts = await ApiService.getCommunityReports();
+      if (!mounted) return;
+      setState(() {
+        _recentDrives = drives.take(2).toList();
+        _latestPosts = posts.take(2).toList();
+        _isDashboardLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isDashboardLoading = false);
+    }
+  }
+
+  String _formatTimeAgo(String timestamp) {
+    try {
+      final date = DateTime.parse(timestamp);
+      final now = DateTime.now();
+      final difference = now.difference(date);
+      if (difference.inDays > 0) return '${difference.inDays}일 전';
+      if (difference.inHours > 0) return '${difference.inHours}시간 전';
+      if (difference.inMinutes > 0) return '${difference.inMinutes}분 전';
+      return '방금 전';
+    } catch (e) {
+      return '알 수 없음';
+    }
+  }
 
   // Wheelchair Setting Popup
   void _showWheelchairSettingDialog() {
@@ -237,9 +273,11 @@ class _MapScreenState extends State<MapScreen> {
             try {
               final data = json.decode(message.message);
               if (data['type'] == 'dragend') {
-                setState(() {
-                  _mapCenter = latlong.LatLng(data['lat'], data['lng']);
-                });
+                if (mounted) {
+                  setState(() {
+                    _mapCenter = latlong.LatLng(data['lat'], data['lng']);
+                  });
+                }
                 debugPrint("Map Center Updated: $_mapCenter");
               }
             } catch (e) {
@@ -280,6 +318,7 @@ class _MapScreenState extends State<MapScreen> {
       if (permission == LocationPermission.deniedForever) return;
 
       final position = await Geolocator.getCurrentPosition();
+      if (!mounted) return;
       setState(() {
         _currentLocation = latlong.LatLng(
           position.latitude,
@@ -340,9 +379,7 @@ class _MapScreenState extends State<MapScreen> {
     if (!serviceEnabled) {
       debugPrint('Location services are disabled.');
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('위치 서비스가 꺼져있습니다.')));
+        CommonToast.show(context, '위치 서비스가 꺼져있습니다.');
       }
       return;
     }
@@ -354,9 +391,7 @@ class _MapScreenState extends State<MapScreen> {
       if (permission == LocationPermission.denied) {
         debugPrint('Location permissions are denied');
         if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('위치 권한이 거부되었습니다.')));
+          CommonToast.show(context, '위치 권한이 거부되었습니다.');
         }
         return;
       }
@@ -367,9 +402,7 @@ class _MapScreenState extends State<MapScreen> {
         'Location permissions are permanently denied, we cannot request permissions.',
       );
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('위치 권한이 영구적으로 거부되었습니다. 설정에서 허용해주세요.')),
-        );
+        CommonToast.show(context, '위치 권한이 영구적으로 거부되었습니다. 설정에서 허용해주세요.');
       }
       return;
     }
@@ -383,6 +416,7 @@ class _MapScreenState extends State<MapScreen> {
         position.latitude,
         position.longitude,
       );
+      if (!mounted) return;
       setState(() {
         _currentLocation = latlong.LatLng(
           position.latitude,
@@ -494,17 +528,55 @@ class _MapScreenState extends State<MapScreen> {
                             );
                           }),
                           const SizedBox(height: 16),
-                          _buildRecentDestinationItem(
-                            '집',
-                            '서울시 서초구 서초동 567-89',
-                            Icons.home_rounded,
-                          ),
-                          const SizedBox(height: 12),
-                          _buildRecentDestinationItem(
-                            '서울대학교병원',
-                            '서울시 종로구 연건동 101',
-                            Icons.local_hospital_rounded,
-                          ),
+                          if (_isDashboardLoading)
+                            const Center(
+                              child: Padding(
+                                padding: EdgeInsets.all(20),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Color(0xFF00C853),
+                                ),
+                              ),
+                            )
+                          else if (_recentDrives.isEmpty)
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(20),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF9FAFB),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: const Color(0xFFF3F4F6),
+                                ),
+                              ),
+                              child: const Center(
+                                child: Text(
+                                  '주행 기록이 없습니다.',
+                                  style: TextStyle(
+                                    color: Color(0xFF9CA3AF),
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ),
+                            )
+                          else
+                            ...List.generate(_recentDrives.length, (i) {
+                              final drive = _recentDrives[i];
+                              return Padding(
+                                padding: EdgeInsets.only(
+                                  bottom: i < _recentDrives.length - 1 ? 12 : 0,
+                                ),
+                                child: _buildRecentDestinationItem(
+                                  drive.endLocation.isNotEmpty
+                                      ? drive.endLocation
+                                      : '목적지',
+                                  drive.startLocation.isNotEmpty
+                                      ? '출발: ${drive.startLocation}'
+                                      : '출발지 정보 없음',
+                                  Icons.place_rounded,
+                                ),
+                              );
+                            }),
 
                           const SizedBox(height: 32),
 
@@ -518,73 +590,71 @@ class _MapScreenState extends State<MapScreen> {
                             );
                           }),
                           const SizedBox(height: 16),
-                          _buildCommunityPostItem(
-                            tag: '경사로',
-                            time: '30분 전',
-                            title: '강남역 2번 출구 경사로 너무 가파름',
-                            location: '강남역 2번 출구',
-                            likes: 24,
-                            comments: 8,
-                            author: '김철수',
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => CommunityDetailScreen(
-                                    report: {
-                                      'id': 101, // Dummy ID
-                                      'tag': '경사로',
-                                      'title': '강남역 2번 출구 경사로 너무 가파름',
-                                      'location': '강남역 2번 출구',
-                                      'likes': 24,
-                                      'comments': 8,
-                                      'author': '김철수',
-                                      'timestamp': DateTime.now()
-                                          .subtract(const Duration(minutes: 30))
-                                          .millisecondsSinceEpoch,
-                                      'description':
-                                          '강남역 2번 출구 휠체어 리프트 이용이 어렵습니다. 경사로가 너무 가파릅니다.',
-                                      'image': null,
-                                    },
+                          if (_isDashboardLoading)
+                            const Center(
+                              child: Padding(
+                                padding: EdgeInsets.all(20),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Color(0xFF00C853),
+                                ),
+                              ),
+                            )
+                          else if (_latestPosts.isEmpty)
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(20),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF9FAFB),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: const Color(0xFFF3F4F6),
+                                ),
+                              ),
+                              child: const Center(
+                                child: Text(
+                                  '게시글이 없습니다.',
+                                  style: TextStyle(
+                                    color: Color(0xFF9CA3AF),
+                                    fontSize: 14,
                                   ),
                                 ),
-                              );
-                            },
-                          ),
-                          const SizedBox(height: 12),
-                          _buildCommunityPostItem(
-                            tag: '엘리베이터',
-                            time: '2시간 전',
-                            title: '서울숲 입구 엘리베이터 고장',
-                            location: '서울숲',
-                            likes: 18,
-                            comments: 5,
-                            author: '이영희',
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => CommunityDetailScreen(
-                                    report: {
-                                      'id': 102, // Dummy ID
-                                      'tag': '엘리베이터',
-                                      'title': '서울숲 입구 엘리베이터 고장',
-                                      'location': '서울숲',
-                                      'likes': 18,
-                                      'comments': 5,
-                                      'author': '이영희',
-                                      'timestamp': DateTime.now()
-                                          .subtract(const Duration(hours: 2))
-                                          .millisecondsSinceEpoch,
-                                      'description':
-                                          '서울숲 메인 입구 엘리베이터가 점검 중이라 작동하지 않습니다.',
-                                      'image': null,
-                                    },
-                                  ),
+                              ),
+                            )
+                          else
+                            ...List.generate(_latestPosts.length, (i) {
+                              final post = _latestPosts[i];
+                              final tag = post['tag'] ?? '';
+                              final time = _formatTimeAgo(post['time'] ?? '');
+                              final content = post['content'] ?? '';
+                              final address = post['address'] ?? '위치 정보 없음';
+                              final user = post['user'] ?? '알 수 없음';
+                              return Padding(
+                                padding: EdgeInsets.only(
+                                  bottom: i < _latestPosts.length - 1 ? 12 : 0,
+                                ),
+                                child: _buildCommunityPostItem(
+                                  tag: tag,
+                                  time: time,
+                                  title: content.isNotEmpty
+                                      ? content
+                                      : '$tag 제보',
+                                  location: address,
+                                  likes: post['likes'] ?? 0,
+                                  comments: post['comments'] ?? 0,
+                                  author: user,
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            CommunityDetailScreen(report: post),
+                                      ),
+                                    );
+                                  },
                                 ),
                               );
-                            },
-                          ),
+                            }),
 
                           const SizedBox(height: 32),
 

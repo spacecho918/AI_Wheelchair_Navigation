@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:gilbeot/widgets/custom_back_button.dart';
+import 'package:image_picker/image_picker.dart';
+
 import '../services/api_service.dart';
+import '../widgets/common_toast.dart';
 
 class ProfileEditScreen extends StatefulWidget {
   const ProfileEditScreen({super.key});
@@ -10,11 +13,6 @@ class ProfileEditScreen extends StatefulWidget {
 }
 
 class _ProfileEditScreenState extends State<ProfileEditScreen> {
-  // Colors - 다른 화면들과 통일
-  final Color primaryGreen = const Color(0xFF00C853);
-  final Color textDark = const Color(0xFF101727);
-  final Color textGrey = const Color(0xFF4A5565);
-
   final _formKey = GlobalKey<FormState>();
   final _nicknameController = TextEditingController(text: '김사라');
   final _emailController = TextEditingController(text: 'sara.kim@example.com');
@@ -31,6 +29,12 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   bool _isLoading = true;
   String _initialNickname = '';
   String? _nicknameErrorMessage; // 닉네임 중복 등 차단 사유
+  String? _profileImageUrl; // 프로필 이미지 URL
+
+  // Nickname verification state
+  bool _isCheckingNickname = false;
+  bool? _nicknameCheckedAvailable;
+  String? _lastVerifiedNickname;
 
   // Password validation state
   bool _hasMinLength = false;
@@ -69,9 +73,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       if (_currentPasswordFilled &&
           _newPasswordController.text.isNotEmpty &&
           _confirmPasswordController.text.isNotEmpty) {
-        if (!_currentPasswordFilled) {
-          _validationError = '현재 비밀번호를 입력해주세요';
-        } else if (!_isDifferentFromCurrent) {
+        if (!_isDifferentFromCurrent) {
           _validationError = '새 비밀번호는 현재 비밀번호와 달라야 합니다';
         } else if (!_hasMinLength) {
           _validationError = '비밀번호는 8자 이상이어야 합니다';
@@ -102,6 +104,9 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         _initialNickname = user.nickname;
         _nicknameController.text = user.nickname;
         _emailController.text = user.email;
+        if (user.profileImage != null) {
+          _profileImageUrl = user.profileImage;
+        }
         _isLoading = false;
       });
     } else {
@@ -126,97 +131,113 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     super.dispose();
   }
 
-  void _showToast(String message) {
-    late OverlayEntry overlayEntry;
-    overlayEntry = OverlayEntry(
-      builder: (context) => Positioned(
-        bottom: 100.0,
-        left: 0.0,
-        right: 0.0,
-        child: Material(
-          color: Colors.transparent,
-          child: Center(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.4),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Text(
-                message,
-                style: const TextStyle(color: Colors.white, fontSize: 14),
-              ),
-            ),
-          ),
-        ),
-      ),
+  Future<void> _onNicknameDuplicateCheck() async {
+    final nickname = _nicknameController.text.trim();
+    if (nickname.isEmpty) return;
+
+    if (nickname == _initialNickname) {
+      setState(() {
+        _nicknameCheckedAvailable = false;
+        _nicknameErrorMessage = '새로운 닉네임을 입력해주세요.';
+      });
+      return;
+    }
+
+    setState(() => _isCheckingNickname = true);
+
+    final isAvailable = await ApiService.isNicknameAvailableInUserProfiles(
+      nickname,
     );
 
-    Overlay.of(context).insert(overlayEntry);
-    Future.delayed(const Duration(seconds: 2), () {
-      overlayEntry.remove();
+    if (!mounted) return;
+
+    setState(() {
+      _isCheckingNickname = false;
+      _nicknameCheckedAvailable = isAvailable;
+      if (isAvailable) {
+        _lastVerifiedNickname = nickname;
+        _nicknameErrorMessage = null;
+      } else {
+        _nicknameErrorMessage = '이미 사용 중인 닉네임입니다.';
+      }
     });
   }
 
   Future<void> _saveNickname() async {
     final newNickname = _nicknameController.text.trim();
-    setState(() => _nicknameErrorMessage = null);
 
-    if (newNickname.isEmpty) {
-      setState(() => _nicknameErrorMessage = '닉네임을 입력해주세요.');
-      return;
-    }
-
-    // 변경 없으면 저장만 닫기
-    if (newNickname == _initialNickname) {
-      setState(() => _isEditingNickname = false);
-      return;
-    }
-
-    // 다른 닉네임으로 변경 시 중복 검사 (실제 저장되는 user_profiles 기준)
-    final available =
-        await ApiService.isNicknameAvailableInUserProfiles(newNickname);
-    if (!available && mounted) {
-      setState(() => _nicknameErrorMessage =
-          '이미 사용 중인 닉네임입니다. 다른 닉네임을 입력해주세요.');
-      return;
-    }
-
-    final result = await ApiService.updateUserProfile(newNickname);
+    final result = await ApiService.updateUserProfile(nickname: newNickname);
     final success = result['success'] == true;
     final error = result['error'] as String?;
     if (success && mounted) {
-      _showToast('닉네임이 저장되었습니다');
+      CommonToast.show(context, '닉네임이 저장되었습니다');
       setState(() {
         _initialNickname = newNickname;
         _isEditingNickname = false;
         _nicknameErrorMessage = null;
       });
     } else if (mounted) {
-      setState(() => _nicknameErrorMessage = error == 'duplicate'
-          ? '이미 사용 중인 닉네임입니다. 다른 닉네임을 입력해주세요.'
-          : '저장에 실패했습니다.');
+      setState(
+        () => _nicknameErrorMessage = error == 'duplicate'
+            ? '이미 사용 중인 닉네임입니다.'
+            : '저장에 실패했습니다.',
+      );
+    }
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(source: source);
+    if (picked != null) _uploadImage(picked);
+  }
+
+  Future<void> _uploadImage(XFile file) async {
+    setState(() => _isLoading = true);
+    final url = await ApiService.uploadProfileImageToSupabase(file);
+
+    if (url != null) {
+      // Update profile with new image URL
+      final result = await ApiService.updateUserProfile(profileImageUrl: url);
+      if (result['success'] == true) {
+        if (mounted) {
+          setState(() {
+            _profileImageUrl = url;
+            _isLoading = false;
+          });
+          CommonToast.show(context, '프로필 사진이 변경되었습니다');
+        }
+      } else {
+        if (mounted) {
+          setState(() => _isLoading = false);
+          CommonToast.show(context, '프로필 업데이트 실패');
+        }
+      }
+    } else {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        CommonToast.show(context, '이미지 업로드 실패');
+      }
     }
   }
 
   Future<void> _savePassword() async {
     if (_currentPasswordController.text.isEmpty) {
-      _showToast('현재 비밀번호를 입력해주세요');
+      CommonToast.show(context, '현재 비밀번호를 입력해주세요');
       return;
     }
     if (_newPasswordController.text.length < 8) {
-      _showToast('비밀번호는 8자 이상이어야 합니다');
+      CommonToast.show(context, '비밀번호는 8자 이상이어야 합니다');
       return;
     }
     if (_newPasswordController.text != _confirmPasswordController.text) {
-      _showToast('새 비밀번호가 일치하지 않습니다');
+      CommonToast.show(context, '새 비밀번호가 일치하지 않습니다');
       return;
     }
 
     final result = await ApiService.updatePassword(_newPasswordController.text);
 
     if (result['success'] == true) {
-      _showToast(result['message']);
+      CommonToast.show(context, result['message']);
       setState(() {
         _isEditingPassword = false;
         _currentPasswordController.clear();
@@ -224,7 +245,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         _confirmPasswordController.clear();
       });
     } else {
-      _showToast(result['message']);
+      CommonToast.show(context, result['message']);
     }
   }
 
@@ -305,30 +326,57 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                                           ),
                                         ],
                                       ),
-                                      child: const Icon(
-                                        Icons.person,
-                                        size: 50,
-                                        color: Color(0xFF9CA3AF),
-                                      ),
+                                      child: _profileImageUrl != null
+                                          ? ClipOval(
+                                              child: Image.network(
+                                                _profileImageUrl!,
+                                                width: 100,
+                                                height: 100,
+                                                fit: BoxFit.cover,
+                                                errorBuilder:
+                                                    (
+                                                      context,
+                                                      error,
+                                                      stackTrace,
+                                                    ) {
+                                                      return const Icon(
+                                                        Icons.person,
+                                                        size: 50,
+                                                        color: Color(
+                                                          0xFF9CA3AF,
+                                                        ),
+                                                      );
+                                                    },
+                                              ),
+                                            )
+                                          : const Icon(
+                                              Icons.person,
+                                              size: 50,
+                                              color: Color(0xFF9CA3AF),
+                                            ),
                                     ),
                                     Positioned(
                                       bottom: 0,
                                       right: 0,
-                                      child: Container(
-                                        width: 32,
-                                        height: 32,
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFF00C853),
-                                          shape: BoxShape.circle,
-                                          border: Border.all(
-                                            color: Colors.white,
-                                            width: 2,
+                                      child: GestureDetector(
+                                        onTap: () =>
+                                            _pickImage(ImageSource.camera),
+                                        child: Container(
+                                          width: 32,
+                                          height: 32,
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFF00C853),
+                                            shape: BoxShape.circle,
+                                            border: Border.all(
+                                              color: Colors.white,
+                                              width: 2,
+                                            ),
                                           ),
-                                        ),
-                                        child: const Icon(
-                                          Icons.camera_alt,
-                                          size: 16,
-                                          color: Colors.white,
+                                          child: const Icon(
+                                            Icons.camera_alt,
+                                            size: 16,
+                                            color: Colors.white,
+                                          ),
                                         ),
                                       ),
                                     ),
@@ -336,9 +384,8 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                                 ),
                                 const SizedBox(height: 12),
                                 TextButton(
-                                  onPressed: () {
-                                    // TODO: Implement photo change
-                                  },
+                                  onPressed: () =>
+                                      _pickImage(ImageSource.gallery),
                                   child: const Text(
                                     '사진 변경',
                                     style: TextStyle(
@@ -364,6 +411,9 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                                   setState(() {
                                     _isEditingNickname = !_isEditingNickname;
                                     _nicknameErrorMessage = null;
+                                    // Reset verification state on cancel/toggle
+                                    _nicknameCheckedAvailable = null;
+                                    _lastVerifiedNickname = null;
                                   });
                                 },
                                 child: Text(
@@ -384,21 +434,157 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                             Column(
                               children: [
                                 _buildInputCard([
-                                  _buildTextField(
-                                    label: '닉네임',
-                                    controller: _nicknameController,
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 20,
+                                      vertical: 8,
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        const Text(
+                                          '닉네임',
+                                          style: TextStyle(
+                                            color: Color(0xFF6B7280),
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 6),
+                                        Row(
+                                          children: [
+                                            Expanded(
+                                              child: TextField(
+                                                controller: _nicknameController,
+                                                style: const TextStyle(
+                                                  color: Color(0xFF1F2937),
+                                                  fontSize: 15,
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                                decoration:
+                                                    const InputDecoration(
+                                                      isDense: true,
+                                                      contentPadding:
+                                                          EdgeInsets.symmetric(
+                                                            vertical: 8,
+                                                          ),
+                                                      border: InputBorder.none,
+                                                    ),
+                                                onChanged: (value) {
+                                                  // Reset verification on change
+                                                  if (_nicknameCheckedAvailable !=
+                                                      null) {
+                                                    setState(() {
+                                                      _nicknameCheckedAvailable =
+                                                          null;
+                                                      _lastVerifiedNickname =
+                                                          null;
+                                                      _nicknameErrorMessage =
+                                                          null;
+                                                    });
+                                                  }
+                                                },
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            SizedBox(
+                                              height: 36,
+                                              child: TextButton(
+                                                onPressed: _isCheckingNickname
+                                                    ? null
+                                                    : _onNicknameDuplicateCheck,
+                                                style: TextButton.styleFrom(
+                                                  backgroundColor: const Color(
+                                                    0xFFE8F5E9,
+                                                  ),
+                                                  foregroundColor: const Color(
+                                                    0xFF00C853,
+                                                  ),
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        horizontal: 12,
+                                                      ),
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          8,
+                                                        ),
+                                                  ),
+                                                ),
+                                                child: _isCheckingNickname
+                                                    ? const SizedBox(
+                                                        width: 16,
+                                                        height: 16,
+                                                        child: CircularProgressIndicator(
+                                                          strokeWidth: 2,
+                                                          valueColor:
+                                                              AlwaysStoppedAnimation<
+                                                                Color
+                                                              >(
+                                                                Color(
+                                                                  0xFF00C853,
+                                                                ),
+                                                              ),
+                                                        ),
+                                                      )
+                                                    : const Text(
+                                                        '중복 확인',
+                                                        style: TextStyle(
+                                                          fontSize: 13,
+                                                          fontWeight:
+                                                              FontWeight.w600,
+                                                        ),
+                                                      ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ]),
+                                // Verification Message
+                                if (_nicknameCheckedAvailable != null) ...[
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    _nicknameCheckedAvailable!
+                                        ? '사용 가능한 닉네임입니다.'
+                                        : _nicknameErrorMessage!,
+                                    style: TextStyle(
+                                      color: _nicknameCheckedAvailable!
+                                          ? const Color(0xFF00C853)
+                                          : const Color(0xFFE53935),
+                                      fontSize: 13,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
+
                                 const SizedBox(height: 16),
                                 // Nickname Save Button
                                 SizedBox(
                                   width: double.infinity,
                                   height: 48,
                                   child: ElevatedButton(
-                                    onPressed: _saveNickname,
+                                    onPressed:
+                                        (_nicknameCheckedAvailable == true &&
+                                            _lastVerifiedNickname ==
+                                                _nicknameController.text
+                                                    .trim() &&
+                                            _nicknameController.text.trim() !=
+                                                _initialNickname)
+                                        ? _saveNickname
+                                        : null,
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: const Color(0xFF00C853),
+                                      disabledBackgroundColor: const Color(
+                                        0xFFE5E7EB,
+                                      ),
                                       foregroundColor: Colors.white,
+                                      disabledForegroundColor: const Color(
+                                        0xFF9CA3AF,
+                                      ),
                                       elevation: 0,
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(12),
@@ -413,18 +599,6 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                                     ),
                                   ),
                                 ),
-                                // 닉네임 차단 사유 메시지 (회원가입과 동일하게 화면에 표시)
-                                if (_nicknameErrorMessage != null) ...[
-                                  const SizedBox(height: 12),
-                                  Text(
-                                    _nicknameErrorMessage!,
-                                    style: const TextStyle(
-                                      color: Color(0xFFE53935),
-                                      fontSize: 13,
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ],
                               ],
                             )
                           else

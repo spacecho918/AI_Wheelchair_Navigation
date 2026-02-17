@@ -14,6 +14,7 @@ import 'package:latlong2/latlong.dart' as latlong;
 import 'package:gilbeot/helpers/kakao_map_helper.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
+import 'package:gilbeot/widgets/common_toast.dart';
 
 class ReportConfirmScreen extends StatefulWidget {
   final latlong.LatLng location;
@@ -516,12 +517,7 @@ class _ReportConfirmScreenState extends State<ReportConfirmScreen> {
     final user = AuthService.currentUser;
     if (user == null) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('제보를 하려면 로그인이 필요합니다.'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        CommonToast.show(context, '제보를 하려면 로그인이 필요합니다.');
         setState(() {
           _isLoading = false;
         });
@@ -567,18 +563,11 @@ class _ReportConfirmScreenState extends State<ReportConfirmScreen> {
           ),
         );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result['message'] ?? '제보 제출에 실패했습니다.'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        CommonToast.show(context, result['message'] ?? '제보 제출에 실패했습니다.');
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('오류가 발생했습니다: $e'), backgroundColor: Colors.red),
-      );
+      CommonToast.show(context, '오류가 발생했습니다: $e');
     } finally {
       if (mounted) {
         setState(() {

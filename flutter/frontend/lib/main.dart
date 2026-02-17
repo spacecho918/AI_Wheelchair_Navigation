@@ -8,7 +8,6 @@ import 'package:gilbeot/services/session_storage_local_storage.dart';
 import 'package:gilbeot/services/theme_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -18,7 +17,8 @@ void main() async {
 
   await Supabase.initialize(
     url: supabaseUrl,
-    anonKey: '***REMOVED***',
+    anonKey:
+        '***REMOVED***',
     authOptions: FlutterAuthClientOptions(
       localStorage: SessionStorageLocalStorage(persistSessionKey: persistKey),
     ),
@@ -38,7 +38,7 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  ThemeMode _themeMode = ThemeMode.system;
+  ThemeMode _themeMode = ThemeMode.light;
   ThemeMode get currentThemeMode => _themeMode;
 
   @override
@@ -72,8 +72,8 @@ class _MyAppState extends State<MyApp> {
         // This is the theme of your application.
         //
         // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
+        // the application has a green toolbar. Then, without quitting the app,
+        // try changing the seedColor in the colorScheme below to Colors.blue
         // and then invoke "hot reload" (save your changes or press the "hot
         // reload" button in a Flutter-supported IDE, or press "r" if you used
         // the command line to start the app).
@@ -85,7 +85,9 @@ class _MyAppState extends State<MyApp> {
         // This works for code too, not just values: Most code changes can be
         // tested with just a hot reload.
         brightness: Brightness.light,
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        scaffoldBackgroundColor: Colors.white,
+        cardColor: Colors.white,
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF00C853)),
         inputDecorationTheme: const InputDecorationTheme(
           border: OutlineInputBorder(),
         ),
@@ -98,7 +100,7 @@ class _MyAppState extends State<MyApp> {
         scaffoldBackgroundColor: const Color(0xFF121212),
         cardColor: const Color(0xFF1E1E1E),
         colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.deepPurple,
+          seedColor: const Color(0xFF00C853),
           brightness: Brightness.dark,
         ),
         textTheme: const TextTheme(),
@@ -134,9 +136,9 @@ class _LoginScreenWrapperState extends State<LoginScreenWrapper> {
   void _redirectIfSession() {
     if (!mounted) return;
     if (AuthService.currentUser != null) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const MapScreen()),
-      );
+      Navigator.of(
+        context,
+      ).pushReplacement(MaterialPageRoute(builder: (_) => const MapScreen()));
     }
   }
 

@@ -6,8 +6,8 @@ import 'package:flutter/services.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:gilbeot/helpers/kakao_map_helper.dart';
 import 'dart:convert';
+import 'package:gilbeot/helpers/kakao_map_helper.dart';
 import 'camera_screen.dart';
 import 'navigation_end_screen.dart';
 
@@ -18,6 +18,7 @@ class NavigationScreen extends StatefulWidget {
   final LatLng? startLocation;
   final LatLng? endLocation;
   final List<List<double>>? routeGeometry;
+  final int avoidedObstacles;
 
   const NavigationScreen({
     super.key,
@@ -27,6 +28,7 @@ class NavigationScreen extends StatefulWidget {
     this.startLocation,
     this.endLocation,
     this.routeGeometry,
+    this.avoidedObstacles = 0,
   });
 
   @override
@@ -36,55 +38,12 @@ class NavigationScreen extends StatefulWidget {
 class _NavigationScreenState extends State<NavigationScreen> {
   WebViewController? _mapController;
 
-  // 더미 안내 데이터
-  final List<Map<String, dynamic>> _directions = [
-    {
-      'icon': Icons.turn_left,
-      'instruction': '좌회전',
-      'detail': '엘리베이터까지 50m',
-      'tag': '앞쪽 경사로 이용',
-    },
-    {
-      'icon': Icons.straight,
-      'instruction': '직진',
-      'detail': '300m 직진',
-      'tag': null,
-    },
-    {
-      'icon': Icons.turn_right,
-      'instruction': '우회전',
-      'detail': '목적지까지 100m',
-      'tag': null,
-    },
-  ];
-
-  final int _currentDirectionIndex = 0;
   bool _isEndNavPressed = false;
 
   @override
   void initState() {
     super.initState();
     _initMapController();
-    _getCurrentLocation();
-  }
-
-  Future<void> _getCurrentLocation() async {
-    try {
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) return;
-
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) return;
-      }
-      if (permission == LocationPermission.deniedForever) return;
-
-      await Geolocator.getCurrentPosition();
-      // Location retrieved successfully
-    } catch (e) {
-      debugPrint('Error getting location: $e');
-    }
   }
 
   Future<void> _initMapController() async {
@@ -107,6 +66,15 @@ class _NavigationScreenState extends State<NavigationScreen> {
             }
           },
         );
+
+        // 지도 로드 완료 시 출발지 중심으로 이동
+        controller.setNavigationDelegate(
+          NavigationDelegate(
+            onPageFinished: (url) {
+              _onMapReady();
+            },
+          ),
+        );
       }
 
       _mapController = controller;
@@ -118,14 +86,60 @@ class _NavigationScreenState extends State<NavigationScreen> {
     }
   }
 
+  /// 지도 로드 완료 후 출발지 중심 + 경로 표시
+  void _onMapReady() {
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (!mounted || _mapController == null) return;
+
+      const mapId = 'navigation';
+
+      // 출발지로 센터 이동 + 마커 표시
+      if (widget.startLocation != null) {
+        KakaoMapHelper.setCenter(
+          _mapController,
+          widget.startLocation!.latitude,
+          widget.startLocation!.longitude,
+          mapId: mapId,
+        );
+        KakaoMapHelper.setMarker(
+          _mapController,
+          widget.startLocation!.latitude,
+          widget.startLocation!.longitude,
+          mapId: mapId,
+        );
+      }
+
+      // 경로 그리기
+      if (widget.routeGeometry != null) {
+        KakaoMapHelper.drawRoute(
+          _mapController,
+          widget.routeGeometry!,
+          mapId: mapId,
+        );
+      }
+    });
+  }
+
   Future<void> _loadMap() async {
     if (_mapController == null) return;
 
+    final lat = widget.startLocation?.latitude ?? 37.5445;
+    final lng = widget.startLocation?.longitude ?? 127.0560;
+
     if (kIsWeb) {
-      _mapController!.loadRequest(
-        Uri.parse('${Uri.base.origin}/kakao_map.html'),
-      );
+      // 웹: URL 파라미터로 초기화 + 캐시 방지
+      // level=1 (최대 확대), mapId=navigation (iframe 식별용)
+      var url =
+          '${Uri.base.origin}/kakao_map.html?lat=$lat&lng=$lng&marker=true&level=1&mapId=navigation&t=${DateTime.now().millisecondsSinceEpoch}';
+
+      _mapController!.loadRequest(Uri.parse(url));
+
+      // 웹에서도 _onMapReady 호출하여 경로 그리기 (URL 길이 제한 회피를 위해 postMessage 사용)
+      Future.delayed(const Duration(milliseconds: 1000), () {
+        _onMapReady();
+      });
     } else {
+      // 모바일: HTML 직접 로드 후 onPageFinished에서 _onMapReady 호출
       String fileText = await rootBundle.loadString('assets/kakao_map.html');
       _mapController!.loadRequest(
         Uri.dataFromString(
@@ -135,20 +149,6 @@ class _NavigationScreenState extends State<NavigationScreen> {
         ),
       );
     }
-
-    // Center on start location or current location
-    Future.delayed(const Duration(milliseconds: 1500), () {
-      if (widget.startLocation != null) {
-        KakaoMapHelper.setCenter(
-          _mapController,
-          widget.startLocation!.latitude,
-          widget.startLocation!.longitude,
-        );
-      }
-      if (widget.routeGeometry != null) {
-        KakaoMapHelper.drawRoute(_mapController, widget.routeGeometry!);
-      }
-    });
   }
 
   Future<void> _moveToCurrentLocation() async {
@@ -158,6 +158,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
         _mapController,
         position.latitude,
         position.longitude,
+        mapId: 'navigation',
       );
     } catch (e) {
       debugPrint("Error getting location: $e");
@@ -178,10 +179,21 @@ class _NavigationScreenState extends State<NavigationScreen> {
     );
   }
 
+  /// 경로 안내 정보 계산
+  Map<String, dynamic> _getCurrentDirection() {
+    return {
+      'icon': Icons.navigation_rounded,
+      'instruction': '${widget.routeType} 안내 중',
+      'detail': '${widget.totalDistance} 남음',
+      'tag': widget.avoidedObstacles > 0
+          ? '장애물 ${widget.avoidedObstacles}개 회피'
+          : null,
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
-    final currentDirection = _directions[_currentDirectionIndex];
-
+    final currentDirection = _getCurrentDirection();
     return Scaffold(
       body: Stack(
         children: [
@@ -487,7 +499,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
                               ),
                             ),
                             FractionallySizedBox(
-                              widthFactor: 0.35, // 35% 진행 상태 예시
+                              widthFactor: 0.0, // 출발 시작 0%
                               child: Container(
                                 height: 6,
                                 decoration: BoxDecoration(
@@ -509,26 +521,42 @@ class _NavigationScreenState extends State<NavigationScreen> {
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              '3번 회전 남음',
+                              widget.routeType,
                               style: TextStyle(
                                 fontSize: 12,
                                 color: Color(0xFF9EA6B8),
                               ),
                             ),
                             const SizedBox(width: 16),
-                            Icon(
-                              Icons.accessible,
-                              size: 14,
-                              color: Colors.grey[500],
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              '숲 알뜰 경사로 2개',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Color(0xFF9EA6B8),
+                            if (widget.avoidedObstacles > 0) ...[
+                              Icon(
+                                Icons.warning_amber_rounded,
+                                size: 14,
+                                color: Colors.grey[500],
                               ),
-                            ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '장애물 ${widget.avoidedObstacles}개 회피',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Color(0xFF9EA6B8),
+                                ),
+                              ),
+                            ] else ...[
+                              Icon(
+                                Icons.accessible,
+                                size: 14,
+                                color: Colors.grey[500],
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '장애물 없음',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Color(0xFF9EA6B8),
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ],

@@ -12,7 +12,7 @@ class ThemeService {
       return ThemeMode.values[index];
     }
 
-    return ThemeMode.system;
+    return ThemeMode.light;
   }
 
   static Future<void> saveTheme(ThemeMode mode) async {

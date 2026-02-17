@@ -25,13 +25,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Column(
           children: [
             // Header
             Container(
-              color: Theme.of(context).colorScheme.surface,
+              color: Theme.of(context).scaffoldBackgroundColor,
               height: 56,
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Stack(
@@ -77,7 +77,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 context,
                                 MaterialPageRoute(
                                   builder: (context) =>
-                                  const ProfileEditScreen(),
+                                      const ProfileEditScreen(),
                                 ),
                               );
                             },
@@ -99,7 +99,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 context,
                                 MaterialPageRoute(
                                   builder: (context) =>
-                                  const NotificationSettingsScreen(),
+                                      const NotificationSettingsScreen(),
                                 ),
                               );
                             },
@@ -142,7 +142,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 context,
                                 MaterialPageRoute(
                                   builder: (context) =>
-                                  const TermsScreen(isPrivacyPolicy: true),
+                                      const TermsScreen(isPrivacyPolicy: true),
                                 ),
                               );
                             },
@@ -187,7 +187,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget _buildSettingsCard(List<Widget> children) {
     return Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainer,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -221,10 +221,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceContainerHigh,
+                  color: primaryGreen.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(icon, color: Theme.of(context).colorScheme.onSurface, size: 22),
+                child: Icon(icon, color: primaryGreen, size: 22),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -266,7 +266,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget _buildDivider() {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 20),
-      child: Divider(height: 1, color: Theme.of(context).colorScheme.outlineVariant),
+      child: Divider(
+        height: 1,
+        color: Theme.of(context).colorScheme.outlineVariant,
+      ),
     );
   }
 
@@ -274,7 +277,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainer,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -293,12 +296,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceContainerHigh,
+                  color: primaryGreen.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
                   Icons.palette_outlined,
-                  color: Theme.of(context).colorScheme.onSurface,
+                  color: primaryGreen,
                   size: 22,
                 ),
               ),
@@ -345,7 +348,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     required String label,
     required String value,
   }) {
-
     final currentMode = MyApp.of(context)?.currentThemeMode;
 
     bool isSelected = false;
@@ -361,7 +363,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Expanded(
       child: GestureDetector(
         onTap: () {
-
           ThemeMode mode;
 
           switch (value) {
@@ -383,12 +384,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
           padding: const EdgeInsets.symmetric(vertical: 16),
           decoration: BoxDecoration(
             color: isSelected
-                ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.12)
-                : Theme.of(context).colorScheme.surface,
+                ? primaryGreen.withValues(alpha: 0.12)
+                : Theme.of(context).scaffoldBackgroundColor,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: isSelected
-                  ? Theme.of(context).colorScheme.primary
+                  ? primaryGreen
                   : Theme.of(context).colorScheme.outlineVariant,
               width: isSelected ? 1.5 : 1,
             ),
@@ -408,7 +409,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Text(
                 label,
                 style: TextStyle(
-                  color: isSelected ? primaryGreen : Theme.of(context).colorScheme.onSurface,
+                  color: isSelected
+                      ? primaryGreen
+                      : Theme.of(context).colorScheme.onSurface,
                   fontSize: 14,
                   fontWeight: FontWeight.normal,
                 ),

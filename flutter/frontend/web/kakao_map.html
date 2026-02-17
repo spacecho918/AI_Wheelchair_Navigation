@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <!-- 
       TODO: Replace YOUR_KAKAO_JAVASCRIPT_KEY with your actual Kakao JavaScript Key.
       Ensure you have registered the domain used in WebView's baseUrl (e.g., https://gilbeot.app) in the Kakao Developers Console.
@@ -17,11 +17,14 @@
             padding: 0;
             width: 100%;
             height: 100%;
+            overflow: hidden;
+            touch-action: manipulation;
         }
 
         #map {
             width: 100%;
             height: 100%;
+            touch-action: pan-x pan-y;
         }
     </style>
 </head>
@@ -47,12 +50,27 @@
         var initialLat = latParam ? parseFloat(latParam) : 37.5445;
         var initialLng = lngParam ? parseFloat(lngParam) : 127.0560;
 
+        // Get zoom level from URL or default to 3
+        var levelParam = getParameterByName('level');
+        var initialLevel = levelParam ? parseInt(levelParam) : 3;
+
         var options = {
             center: new kakao.maps.LatLng(initialLat, initialLng),
-            level: 3
+            level: initialLevel
         };
         var map = new kakao.maps.Map(container, options);
         var currentMarker = null;
+        var currentPolyline = null;
+
+        // Relayout after a short delay to handle iframe resize
+        // This is critical for Flutter Web where the iframe may start at 0x0
+        setTimeout(function () {
+            map.relayout();
+            map.setCenter(new kakao.maps.LatLng(initialLat, initialLng));
+        }, 300);
+        setTimeout(function () {
+            map.relayout();
+        }, 1000);
 
         // If 'marker=true' is present, add a marker at the center
         var markerParam = getParameterByName('marker');
@@ -62,6 +80,54 @@
                 position: markerPosition
             });
             currentMarker.setMap(map);
+        }
+
+        function drawRoute(pathCoordinates) {
+            // Ensure map knows its correct container size
+            map.relayout();
+
+            if (currentPolyline) {
+                currentPolyline.setMap(null);
+            }
+
+            var linePath = [];
+            for (var i = 0; i < pathCoordinates.length; i++) {
+                linePath.push(new kakao.maps.LatLng(pathCoordinates[i][0], pathCoordinates[i][1]));
+            }
+
+            currentPolyline = new kakao.maps.Polyline({
+                path: linePath,
+                strokeWeight: 5,
+                strokeColor: '#00C853',
+                strokeOpacity: 0.8,
+                strokeStyle: 'solid'
+            });
+
+            currentPolyline.setMap(map);
+
+            // Adjust bounds to show the whole route
+            if (linePath.length > 0) {
+                var bounds = new kakao.maps.LatLngBounds();
+                for (var i = 0; i < linePath.length; i++) {
+                    bounds.extend(linePath[i]);
+                }
+                map.setBounds(bounds);
+            }
+        }
+
+        // Load route from URL param: route=[[lat,lng],[lat,lng],...]
+        var routeParam = getParameterByName('route');
+        if (routeParam) {
+            try {
+                var routeCoords = JSON.parse(routeParam);
+                if (routeCoords && routeCoords.length > 0) {
+                    setTimeout(function () {
+                        drawRoute(routeCoords);
+                    }, 500);
+                }
+            } catch (e) {
+                console.error('Error parsing route param:', e);
+            }
         }
 
         function setCenter(lat, lng) {
@@ -111,17 +177,32 @@
             }
         });
 
-        // Listen for postMessage from Flutter (for Web compatibility)
+        // Listen for postMessage from Flutter (for Web compatibility and Mobile controller calls)
         window.addEventListener('message', function (event) {
-            console.log('Received message:', event.data);
             try {
                 var data = event.data;
                 if (typeof data === 'string') {
                     data = JSON.parse(data);
                 }
-                console.log('Parsed data:', data);
+                console.log('KakaoMap Message Received:', data);
+
+                // mapId filtering to prevent interference between multiple maps
+                var myMapId = getParameterByName('mapId');
+                if (myMapId) {
+                    // If this map has an ID, ONLY accept messages with matching ID
+                    if (data.mapId !== myMapId) {
+                        console.log('Ignored message due to mapId mismatch:', data.mapId, 'vs', myMapId);
+                        return;
+                    }
+                } else {
+                    // If this map has NO ID (e.g. main map), ignore messages targeted at specific ID
+                    if (data.mapId) {
+                        console.log('Ignored message targeted at specific mapId:', data.mapId);
+                        return;
+                    }
+                }
+
                 if (data.action === 'setCenter' && data.lat && data.lng) {
-                    console.log('Calling setCenter:', data.lat, data.lng);
                     setCenter(data.lat, data.lng);
                 } else if (data.action === 'panTo' && data.lat && data.lng) {
                     panTo(data.lat, data.lng);
@@ -129,6 +210,13 @@
                     setMarker(data.lat, data.lng);
                 } else if (data.action === 'setStaticMode') {
                     setStaticMode(data.isStatic);
+                } else if (data.action === 'drawRoute') {
+                    console.log('Action: drawRoute', data.path);
+                    if (data.path) {
+                        drawRoute(data.path);
+                    } else {
+                        console.error('drawRoute called without path!');
+                    }
                 }
             } catch (e) {
                 console.error('Error handling postMessage:', e);

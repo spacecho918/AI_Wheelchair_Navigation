@@ -31,11 +31,25 @@ void sendMapCommand(Map<String, dynamic> command) {
     print('Found ${iframes.length} iframes');
 
     bool sent = false;
+    final targetMapId = command['mapId'] as String?;
+
     for (var iframe in iframes) {
       if (iframe is html.IFrameElement) {
         final src = iframe.src ?? '';
-        print('Iframe src: $src');
-        if (src.contains('kakao_map.html')) {
+
+        // If mapId is specified, only send to matching iframe
+        if (targetMapId != null) {
+          if (src.contains('mapId=$targetMapId')) {
+            print(
+              'Sending to kakao_map iframe (id=$targetMapId): ${jsonEncode(command)}',
+            );
+            iframe.contentWindow?.postMessage(jsonEncode(command), '*');
+            sent = true;
+            return;
+          }
+        }
+        // Default behavior: find first kakao_map iframe (if no mapId specified)
+        else if (src.contains('kakao_map.html')) {
           print('Sending to kakao_map iframe: ${jsonEncode(command)}');
           iframe.contentWindow?.postMessage(jsonEncode(command), '*');
           sent = true;

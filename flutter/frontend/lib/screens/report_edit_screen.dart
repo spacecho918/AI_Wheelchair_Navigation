@@ -5,6 +5,7 @@ import 'package:gilbeot/widgets/custom_back_button.dart';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:gilbeot/screens/camera_screen.dart';
+import 'package:gilbeot/widgets/common_toast.dart';
 
 class ReportEditScreen extends StatefulWidget {
   final Map<String, dynamic> report;
@@ -66,22 +67,16 @@ class _ReportEditScreenState extends State<ReportEditScreen> {
     // Validate inputs
     if ((_selectedReason == '해결됨' || _selectedReason == '장애물 오류') &&
         _imagePath == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('증빙 사진을 등록해주세요.')));
+      CommonToast.show(context, '증빙 사진을 등록해주세요.');
       return;
     }
     if (_selectedReason == '기타' && _descriptionController.text.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('수정 사유를 입력해주세요.')));
+      CommonToast.show(context, '수정 사유를 입력해주세요.');
       return;
     }
 
     // Success
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('수정 요청이 접수되었습니다.')));
+    CommonToast.show(context, '수정 요청이 접수되었습니다.');
     Navigator.pop(context);
   }
 

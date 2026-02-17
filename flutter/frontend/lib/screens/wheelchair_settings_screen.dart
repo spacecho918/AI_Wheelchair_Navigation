@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gilbeot/widgets/custom_back_button.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:gilbeot/widgets/common_toast.dart';
 import '../services/api_service.dart';
 
 class WheelchairSettingsScreen extends StatefulWidget {
@@ -44,9 +45,7 @@ class _WheelchairSettingsScreenState extends State<WheelchairSettingsScreen> {
     } else {
       // Show error snackbar?
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('설정에 실패했습니다')));
+        CommonToast.show(context, '설정에 실패했습니다');
       }
     }
   }

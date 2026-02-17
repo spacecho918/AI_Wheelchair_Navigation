@@ -11,51 +11,90 @@ class KakaoMapHelper {
   /// Send a command to the Kakao Map.
   /// On Web: Uses postMessage to the iframe.
   /// On Mobile: Uses runJavaScript.
-  static void setCenter(WebViewController? controller, double lat, double lng) {
+  static void setCenter(
+    WebViewController? controller,
+    double lat,
+    double lng, {
+    String? mapId,
+  }) {
     if (kIsWeb) {
-      platform.sendMapCommand({'action': 'setCenter', 'lat': lat, 'lng': lng});
+      platform.sendMapCommand({
+        'action': 'setCenter',
+        'lat': lat,
+        'lng': lng,
+        if (mapId != null) 'mapId': mapId,
+      });
     } else {
       controller?.runJavaScript('setCenter($lat, $lng)');
     }
   }
 
-  static void panTo(WebViewController? controller, double lat, double lng) {
+  static void panTo(
+    WebViewController? controller,
+    double lat,
+    double lng, {
+    String? mapId,
+  }) {
     if (kIsWeb) {
-      platform.sendMapCommand({'action': 'panTo', 'lat': lat, 'lng': lng});
+      debugPrint('KakaoMapHelper.panTo -> mapId=$mapId');
+      platform.sendMapCommand({
+        'action': 'panTo',
+        'lat': lat,
+        'lng': lng,
+        if (mapId != null) 'mapId': mapId,
+      });
     } else {
       controller?.runJavaScript('panTo($lat, $lng)');
     }
   }
 
-  static void setMarker(WebViewController? controller, double lat, double lng) {
+  static void setMarker(
+    WebViewController? controller,
+    double lat,
+    double lng, {
+    String? mapId,
+  }) {
     if (kIsWeb) {
-      platform.sendMapCommand({'action': 'setMarker', 'lat': lat, 'lng': lng});
+      platform.sendMapCommand({
+        'action': 'setMarker',
+        'lat': lat,
+        'lng': lng,
+        if (mapId != null) 'mapId': mapId,
+      });
     } else {
       controller?.runJavaScript('setMarker($lat, $lng)');
     }
   }
 
-  static void setStaticMode(WebViewController? controller, bool isStatic) {
+  static void setStaticMode(
+    WebViewController? controller,
+    bool isStatic, {
+    String? mapId,
+  }) {
     if (kIsWeb) {
       platform.sendMapCommand({
         'action': 'setStaticMode',
         'isStatic': isStatic,
+        if (mapId != null) 'mapId': mapId,
       });
     } else {
       controller?.runJavaScript('setStaticMode($isStatic)');
     }
   }
 
-  static void drawRoute(WebViewController? controller, List<List<double>> path) {
+  static void drawRoute(
+    WebViewController? controller,
+    List<List<double>> path, {
+    String? mapId,
+  }) {
     if (kIsWeb) {
       platform.sendMapCommand({
         'action': 'drawRoute',
         'path': path,
+        if (mapId != null) 'mapId': mapId,
       });
     } else {
-      final jsonPath = path.toString(); // List<List<double>> to string might need better formatting for JS
-      // Better to use jsonEncode if possible, but for simple list of list of doubles, string interpolation might be tricky in JS key.
-      // Actually `path.toString()` in Dart for `[[1.1, 2.2], [3.3, 4.4]]` produces `[[1.1, 2.2], [3.3, 4.4]]` which is valid JS array syntax.
+      final jsonPath = path.toString();
       controller?.runJavaScript('drawRoute($jsonPath)');
     }
   }

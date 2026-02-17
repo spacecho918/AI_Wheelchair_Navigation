@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gilbeot/screens/location_search_screen.dart';
+import 'package:gilbeot/widgets/common_toast.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/auth_service.dart';
 
@@ -173,7 +174,7 @@ class _SavedPlacesScreenState extends State<SavedPlacesScreen> {
                         });
                       });
                       await _savePlacesToServer();
-                      _showToast('장소가 추가되었습니다.');
+                      CommonToast.show(context, '장소가 추가되었습니다.');
                     }
                   },
                   style: ElevatedButton.styleFrom(
@@ -220,39 +221,7 @@ class _SavedPlacesScreenState extends State<SavedPlacesScreen> {
     });
 
     await _savePlacesToServer();
-    _showToast('장소가 삭제되었습니다.');
-  }
-
-  void _showToast(String message) {
-    late OverlayEntry overlayEntry;
-    overlayEntry = OverlayEntry(
-      builder: (context) => Positioned(
-        bottom: 100.0,
-        left: 0.0,
-        right: 0.0,
-        child: Material(
-          color: Colors.transparent,
-          child: Center(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.4),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Text(
-                message,
-                style: const TextStyle(color: Colors.white, fontSize: 14),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-
-    Overlay.of(context).insert(overlayEntry);
-    Future.delayed(const Duration(seconds: 2), () {
-      overlayEntry.remove();
-    });
+    CommonToast.show(context, '장소가 삭제되었습니다.');
   }
 
   Widget _buildTabButton(int index, String text) {
@@ -414,7 +383,7 @@ class _SavedPlacesScreenState extends State<SavedPlacesScreen> {
                       }
                     });
                     await _savePlacesToServer();
-                    _showToast('장소가 수정되었습니다.');
+                    CommonToast.show(context, '장소가 수정되었습니다.');
                   }
                 },
                 icon: const Icon(Icons.edit, color: Color(0xFF9EA6B8)),

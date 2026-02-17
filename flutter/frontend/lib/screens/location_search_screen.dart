@@ -9,6 +9,7 @@ import 'package:gilbeot/screens/saved_places_screen.dart';
 
 import 'package:gilbeot/widgets/custom_back_button.dart';
 import '../services/recent_searches_service.dart';
+import 'package:gilbeot/widgets/common_toast.dart';
 
 class LocationSearchScreen extends StatefulWidget {
   final LatLng? searchLocation;
@@ -108,9 +109,7 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
     } catch (e) {
       debugPrint("Location Error: $e");
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('위치를 가져올 수 없습니다: $e')));
+        CommonToast.show(context, '위치를 가져올 수 없습니다: $e');
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -735,9 +734,7 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
     final uri = Uri.parse(url);
     if (!await launchUrl(uri)) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('링크를 열 수 없습니다.')));
+        CommonToast.show(context, '링크를 열 수 없습니다.');
       }
     }
   }

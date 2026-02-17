@@ -9,6 +9,7 @@ import 'package:gilbeot/screens/saved_places_screen.dart';
 import 'package:gilbeot/screens/route_search_screen.dart';
 import 'package:geolocator/geolocator.dart';
 import '../services/recent_searches_service.dart';
+import 'package:gilbeot/widgets/common_toast.dart';
 
 class SearchScreen extends StatefulWidget {
   final LatLng? searchLocation;
@@ -671,9 +672,7 @@ class _SearchScreenState extends State<SearchScreen> {
     final uri = Uri.parse(url);
     if (!await launchUrl(uri)) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('링크를 열 수 없습니다.')));
+        CommonToast.show(context, '링크를 열 수 없습니다.');
       }
     }
   }

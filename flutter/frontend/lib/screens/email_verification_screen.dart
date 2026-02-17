@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'login_screen.dart';
 import '../services/auth_service.dart';
+import 'package:gilbeot/widgets/common_toast.dart';
 
 class EmailVerificationScreen extends StatefulWidget {
   final String email;
@@ -22,15 +23,11 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
     try {
       await AuthService.resendVerificationEmail(widget.email);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('인증 링크를 다시 보냈습니다. 메일함을 확인해주세요.')),
-        );
+        CommonToast.show(context, '인증 링크를 다시 보냈습니다. 메일함을 확인해주세요.');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('재발송 실패: $e')),
-        );
+        CommonToast.show(context, '재발송 실패: $e');
       }
     } finally {
       if (mounted) setState(() => _isResending = false);
@@ -261,7 +258,9 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                               ),
                             ),
                             TextButton(
-                              onPressed: _isResending ? null : _resendVerification,
+                              onPressed: _isResending
+                                  ? null
+                                  : _resendVerification,
                               child: Text(
                                 _isResending ? '전송 중...' : '다시 보내기',
                                 style: const TextStyle(

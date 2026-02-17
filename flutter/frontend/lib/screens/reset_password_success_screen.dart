@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:gilbeot/screens/login_screen.dart';
+import 'package:gilbeot/widgets/common_toast.dart';
 
 class ResetPasswordSuccessScreen extends StatefulWidget {
   final String email;
@@ -213,11 +214,7 @@ class _ResetPasswordSuccessScreenState
                             ),
                             TextButton(
                               onPressed: () {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('재설정 링크를 다시 보냈습니다.'),
-                                  ),
-                                );
+                                CommonToast.show(context, '재설정 링크를 다시 보냈습니다.');
                               },
                               child: const Text(
                                 '다시 보내기',

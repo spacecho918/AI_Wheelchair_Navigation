@@ -427,6 +427,7 @@ async def compare_routes(request: RouteRequest):
                     "success": result.success,
                     "distance": result.distance,
                     "estimated_time": result.estimated_time,
+                    "geometry": result.geometry,
                     "avoided_obstacles": result.avoided_obstacles,
                     "total_weight": result.total_weight
                 }

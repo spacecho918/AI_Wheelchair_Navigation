@@ -6,6 +6,7 @@ import 'login_screen.dart';
 import 'reset_password_screen.dart';
 import '../services/auth_service.dart';
 import '../services/api_service.dart';
+import 'package:gilbeot/widgets/common_toast.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -32,6 +33,7 @@ class _SignupScreenState extends State<SignupScreen> {
   String? _signupErrorMessage;
   bool? _nicknameCheckedAvailable;
   bool _isCheckingNickname = false;
+
   /// 중복 확인에서 '사용 가능'으로 통과한 닉네임. signUp 실패 시 닉네임 오류로 잘못 표시하지 않도록 사용.
   String? _lastVerifiedNickname;
 
@@ -45,7 +47,8 @@ class _SignupScreenState extends State<SignupScreen> {
     _confirmPasswordController.addListener(_validateForm);
     // 이메일 변경 시 이전 가입 실패 메시지 제거 (다른 이메일로 재시도 시)
     _emailController.addListener(() {
-      if (_signupErrorMessage != null) setState(() => _signupErrorMessage = null);
+      if (_signupErrorMessage != null)
+        setState(() => _signupErrorMessage = null);
     });
   }
 
@@ -108,20 +111,23 @@ class _SignupScreenState extends State<SignupScreen> {
   static String _wheelchairTypeToDb(String? uiValue) {
     if (uiValue == null || uiValue.isEmpty) return 'none';
     switch (uiValue) {
-      case 'Electric': return 'electric';
-      case 'Manual': return 'manual';
-      case 'CaregiverManual': return 'assisted_manual';
-      case 'None': return 'none';
-      default: return uiValue.toLowerCase();
+      case 'Electric':
+        return 'electric';
+      case 'Manual':
+        return 'manual';
+      case 'CaregiverManual':
+        return 'assisted_manual';
+      case 'None':
+        return 'none';
+      default:
+        return uiValue.toLowerCase();
     }
   }
 
   Future<void> _onNicknameDuplicateCheck() async {
     final nickname = _nicknameController.text.trim();
     if (nickname.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('닉네임을 입력한 뒤 확인해 주세요.')),
-      );
+      CommonToast.show(context, '닉네임을 입력한 뒤 확인해 주세요.');
       return;
     }
     setState(() {
@@ -129,7 +135,8 @@ class _SignupScreenState extends State<SignupScreen> {
       _nicknameCheckedAvailable = null;
       _signupErrorMessage = null;
     });
-    final available = await ApiService.isNicknameAvailableInUserProfilesForSignup(nickname);
+    final available =
+        await ApiService.isNicknameAvailableInUserProfilesForSignup(nickname);
     if (!mounted) return;
     setState(() {
       _isCheckingNickname = false;
@@ -142,19 +149,9 @@ class _SignupScreenState extends State<SignupScreen> {
       }
     });
     if (available) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('사용 가능한 닉네임입니다.'),
-          backgroundColor: Color(0xFF00C853),
-        ),
-      );
+      CommonToast.show(context, '사용 가능한 닉네임입니다.');
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('이미 사용 중인 닉네임입니다. 다른 닉네임을 입력해 주세요.'),
-          backgroundColor: Color(0xFFE53935),
-        ),
-      );
+      CommonToast.show(context, '이미 사용 중인 닉네임입니다. 다른 닉네임을 입력해 주세요.');
     }
   }
 
@@ -383,36 +380,51 @@ class _SignupScreenState extends State<SignupScreen> {
                             onPressed: _isFormValid
                                 ? () async {
                                     setState(() => _signupErrorMessage = null);
-                                    final nickname = _nicknameController.text.trim();
-                                    final alreadyVerified = (nickname == _lastVerifiedNickname);
+                                    final nickname = _nicknameController.text
+                                        .trim();
+                                    final alreadyVerified =
+                                        (nickname == _lastVerifiedNickname);
                                     if (!alreadyVerified) {
-                                      final nicknameOk = await ApiService.isNicknameAvailableInUserProfilesForSignup(nickname);
+                                      final nicknameOk =
+                                          await ApiService.isNicknameAvailableInUserProfilesForSignup(
+                                            nickname,
+                                          );
                                       if (!nicknameOk && mounted) {
-                                        setState(() => _signupErrorMessage =
-                                            '이미 사용 중인 닉네임입니다. 다른 닉네임을 입력해주세요.');
+                                        setState(
+                                          () => _signupErrorMessage =
+                                              '이미 사용 중인 닉네임입니다. 다른 닉네임을 입력해주세요.',
+                                        );
                                         return;
                                       }
                                     }
                                     try {
-                                      final wt = _wheelchairTypeToDb(_selectedWheelchairType);
+                                      final wt = _wheelchairTypeToDb(
+                                        _selectedWheelchairType,
+                                      );
                                       final metadata = {
                                         'name': _nameController.text.trim(),
                                         'nickname': nickname,
                                         'wheelchair_type': wt,
                                       };
                                       if (kDebugMode) {
-                                        debugPrint('SignUp metadata: $metadata');
+                                        debugPrint(
+                                          'SignUp metadata: $metadata',
+                                        );
                                       }
                                       final response = await AuthService.signUp(
                                         email: _emailController.text.trim(),
                                         password: _passwordController.text,
                                         metadata: metadata,
                                       );
-                                      final identities = response.user?.identities;
-                                      if (identities == null || identities.isEmpty) {
+                                      final identities =
+                                          response.user?.identities;
+                                      if (identities == null ||
+                                          identities.isEmpty) {
                                         if (mounted) {
-                                          setState(() => _signupErrorMessage =
-                                              '기존 이메일 존재로 가입 불가능합니다.');
+                                          setState(
+                                            () => _signupErrorMessage =
+                                                '기존 이메일 존재로 가입 불가능합니다.',
+                                          );
                                         }
                                         return;
                                       }
@@ -430,33 +442,55 @@ class _SignupScreenState extends State<SignupScreen> {
                                     } catch (e) {
                                       if (!mounted) return;
                                       final msg = e.toString().toLowerCase();
-                                      final nicknameJustVerified = (nickname == _lastVerifiedNickname);
+                                      final nicknameJustVerified =
+                                          (nickname == _lastVerifiedNickname);
                                       // 터미널 로그: "Database error saving new user" (500) = 가입 후 DB/트리거 실패
-                                      final isDbErrorSavingUser = msg.contains('database error saving new user') ||
+                                      final isDbErrorSavingUser =
+                                          msg.contains(
+                                            'database error saving new user',
+                                          ) ||
                                           msg.contains('unexpected_failure');
                                       // 이메일 중복: Supabase/GoTrue가 반환할 수 있는 여러 패턴
-                                      final isEmailDuplicate = !isDbErrorSavingUser && (
-                                          msg.contains('already registered') ||
-                                          msg.contains('user already registered') ||
-                                          msg.contains('already exists') ||
-                                          msg.contains('already been registered') ||
-                                          msg.contains('email already') ||
-                                          (msg.contains('email') && (msg.contains('already') || msg.contains('exist') || msg.contains('duplicate'))));
+                                      final isEmailDuplicate =
+                                          !isDbErrorSavingUser &&
+                                          (msg.contains('already registered') ||
+                                              msg.contains(
+                                                'user already registered',
+                                              ) ||
+                                              msg.contains('already exists') ||
+                                              msg.contains(
+                                                'already been registered',
+                                              ) ||
+                                              msg.contains('email already') ||
+                                              (msg.contains('email') &&
+                                                  (msg.contains('already') ||
+                                                      msg.contains('exist') ||
+                                                      msg.contains(
+                                                        'duplicate',
+                                                      ))));
                                       if (isEmailDuplicate) {
-                                        setState(() => _signupErrorMessage =
-                                            '기존 이메일 존재로 가입 불가능합니다.');
+                                        setState(
+                                          () => _signupErrorMessage =
+                                              '기존 이메일 존재로 가입 불가능합니다.',
+                                        );
                                       } else if (isDbErrorSavingUser) {
-                                        setState(() => _signupErrorMessage =
-                                            '가입 처리 중 서버 오류가 발생했습니다. 닉네임 중복 또는 프로필 생성 설정 문제일 수 있습니다. 다른 닉네임으로 시도하거나 잠시 후 다시 시도해 주세요.');
+                                        setState(
+                                          () => _signupErrorMessage =
+                                              '가입 처리 중 서버 오류가 발생했습니다. 닉네임 중복 또는 프로필 생성 설정 문제일 수 있습니다. 다른 닉네임으로 시도하거나 잠시 후 다시 시도해 주세요.',
+                                        );
                                       } else if (!nicknameJustVerified &&
                                           (msg.contains('23505') ||
                                               msg.contains('unique') ||
                                               msg.contains('nickname'))) {
-                                        setState(() => _signupErrorMessage =
-                                            '이미 사용 중인 닉네임입니다. 다른 닉네임을 입력해주세요.');
+                                        setState(
+                                          () => _signupErrorMessage =
+                                              '이미 사용 중인 닉네임입니다. 다른 닉네임을 입력해주세요.',
+                                        );
                                       } else {
-                                        setState(() => _signupErrorMessage =
-                                            '가입에 실패했습니다. 다시 시도해주세요.');
+                                        setState(
+                                          () => _signupErrorMessage =
+                                              '가입에 실패했습니다. 다시 시도해주세요.',
+                                        );
                                       }
                                     }
                                   }
@@ -620,7 +654,10 @@ class _SignupScreenState extends State<SignupScreen> {
           controller: controller,
           obscureText: isPassword,
           keyboardType: inputType,
-          style: const TextStyle(fontSize: 14), // Input text style
+          style: const TextStyle(
+            color: Color(0xFF101727),
+            fontSize: 14,
+          ), // Input text style
           decoration: InputDecoration(
             hintText: placeholder,
             hintStyle: const TextStyle(color: Color(0xFF717182), fontSize: 14),
@@ -661,10 +698,13 @@ class _SignupScreenState extends State<SignupScreen> {
             Expanded(
               child: TextField(
                 controller: _nicknameController,
-                style: const TextStyle(fontSize: 14),
+                style: const TextStyle(color: Color(0xFF101727), fontSize: 14),
                 decoration: InputDecoration(
                   hintText: '닉네임을 입력하세요',
-                  hintStyle: const TextStyle(color: Color(0xFF717182), fontSize: 14),
+                  hintStyle: const TextStyle(
+                    color: Color(0xFF717182),
+                    fontSize: 14,
+                  ),
                   filled: true,
                   fillColor: const Color(0xFFF3F3F5),
                   contentPadding: const EdgeInsets.symmetric(
@@ -682,7 +722,9 @@ class _SignupScreenState extends State<SignupScreen> {
             SizedBox(
               height: 48,
               child: TextButton(
-                onPressed: _isCheckingNickname ? null : _onNicknameDuplicateCheck,
+                onPressed: _isCheckingNickname
+                    ? null
+                    : _onNicknameDuplicateCheck,
                 style: TextButton.styleFrom(
                   backgroundColor: const Color(0xFFE8F5E9),
                   foregroundColor: const Color(0xFF00C853),
@@ -711,9 +753,7 @@ class _SignupScreenState extends State<SignupScreen> {
         if (_nicknameCheckedAvailable != null) ...[
           const SizedBox(height: 6),
           Text(
-            _nicknameCheckedAvailable!
-                ? '사용 가능한 닉네임입니다.'
-                : '이미 사용 중인 닉네임입니다.',
+            _nicknameCheckedAvailable! ? '사용 가능한 닉네임입니다.' : '이미 사용 중인 닉네임입니다.',
             style: TextStyle(
               fontSize: 12,
               color: _nicknameCheckedAvailable!

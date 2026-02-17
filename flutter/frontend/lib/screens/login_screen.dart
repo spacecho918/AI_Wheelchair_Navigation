@@ -4,6 +4,7 @@ import 'signup_screen.dart';
 import 'reset_password_screen.dart';
 import 'map_screen.dart';
 import '../services/auth_service.dart';
+import 'package:gilbeot/widgets/common_toast.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
@@ -48,15 +49,12 @@ class _GilbeotState extends State<Gilbeot> {
     try {
       await AuthService.signInWithGoogle();
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('구글 로그인 창을 엽니다. 완료 후 앱으로 돌아오세요.'),
-        ),
-      );
+      CommonToast.show(context, '구글 로그인 창을 엽니다. 완료 후 앱으로 돌아오세요.');
     } catch (e) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Google 로그인 실패: ${e.toString().replaceFirst('Exception: ', '')}')),
+      CommonToast.show(
+        context,
+        'Google 로그인 실패: ${e.toString().replaceFirst('Exception: ', '')}',
       );
     }
   }
@@ -65,15 +63,12 @@ class _GilbeotState extends State<Gilbeot> {
     try {
       await AuthService.signInWithKakao();
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('카카오 로그인 창을 엽니다. 완료 후 앱으로 돌아오세요.'),
-        ),
-      );
+      CommonToast.show(context, '카카오 로그인 창을 엽니다. 완료 후 앱으로 돌아오세요.');
     } catch (e) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('카카오 로그인 실패: ${e.toString().replaceFirst('Exception: ', '')}')),
+      CommonToast.show(
+        context,
+        '카카오 로그인 실패: ${e.toString().replaceFirst('Exception: ', '')}',
       );
     }
   }
@@ -187,7 +182,12 @@ class _GilbeotState extends State<Gilbeot> {
               const SizedBox(height: 20),
 
               // 입력창
-              _buildTextField('이메일', '이메일을 입력하세요', _emailController),
+              _buildTextField(
+                '이메일',
+                '이메일을 입력하세요',
+                _emailController,
+                textInputAction: TextInputAction.next,
+              ),
               const SizedBox(height: 14),
               _buildTextField(
                 '비밀번호',
@@ -198,6 +198,8 @@ class _GilbeotState extends State<Gilbeot> {
                 onToggleObscure: () {
                   setState(() => _obscurePassword = !_obscurePassword);
                 },
+                textInputAction: TextInputAction.done,
+                onSubmitted: (_) => _login(),
               ),
 
               const SizedBox(height: 20),
@@ -207,50 +209,7 @@ class _GilbeotState extends State<Gilbeot> {
                 width: double.infinity,
                 height: 48,
                 child: ElevatedButton(
-                  onPressed: () async {
-                    final email = _emailController.text.trim();
-                    final password = _passwordController.text.trim();
-
-                    if (email.isEmpty || password.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('이메일과 비밀번호를 입력해주세요.')),
-                      );
-                      return;
-                    }
-
-                    try {
-                      showDialog(
-                        context: context,
-                        barrierDismissible: false,
-                        builder: (context) =>
-                            const Center(child: CircularProgressIndicator()),
-                      );
-
-                      await AuthService.signIn(
-                        email: email,
-                        password: password,
-                      );
-
-                      if (context.mounted) {
-                        Navigator.pop(context); // 로딩 닫기
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const MapScreen(),
-                          ),
-                        );
-                      }
-                    } catch (e) {
-                      if (context.mounted) {
-                        Navigator.pop(context); // 로딩 닫기
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('로그인 실패: 이메일 또는 비밀번호를 확인해주세요.'),
-                          ),
-                        );
-                      }
-                    }
-                  },
+                  onPressed: _login,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF00C853), // 초록색 배경
                     foregroundColor: Colors.white, // 흰색 글자 (누를 때 효과)
@@ -274,7 +233,7 @@ class _GilbeotState extends State<Gilbeot> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => ResetPasswordScreen(),
+                      builder: (context) => const ResetPasswordScreen(),
                     ),
                   );
                 },
@@ -304,7 +263,9 @@ class _GilbeotState extends State<Gilbeot> {
                     onPressed: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => SignupScreen()),
+                        MaterialPageRoute(
+                          builder: (context) => const SignupScreen(),
+                        ),
                       );
                     },
                     child: const Text(
@@ -324,6 +285,39 @@ class _GilbeotState extends State<Gilbeot> {
         const SizedBox(height: 40),
       ],
     );
+  }
+
+  Future<void> _login() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+
+    if (email.isEmpty || password.isEmpty) {
+      CommonToast.show(context, '이메일과 비밀번호를 입력해주세요.');
+      return;
+    }
+
+    try {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator()),
+      );
+
+      await AuthService.signIn(email: email, password: password);
+
+      if (context.mounted) {
+        Navigator.pop(context); // 로딩 닫기
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const MapScreen()),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.pop(context); // 로딩 닫기
+        CommonToast.show(context, '로그인 실패: 이메일 또는 비밀번호를 확인해주세요.');
+      }
+    }
   }
 
   // 구글 로그인 버튼 스타일 (OutlinedButton 사용)
@@ -409,6 +403,8 @@ class _GilbeotState extends State<Gilbeot> {
     bool isPassword = false,
     bool obscureText = false,
     VoidCallback? onToggleObscure,
+    TextInputAction? textInputAction,
+    ValueChanged<String>? onSubmitted,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -420,10 +416,13 @@ class _GilbeotState extends State<Gilbeot> {
         const SizedBox(height: 8),
         TextField(
           controller: controller,
+          style: const TextStyle(color: Color(0xFF101727), fontSize: 14),
           obscureText: isPassword ? obscureText : false,
+          textInputAction: textInputAction,
+          onSubmitted: onSubmitted,
           decoration: InputDecoration(
             hintText: placeholder,
-            hintStyle: const TextStyle(color: Color(0xFF9EA6B8)),
+            hintStyle: const TextStyle(color: Color(0xFF697282)),
             filled: true,
             fillColor: const Color(0xFFF3F3F5),
             contentPadding: const EdgeInsets.symmetric(

@@ -4,9 +4,11 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
+import 'package:image_picker/image_picker.dart';
 import '../models/user_model.dart';
 import '../models/driving_history.dart';
 import '../models/report_summary.dart';
+
 import 'auth_service.dart';
 
 class ApiService {
@@ -95,6 +97,36 @@ class ApiService {
       debugPrint('Route Error: $e');
     }
     return {"success": false, "message": "경로 탐색 실패"};
+  }
+
+  /// 3-2. 경로 비교 (3가지 모드 동시 조회)
+  static Future<Map<String, dynamic>> compareRoutes({
+    required double startLat,
+    required double startLon,
+    required double endLat,
+    required double endLon,
+    String wheelchairType = 'manual',
+  }) async {
+    final uri = Uri.parse('$baseUrl/route/compare');
+    try {
+      final response = await http.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'start_lat': startLat,
+          'start_lon': startLon,
+          'end_lat': endLat,
+          'end_lon': endLon,
+          'wheelchair_type': wheelchairType,
+        }),
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(utf8.decode(response.bodyBytes));
+      }
+    } catch (e) {
+      debugPrint('Compare Routes Error: $e');
+    }
+    return {"success": false, "message": "경로 비교 실패"};
   }
 
   // === Direct Supabase Actions ===
@@ -263,20 +295,20 @@ class ApiService {
 
       return (data as List)
           .map((item) {
-        final obs = item['obstacles'];
-        if (obs == null) return null;
+            final obs = item['obstacles'];
+            if (obs == null) return null;
 
-        return ReportSummary(
-          id: obs['id'].toString(),
-          title: obs['obstacle_type'],
-          location: "댓글: ${item['content']}", // Show comment content ?
-          status: 'confirmed',
-          commentCount: 0,
-          likeCount: 0,
-          date: DateTime.parse(item['created_at']),
-          content: item['content'],
-        );
-      })
+            return ReportSummary(
+              id: obs['id'].toString(),
+              title: obs['obstacle_type'],
+              location: "댓글: ${item['content']}", // Show comment content ?
+              status: 'confirmed',
+              commentCount: 0,
+              likeCount: 0,
+              date: DateTime.parse(item['created_at']),
+              content: item['content'],
+            );
+          })
           .whereType<ReportSummary>()
           .toList();
     } catch (e) {
@@ -373,7 +405,9 @@ class ApiService {
         var wt = res['wheelchair_type'] as String?;
         final metaWt = metadata?['wheelchair_type'] as String?;
         // 회원가입 직후: 트리거가 metadata를 안 넣었을 수 있음 → metadata로 user_profiles 동기화
-        if (metaWt != null && metaWt.isNotEmpty && _toDbWheelchairType(metaWt) != wt) {
+        if (metaWt != null &&
+            metaWt.isNotEmpty &&
+            _toDbWheelchairType(metaWt) != wt) {
           try {
             await _supabase
                 .from('user_profiles')
@@ -385,12 +419,20 @@ class ApiService {
         final reportLevel = res['report_level'];
         final profileImageUrl = res['profile_image_url'] as String?;
         return User(
-          nickname: nick?.isNotEmpty == true ? nick : (metadata?['nickname'] ?? '사용자'),
+          nickname: nick?.isNotEmpty == true
+              ? nick
+              : (metadata?['nickname'] ?? '사용자'),
           email: user.email ?? '',
-          profileImage: profileImageUrl?.isNotEmpty == true ? profileImageUrl : null,
-          wheelchairType: _normalizeWheelchairType(wt ?? metadata?['wheelchair_type'] ?? 'none'),
+          profileImage: profileImageUrl?.isNotEmpty == true
+              ? profileImageUrl
+              : null,
+          wheelchairType: _normalizeWheelchairType(
+            wt ?? metadata?['wheelchair_type'] ?? 'none',
+          ),
           driveCount: metadata?['drive_count'] ?? 0,
-          reportCount: reportLevel is int ? reportLevel : (metadata?['report_count'] ?? 0),
+          reportCount: reportLevel is int
+              ? reportLevel
+              : (metadata?['report_count'] ?? 0),
           likeCount: metadata?['like_count'] ?? 0,
           commentCount: metadata?['comment_count'] ?? 0,
         );
@@ -407,7 +449,8 @@ class ApiService {
     if (lower == 'none') return 'None';
     if (lower == 'electric') return 'Electric';
     if (lower == 'manual') return 'Manual';
-    if (lower == 'caregivermanual' || lower == 'assisted_manual') return 'CaregiverManual';
+    if (lower == 'caregivermanual' || lower == 'assisted_manual')
+      return 'CaregiverManual';
     return v;
   }
 
@@ -415,13 +458,16 @@ class ApiService {
     final lower = frontendType.toString().toLowerCase();
     if (lower == 'electric') return 'electric';
     if (lower == 'manual') return 'manual';
-    if (lower == 'caregivermanual' || lower == 'assisted_manual') return 'assisted_manual';
+    if (lower == 'caregivermanual' || lower == 'assisted_manual')
+      return 'assisted_manual';
     if (lower == 'none') return 'none';
     return 'manual';
   }
 
   /// 회원가입용. user_profiles 테이블 기준 닉네임 중복 검사 (비로그인에서 호출, RPC 사용)
-  static Future<bool> isNicknameAvailableInUserProfilesForSignup(String nickname) async {
+  static Future<bool> isNicknameAvailableInUserProfilesForSignup(
+    String nickname,
+  ) async {
     if (nickname.trim().isEmpty) return false;
     try {
       final res = await _supabase.rpc(
@@ -435,19 +481,15 @@ class ApiService {
     }
   }
 
-  /// 설정 > 닉네임 변경용. user_profiles 기준으로 중복 검사 (본인 닉네임이면 사용 가능)
+  /// 설정 > 닉네임 변경용. user_profiles 기준으로 중복 검사 (RPC 사용, RLS 우회)
   static Future<bool> isNicknameAvailableInUserProfiles(String nickname) async {
     if (nickname.trim().isEmpty) return false;
-    final user = AuthService.currentUser;
-    if (user == null) return false;
     try {
-      final res = await _supabase
-          .from('user_profiles')
-          .select('user_id')
-          .eq('nickname', nickname.trim())
-          .maybeSingle();
-      if (res == null) return true;
-      return res['user_id'] == user.id;
+      final res = await _supabase.rpc(
+        'check_nickname_available_user_profiles',
+        params: {'p_nickname': nickname.trim()},
+      );
+      return res == true;
     } catch (e) {
       debugPrint('isNicknameAvailableInUserProfiles error: $e');
       return true;
@@ -470,31 +512,94 @@ class ApiService {
     );
   }
 
-  /// 닉네임 수정: auth 메타데이터 + user_profiles 테이블 반영. Returns: { 'success': bool, 'error': String? } — 'duplicate' 시 닉네임 중복
-  static Future<Map<String, dynamic>> updateUserProfile(String nickname) async {
+  static Future<Map<String, dynamic>> updateUserProfile({
+    String? nickname,
+    String? profileImageUrl,
+  }) async {
     final user = AuthService.currentUser;
     if (user == null) return {'success': false, 'error': null};
+
+    final updates = <String, dynamic>{};
+    final userAttributes = <String, dynamic>{};
+
+    if (nickname != null) {
+      updates['nickname'] = nickname;
+      updates['name'] = nickname;
+      userAttributes['nickname'] = nickname;
+    }
+
+    if (profileImageUrl != null) {
+      updates['profile_image_url'] = profileImageUrl;
+      // Also update metadata if needed, though profile_image_url in refined user model usually comes from DB
+      userAttributes['profile_image_url'] = profileImageUrl;
+    }
+
+    if (updates.isEmpty) return {'success': true, 'error': null};
+
     try {
-      await _supabase.auth.updateUser(
-        supabase.UserAttributes(data: {'nickname': nickname}),
-      );
+      if (userAttributes.isNotEmpty) {
+        await _supabase.auth.updateUser(
+          supabase.UserAttributes(data: userAttributes),
+        );
+      }
+
       try {
         await _supabase
             .from('user_profiles')
-            .update({'nickname': nickname, 'name': nickname})
+            .update(updates)
             .eq('user_id', user.id);
       } catch (_) {}
       return {'success': true, 'error': null};
     } catch (e) {
       debugPrint('updateUserProfile error: $e');
       final msg = e.toString().toLowerCase();
-      final isDuplicate = msg.contains('23505') ||
+      final isDuplicate =
+          msg.contains('23505') ||
           msg.contains('unique') ||
           msg.contains('duplicate');
-      return {
-        'success': false,
-        'error': isDuplicate ? 'duplicate' : null,
-      };
+      return {'success': false, 'error': isDuplicate ? 'duplicate' : null};
+    }
+  }
+
+  /// 9. 프로필 이미지 업로드 (Supabase Storage)
+
+  static Future<String?> uploadProfileImageToSupabase(XFile file) async {
+    final user = AuthService.currentUser;
+    if (user == null) return null;
+
+    try {
+      final fileExt = file.path.split('.').last;
+      final fileName =
+          '${user.id}/${DateTime.now().millisecondsSinceEpoch}.$fileExt';
+      debugPrint('Uploading profile image: $fileName for user: ${user.id}');
+
+      if (kIsWeb) {
+        final bytes = await file.readAsBytes();
+        await _supabase.storage
+            .from('profile_image')
+            .uploadBinary(
+              fileName,
+              bytes,
+              fileOptions: const supabase.FileOptions(upsert: true),
+            );
+      } else {
+        final ioFile = File(file.path);
+        await _supabase.storage
+            .from('profile_image')
+            .upload(
+              fileName,
+              ioFile,
+              fileOptions: const supabase.FileOptions(upsert: true),
+            );
+      }
+
+      final imageUrl = _supabase.storage
+          .from('profile_image')
+          .getPublicUrl(fileName);
+      return imageUrl;
+    } catch (e) {
+      debugPrint('Supabase Storage Upload Error: $e');
+      return null;
     }
   }
 

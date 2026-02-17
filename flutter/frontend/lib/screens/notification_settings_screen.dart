@@ -351,7 +351,9 @@ class _NotificationSettingsScreenState
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: value ? const Color(0xFFE8F5E9) : const Color(0xFFF3F4F6),
+              color: value
+                  ? primaryGreen.withValues(alpha: 0.1)
+                  : const Color(0xFFF3F4F6),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(
