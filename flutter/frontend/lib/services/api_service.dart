@@ -46,12 +46,28 @@ class ApiService {
     return null;
   }
 
-  /// 2. AI 분석 (Python 서버 /api/analyze)
-  static Future<Map<String, dynamic>> analyzeImage(String imagePath) async {
+  /// 2. AI 분석 (Python 서버 /report/analyze)
+  /// 반환값:
+  ///   success: bool
+  ///   annotated_image: String (base64 JPEG — bbox가 그려진 이미지)
+  ///   detections: List<Map> [{class, confidence, box}, ...]
+  ///   detected_type: String? (가장 높은 신뢰도 클래스)
+  ///   message: String
+  static Future<Map<String, dynamic>> analyzeImage(
+    String imagePath, {
+    Uint8List? imageBytes, // 웹에서 blob URL 대신 bytes 직접 전달
+  }) async {
     final uri = Uri.parse('$baseUrl/report/analyze');
     var request = http.MultipartRequest('POST', uri);
 
-    if (!kIsWeb) {
+    if (kIsWeb && imageBytes != null) {
+      // 웹: bytes로 직접 첨부 (blob URL은 MultipartFile.fromPath 불가)
+      request.files.add(http.MultipartFile.fromBytes(
+        'image',
+        imageBytes,
+        filename: 'photo.jpg',
+      ));
+    } else if (!kIsWeb) {
       request.files.add(await http.MultipartFile.fromPath('image', imagePath));
     }
 
@@ -61,6 +77,7 @@ class ApiService {
       if (res.statusCode == 200) {
         return jsonDecode(utf8.decode(res.bodyBytes));
       }
+      debugPrint('Analyze HTTP ${res.statusCode}: ${res.body}');
     } catch (e) {
       debugPrint('Analyze Error: $e');
     }

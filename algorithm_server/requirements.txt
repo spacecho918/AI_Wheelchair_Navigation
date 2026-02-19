@@ -28,3 +28,7 @@ python-dotenv>=1.0.0
 # AI & API
 ultralytics>=8.0.0
 python-multipart>=0.0.6
+
+# 이미지 처리 (YOLO 서비스용)
+opencv-python-headless>=4.8.0  # 서버 환경 (GUI 없음)
+Pillow>=10.0.0

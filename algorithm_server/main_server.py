@@ -66,6 +66,13 @@ obstacle_manager: Optional[ObstacleManager] = None
 is_initialized = False
 edge_data_source: str = "none"  # 경사도 데이터 소스: "database", "json", "none"
 
+# Supabase 클라이언트 (report_router의 Storage 업로드에 공유)
+try:
+    from supabase import create_client as _create_supabase_client
+    HAS_SUPABASE = True
+except ImportError:
+    HAS_SUPABASE = False
+
 
 # ===== Pydantic 모델 =====
 
@@ -189,6 +196,17 @@ def initialize_system():
         app.state.graph_builder = graph_builder
         app.state.route_calculator = route_calculator
         app.state.obstacle_manager = obstacle_manager
+
+        # Supabase 클라이언트 공유 (report_router의 Storage 업로드용)
+        if HAS_SUPABASE and supabase_url and supabase_key:
+            try:
+                app.state.supabase_client = _create_supabase_client(supabase_url, supabase_key)
+                logger.info("Supabase 클라이언트 초기화 완료")
+            except Exception as _sc_e:
+                logger.warning("Supabase 클라이언트 초기화 실패: %s", _sc_e)
+                app.state.supabase_client = None
+        else:
+            app.state.supabase_client = None
         
         is_initialized = True
         logger.info("=== 시스템 초기화 완료 ===")

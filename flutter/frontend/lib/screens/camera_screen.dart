@@ -1,4 +1,7 @@
+import 'dart:typed_data';
+
 import 'package:camera/camera.dart'; // 카메라 패키지
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:image_picker/image_picker.dart'; // 갤러리 접근용
@@ -27,29 +30,24 @@ class _CameraScreenState extends State<CameraScreen> {
   @override
   void initState() {
     super.initState();
+    // 웹/앱 모두 카메라 초기화 시도 (camera_web 지원 시 동작)
     _initCamera();
   }
 
   // 카메라 초기화 로직
   Future<void> _initCamera() async {
     try {
-      // 1. 기기에서 사용 가능한 카메라 목록을 가져옵니다.
       final cameras = await availableCameras();
-
-      // 2. 카메라가 있다면 첫 번째 카메라(보통 후면)를 선택합니다.
       final firstCamera = cameras.first;
 
-      // 3. 컨트롤러를 생성합니다. (해상도는 높게 설정)
       _controller = CameraController(
         firstCamera,
         ResolutionPreset.high,
-        enableAudio: false, // 단순 사진 촬영이면 오디오 불필요
+        enableAudio: false,
       );
 
-      // 4. 컨트롤러를 초기화합니다.
       _initializeControllerFuture = _controller!.initialize();
 
-      // 5. 화면 갱신
       if (mounted) {
         setState(() {});
       }
@@ -60,7 +58,6 @@ class _CameraScreenState extends State<CameraScreen> {
 
   @override
   void dispose() {
-    // 위젯이 종료될 때 컨트롤러를 반드시 해제해야 메모리 누수가 없습니다.
     _controller?.dispose();
     super.dispose();
   }
@@ -71,17 +68,14 @@ class _CameraScreenState extends State<CameraScreen> {
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // 1. 카메라 프리뷰 영역 (실제 카메라 화면)
+          // 1. 카메라 프리뷰 영역
           SizedBox.expand(
             child: FutureBuilder<void>(
               future: _initializeControllerFuture,
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.done) {
-                  // 초기화가 완료되면 미리보기(Preview)를 보여줍니다.
-                  // CameraPreview를 사용하여 비율을 맞춥니다.
                   return CameraPreview(_controller!);
                 } else {
-                  // 로딩 중일 때는 검은 화면에 로딩 인디케이터
                   return const Center(
                     child: CircularProgressIndicator(color: Colors.white),
                   );
@@ -90,14 +84,13 @@ class _CameraScreenState extends State<CameraScreen> {
             ),
           ),
 
-          // 2. 3x3 격자 (Grid Lines)
+          // 2. 3x3 격자
           const _GridOverlay(),
 
-          // 3. 상단 및 하단 UI 컨트롤 (기존 디자인 유지)
+          // 3. 상단 및 하단 컨트롤
           SafeArea(
             child: Column(
               children: [
-                // 상단 바 (닫기, 플래시)
                 Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 20,
@@ -106,7 +99,6 @@ class _CameraScreenState extends State<CameraScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      // 뒤로가기 버튼 (통일된 디자인)
                       GestureDetector(
                         onTap: () => Navigator.pop(context),
                         child: Container(
@@ -135,7 +127,6 @@ class _CameraScreenState extends State<CameraScreen> {
 
                 const Spacer(),
 
-                // 하단 컨트롤 영역
                 Container(
                   padding: const EdgeInsets.only(bottom: 30),
                   width: double.infinity,
@@ -153,14 +144,16 @@ class _CameraScreenState extends State<CameraScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 40),
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: 40),
                         child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          mainAxisAlignment:
+                              MainAxisAlignment.spaceBetween,
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
                             _buildGalleryButton(),
                             _buildShutterButton(),
-                            _buildFlashButton(), // 리셋 버튼 대신 플래시 버튼 배치
+                            _buildFlashButton(),
                           ],
                         ),
                       ),
@@ -193,7 +186,7 @@ class _CameraScreenState extends State<CameraScreen> {
     );
   }
 
-  // --- 아래는 기존 UI 위젯들 (Stateless 때와 동일) ---
+  // --- 기존 UI 위젯들 ---
 
   Widget _buildGalleryButton() {
     return GestureDetector(
@@ -202,18 +195,25 @@ class _CameraScreenState extends State<CameraScreen> {
         debugPrint("Gallery button tapped");
         try {
           final ImagePicker picker = ImagePicker();
-          // 갤러리에서 이미지 선택
+          // 갤러리에서 이미지 선택 (AVIF/HEIF → JPEG 자동 변환)
           final XFile? image = await picker.pickImage(
             source: ImageSource.gallery,
+            imageQuality: 85,
           );
 
           if (image != null && mounted) {
+            // 웹 환경: bytes를 미리 읽어 전달 (blob URL 직접 표시 시 ImageCodecException 방지)
+            Uint8List? bytes;
+            if (kIsWeb) {
+              bytes = await image.readAsBytes();
+            }
             // 선택된 이미지로 확인 화면 이동
             final result = await Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (context) => PhotoConfirmationScreen(
                   imagePath: image.path,
+                  imageBytes: bytes,
                   fromConfirm: widget.fromConfirm,
                   fromNavigation: widget.fromNavigation,
                   fromNavigationEnd: widget.fromNavigationEnd,
@@ -258,11 +258,15 @@ class _CameraScreenState extends State<CameraScreen> {
             if (!mounted) return;
 
             // 2. 촬영된 사진 확인 화면으로 이동
+            Uint8List? bytes;
+            if (kIsWeb) bytes = await image.readAsBytes();
+
             final result = await Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (context) => PhotoConfirmationScreen(
                   imagePath: image.path,
+                  imageBytes: bytes,
                   fromConfirm: widget.fromConfirm,
                   fromNavigation: widget.fromNavigation,
                   fromNavigationEnd: widget.fromNavigationEnd,
@@ -303,7 +307,7 @@ class _CameraScreenState extends State<CameraScreen> {
     );
   }
 
-  // 플래시 버튼 (새로 추가) - 기존 리셋 버튼 자리에 위치
+  // 플래시 버튼 - 기존 리셋 버튼 자리에 위치
   Widget _buildFlashButton() {
     return GestureDetector(
       onTap: () async {

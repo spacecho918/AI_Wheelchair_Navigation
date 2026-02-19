@@ -28,3 +28,9 @@ Thumbs.db
 
 # 캐시
 .cache/
+
+# YOLO 모델 파일 (대용량 — Git LFS 또는 별도 관리)
+*.pt
+
+# 업로드 이미지 (제보 사진)
+static/uploads/
