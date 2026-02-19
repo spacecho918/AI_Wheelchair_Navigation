@@ -204,18 +204,91 @@ class ApiService {
     }
   }
 
-  /// 5. 커뮤니티 목록 (Direct Select)
+  /// 5. 커뮤니티 목록 (Direct Select) — 댓글 수 포함
   static Future<List<Map<String, dynamic>>> getCommunityReports() async {
     try {
-      // Simple select - likes/comments tables are not properly linked
       final data = await _supabase
           .from('obstacles')
           .select('*')
           .order('created_at', ascending: false)
           .limit(50);
 
-      return (data as List).map((item) {
-        // Parse description
+      final items = data as List;
+      if (items.isEmpty) return [];
+
+      final obstacleIds = items
+          .map((item) => item['id']?.toString())
+          .whereType<String>()
+          .toList();
+
+      // obstacle별 댓글 수 조회 (목록 화면 표시용)
+      final commentCountMap = <String, int>{};
+      try {
+        final commentsData = await _supabase
+            .from('comments')
+            .select('obstacle_id')
+            .inFilter('obstacle_id', obstacleIds);
+        for (final c in commentsData as List) {
+          final oid = c['obstacle_id']?.toString();
+          if (oid != null) {
+            commentCountMap[oid] = (commentCountMap[oid] ?? 0) + 1;
+          }
+        }
+      } catch (_) {
+        // comments 테이블 없거나 RLS 등으로 실패 시 0으로 유지
+      }
+
+      // obstacle별 좋아요/싫어요 수 조회 (likes 테이블)
+      final likeCountMap = <String, int>{};
+      final dislikeCountMap = <String, int>{};
+      try {
+        final likesData = await _supabase
+            .from('likes')
+            .select('obstacle_id, is_like')
+            .inFilter('obstacle_id', obstacleIds);
+        for (final row in likesData as List) {
+          final oid = row['obstacle_id']?.toString();
+          if (oid == null) continue;
+          final isLike = row['is_like'] == true;
+          if (isLike) {
+            likeCountMap[oid] = (likeCountMap[oid] ?? 0) + 1;
+          } else {
+            dislikeCountMap[oid] = (dislikeCountMap[oid] ?? 0) + 1;
+          }
+        }
+      } catch (_) {
+        // likes 테이블 없거나 RLS 등으로 실패 시 0으로 유지
+      }
+
+      // 작성자 프로필(닉네임, 프로필 사진) 조회 — 홈/커뮤니티 아바타 표시용
+      final reportedByIds = items
+          .map((item) => item['reported_by']?.toString())
+          .whereType<String>()
+          .where((id) => id.isNotEmpty)
+          .toSet()
+          .toList();
+      final authorProfileMap = <String, Map<String, dynamic>>{};
+      if (reportedByIds.isNotEmpty) {
+        try {
+          final profiles = await _supabase
+              .from('user_profiles')
+              .select('user_id, nickname, profile_image_url')
+              .inFilter('user_id', reportedByIds);
+          for (final p in profiles as List) {
+            final uid = p['user_id']?.toString();
+            if (uid != null) {
+              authorProfileMap[uid] = {
+                'nickname': p['nickname'] as String?,
+                'profile_image_url': (p['profile_image_url'] as String?)?.isNotEmpty == true
+                    ? p['profile_image_url'] as String
+                    : null,
+              };
+            }
+          }
+        } catch (_) {}
+      }
+
+      return items.map((item) {
         String content = item['description'] ?? "";
         String address = "위치 정보 없음";
 
@@ -226,23 +299,30 @@ class ApiService {
         }
 
         final userMatch = RegExp(r'\[User: (.*?)\]').firstMatch(content);
-        String user = "알 수 없음";
-        if (userMatch != null) {
+        final reportedBy = item['reported_by']?.toString();
+        final authorProfile = reportedBy != null ? authorProfileMap[reportedBy] : null;
+        String user = authorProfile?['nickname'] ?? (userMatch != null ? userMatch.group(1)! : "알 수 없음");
+        if (userMatch != null && authorProfile == null) {
           user = userMatch.group(1)!;
+          content = content.replaceAll(userMatch.group(0)!, '').trim();
+        } else if (userMatch != null) {
           content = content.replaceAll(userMatch.group(0)!, '').trim();
         }
 
+        final idStr = item['id']?.toString() ?? '';
+
         return {
-          'id': item['id'].toString(),
+          'id': idStr,
           'tag': item['obstacle_type'],
           'user': user,
-          'time': item['created_at'], // ISO String
+          'user_avatar_url': authorProfile?['profile_image_url'],
+          'time': item['created_at'],
           'timestamp': item['created_at'],
           'address': address,
           'content': content,
-          'likes': 0,
-          'dislikes': 0,
-          'comments': 0,
+          'likes': likeCountMap[idStr] ?? 0,
+          'dislikes': dislikeCountMap[idStr] ?? 0,
+          'comments': commentCountMap[idStr] ?? 0,
           'imageUrl': item['image_url'],
         };
       }).toList();
@@ -252,11 +332,25 @@ class ApiService {
     }
   }
 
-  // Helper to get reaction counts if needed (Complex)
-  // For now, implementing simple count or client filtering if data small?
-  // Or just accept that 'likes' is total reactions.
+  /// 5-1. 현재 사용자의 좋아요/싫어요 상태 (상세 화면용). true=좋아요, false=싫어요, null=미선택
+  static Future<bool?> getMyReaction(String reportId) async {
+    final user = AuthService.currentUser;
+    if (user == null) return null;
+    try {
+      final row = await _supabase
+          .from('likes')
+          .select('is_like')
+          .eq('user_id', user.id)
+          .eq('obstacle_id', reportId)
+          .maybeSingle();
+      if (row == null) return null;
+      return row['is_like'] as bool?;
+    } catch (_) {
+      return null;
+    }
+  }
 
-  /// 6. 내 제보 (Direct Select)
+  /// 6. 내 제보 (Direct Select) — 댓글/좋아요/싫어요 수 집계 포함
   static Future<List<ReportSummary>> getUserReports() async {
     final user = AuthService.currentUser;
     if (user == null) return [];
@@ -267,8 +361,49 @@ class ApiService {
           .eq('reported_by', user.id)
           .order('created_at', ascending: false);
 
-      return (data as List).map((item) {
-        // Parsing logic duplicated - could extract
+      final items = data as List;
+      if (items.isEmpty) return [];
+
+      final obstacleIds = items
+          .map((item) => item['id']?.toString())
+          .whereType<String>()
+          .toList();
+
+      // obstacle별 댓글 수
+      final commentCountMap = <String, int>{};
+      try {
+        final commentsData = await _supabase
+            .from('comments')
+            .select('obstacle_id')
+            .inFilter('obstacle_id', obstacleIds);
+        for (final c in commentsData as List) {
+          final oid = c['obstacle_id']?.toString();
+          if (oid != null) {
+            commentCountMap[oid] = (commentCountMap[oid] ?? 0) + 1;
+          }
+        }
+      } catch (_) {}
+
+      // obstacle별 좋아요/싫어요 수
+      final likeCountMap = <String, int>{};
+      final dislikeCountMap = <String, int>{};
+      try {
+        final likesData = await _supabase
+            .from('likes')
+            .select('obstacle_id, is_like')
+            .inFilter('obstacle_id', obstacleIds);
+        for (final row in likesData as List) {
+          final oid = row['obstacle_id']?.toString();
+          if (oid == null) continue;
+          if (row['is_like'] == true) {
+            likeCountMap[oid] = (likeCountMap[oid] ?? 0) + 1;
+          } else {
+            dislikeCountMap[oid] = (dislikeCountMap[oid] ?? 0) + 1;
+          }
+        }
+      } catch (_) {}
+
+      return items.map((item) {
         String content = item['description'] ?? "";
         String address = "위치 정보 없음";
         final locMatch = RegExp(r'\[Location: (.*?)\]').firstMatch(content);
@@ -276,18 +411,20 @@ class ApiService {
           address = locMatch.group(1)!;
           content = content.replaceAll(locMatch.group(0)!, '').trim();
         }
-        // Remove User tag
         final userMatch = RegExp(r'\[User: (.*?)\]').firstMatch(content);
         if (userMatch != null)
           content = content.replaceAll(userMatch.group(0)!, '').trim();
 
+        final idStr = item['id']?.toString() ?? '';
+
         return ReportSummary(
-          id: item['id'].toString(),
+          id: idStr,
           title: item['obstacle_type'],
           location: address,
           status: 'confirmed',
-          commentCount: 0,
-          likeCount: 0,
+          commentCount: commentCountMap[idStr] ?? 0,
+          likeCount: likeCountMap[idStr] ?? 0,
+          dislikeCount: dislikeCountMap[idStr] ?? 0,
           date: DateTime.parse(item['created_at']),
           content: content,
           imageUrl: item['image_url'],
@@ -295,6 +432,23 @@ class ApiService {
       }).toList();
     } catch (e) {
       return [];
+    }
+  }
+
+  /// 6-1. 제보글 삭제 (본인 작성 글만)
+  static Future<bool> deleteReport(String reportId) async {
+    final user = AuthService.currentUser;
+    if (user == null) return false;
+    try {
+      await _supabase
+          .from('obstacles')
+          .delete()
+          .eq('id', reportId)
+          .eq('reported_by', user.id);
+      return true;
+    } catch (e) {
+      debugPrint('Delete report error: $e');
+      return false;
     }
   }
 
@@ -318,10 +472,11 @@ class ApiService {
             return ReportSummary(
               id: obs['id'].toString(),
               title: obs['obstacle_type'],
-              location: "댓글: ${item['content']}", // Show comment content ?
+              location: "댓글: ${item['content']}",
               status: 'confirmed',
               commentCount: 0,
               likeCount: 0,
+              dislikeCount: 0,
               date: DateTime.parse(item['created_at']),
               content: item['content'],
             );
@@ -388,17 +543,45 @@ class ApiService {
 
   static Future<List<Map<String, dynamic>>> getComments(String reportId) async {
     try {
-      // Getting comments. Ideally join profiles for nickname?
-      // Assuming 'user_id' matches auth.users.
-      // We don't have public profiles table guaranteed.
-      // Just return content for now.
       final data = await _supabase
           .from('comments')
           .select()
           .eq('obstacle_id', reportId)
           .order('created_at', ascending: false);
 
-      return (data as List).map((e) => e as Map<String, dynamic>).toList();
+      final list = (data as List).map((e) => e as Map<String, dynamic>).toList();
+      if (list.isEmpty) return list;
+
+      // user_profiles에서 닉네임 조회 후 댓글에 병합
+      final userIds = list
+          .map((c) => c['user_id'] as String?)
+          .whereType<String>()
+          .toSet()
+          .toList();
+      if (userIds.isEmpty) return list;
+
+      final profiles = await _supabase
+          .from('user_profiles')
+          .select('user_id, nickname, profile_image_url')
+          .inFilter('user_id', userIds);
+      final nickMap = <String, String>{};
+      final avatarMap = <String, String?>{};
+      for (final p in profiles as List) {
+        final id = p['user_id']?.toString();
+        final nick = p['nickname'] as String?;
+        final avatar = p['profile_image_url'] as String?;
+        if (id != null) {
+          if (nick != null && nick.isNotEmpty) nickMap[id] = nick;
+          avatarMap[id] = (avatar != null && avatar.isNotEmpty) ? avatar : null;
+        }
+      }
+
+      for (final c in list) {
+        final uid = c['user_id']?.toString();
+        c['nickname'] = (uid != null ? nickMap[uid] : null) ?? '사용자';
+        c['profile_image_url'] = uid != null ? avatarMap[uid] : null;
+      }
+      return list;
     } catch (e) {
       return [];
     }
@@ -495,6 +678,21 @@ class ApiService {
     } catch (e) {
       debugPrint('check_nickname_available_user_profiles RPC error: $e');
       return true;
+    }
+  }
+
+  /// 회원가입용. auth.users 기준 이메일 중복 검사 (비로그인에서 호출, RPC 사용)
+  static Future<bool> isEmailAvailableForSignup(String email) async {
+    if (email.trim().isEmpty) return false;
+    try {
+      final res = await _supabase.rpc(
+        'check_email_available',
+        params: {'p_email': email.trim()},
+      );
+      return res == true;
+    } catch (e) {
+      debugPrint('check_email_available RPC error: $e');
+      return false;
     }
   }
 

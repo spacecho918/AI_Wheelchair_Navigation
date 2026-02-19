@@ -5,6 +5,7 @@ class ReportSummary {
   final String status; // 'confirmed', 'resolved', 'pending'
   final int commentCount;
   final int likeCount;
+  final int dislikeCount;
   final DateTime date;
   final String content;
   final String? imageUrl;
@@ -16,6 +17,7 @@ class ReportSummary {
     required this.status,
     required this.commentCount,
     required this.likeCount,
+    this.dislikeCount = 0,
     required this.date,
     this.content = '',
     this.imageUrl,
@@ -29,6 +31,7 @@ class ReportSummary {
       status: json['status'] ?? 'pending',
       commentCount: json['comment_count'] ?? 0,
       likeCount: json['like_count'] ?? 0,
+      dislikeCount: json['dislike_count'] ?? 0,
       date: DateTime.parse(json['date']),
       content: json['content'] ?? '',
       imageUrl: json['image_url'],

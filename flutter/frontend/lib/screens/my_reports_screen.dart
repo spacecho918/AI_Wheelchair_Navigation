@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'community_detail_screen.dart';
 import 'package:gilbeot/widgets/custom_back_button.dart';
+import 'package:gilbeot/widgets/common_toast.dart';
 import '../services/api_service.dart';
 import '../models/user_model.dart';
 import '../models/report_summary.dart';
@@ -55,6 +56,37 @@ class _MyReportsScreenState extends State<MyReportsScreen>
   }
 
   // Navigation Helper
+  Future<void> _deleteReport(ReportSummary report) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('제보 삭제'),
+        content: const Text(
+          '이 제보를 삭제하시겠습니까? 삭제된 내용은 복구할 수 없습니다.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('취소', style: TextStyle(color: textGrey)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text('삭제', style: TextStyle(color: Colors.red, fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true || !mounted) return;
+    final ok = await ApiService.deleteReport(report.id);
+    if (!mounted) return;
+    if (ok) {
+      CommonToast.show(context, '제보가 삭제되었습니다.');
+      _loadData();
+    } else {
+      CommonToast.show(context, '삭제에 실패했습니다. 다시 시도해 주세요.');
+    }
+  }
+
   void _navigateToDetail(Map<String, dynamic> item, {bool isComment = false}) {
     // Construct a full report object compatible with CommunityDetailScreen
     final fullReport = {
@@ -68,7 +100,7 @@ class _MyReportsScreenState extends State<MyReportsScreen>
                 item['content']) // Use comment content if available
           : item['content'], // Use actual report content
       'likes': item['likes'],
-      'dislikes': 0, // Default as we might not track dislikes in summary
+      'dislikes': item['dislikes'] ?? 0,
       'comments': item['comments'] ?? 0,
       'tag': item['title'], // Map title to tag
       'commentContent': isComment ? item['content'] : null,
@@ -244,10 +276,12 @@ class _MyReportsScreenState extends State<MyReportsScreen>
           'id': report.id,
           'user': _userProfile?.nickname ?? '나',
           'time': '${report.date.month}월 ${report.date.day}일',
+          'address': report.location,
           'location': report.location,
           'title': report.title,
           'content': report.content,
           'likes': report.likeCount,
+          'dislikes': report.dislikeCount,
           'comments': report.commentCount,
           'status': report.status,
           'date': report.date,
@@ -276,24 +310,39 @@ class _MyReportsScreenState extends State<MyReportsScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Tag
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: primaryGreen,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        report.title,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
+                    // Tag + 삭제 버튼
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: primaryGreen,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            report.title,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
-                      ),
+                        const Spacer(),
+                        IconButton(
+                          icon: Icon(Icons.delete_outline, size: 22, color: textGrey),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(
+                            minWidth: 40,
+                            minHeight: 40,
+                          ),
+                          onPressed: () => _deleteReport(report),
+                          tooltip: '삭제',
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 12),
 
@@ -426,7 +475,7 @@ class _MyReportsScreenState extends State<MyReportsScreen>
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          '0', // No dislike count in model
+                          '${report.dislikeCount}',
                           style: TextStyle(color: textGrey, fontSize: 12),
                         ),
                         const Spacer(),
@@ -467,10 +516,12 @@ class _MyReportsScreenState extends State<MyReportsScreen>
           'id': comment.id,
           'user': _userProfile?.nickname ?? '나',
           'time': '${comment.date.month}월 ${comment.date.day}일',
+          'address': comment.location,
           'location': comment.location,
           'title': comment.title,
           'content': comment.content,
           'likes': comment.likeCount,
+          'dislikes': comment.dislikeCount,
           'comments': comment.commentCount,
           'status': comment.status,
           'date': comment.date,

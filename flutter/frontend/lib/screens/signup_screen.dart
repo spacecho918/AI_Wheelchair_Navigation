@@ -33,9 +33,13 @@ class _SignupScreenState extends State<SignupScreen> {
   String? _signupErrorMessage;
   bool? _nicknameCheckedAvailable;
   bool _isCheckingNickname = false;
+  bool? _emailCheckedAvailable;
+  bool _isCheckingEmail = false;
 
   /// 중복 확인에서 '사용 가능'으로 통과한 닉네임. signUp 실패 시 닉네임 오류로 잘못 표시하지 않도록 사용.
   String? _lastVerifiedNickname;
+  /// 중복 확인에서 '사용 가능'으로 통과한 이메일.
+  String? _lastVerifiedEmail;
 
   @override
   void initState() {
@@ -45,10 +49,14 @@ class _SignupScreenState extends State<SignupScreen> {
     _emailController.addListener(_validateForm);
     _passwordController.addListener(_validateForm);
     _confirmPasswordController.addListener(_validateForm);
-    // 이메일 변경 시 이전 가입 실패 메시지 제거 (다른 이메일로 재시도 시)
+    // 이메일 변경 시 이전 가입 실패 메시지 및 이메일 중복 결과 제거
     _emailController.addListener(() {
-      if (_signupErrorMessage != null)
-        setState(() => _signupErrorMessage = null);
+      if (_signupErrorMessage != null || _emailCheckedAvailable != null)
+        setState(() {
+          _signupErrorMessage = null;
+          _emailCheckedAvailable = null;
+          _lastVerifiedEmail = null;
+        });
     });
   }
 
@@ -94,6 +102,8 @@ class _SignupScreenState extends State<SignupScreen> {
       _signupErrorMessage = null;
       _nicknameCheckedAvailable = null;
       _lastVerifiedNickname = null;
+      _emailCheckedAvailable = null;
+      _lastVerifiedEmail = null;
       _isFormValid =
           isNameFilled &&
           isNicknameFilled &&
@@ -121,6 +131,41 @@ class _SignupScreenState extends State<SignupScreen> {
         return 'none';
       default:
         return uiValue.toLowerCase();
+    }
+  }
+
+  Future<void> _onEmailDuplicateCheck() async {
+    final email = _emailController.text.trim();
+    if (email.isEmpty) {
+      CommonToast.show(context, '이메일을 입력한 뒤 확인해 주세요.');
+      return;
+    }
+    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    if (!emailRegex.hasMatch(email)) {
+      CommonToast.show(context, '올바른 이메일 형식을 입력해 주세요.');
+      return;
+    }
+    setState(() {
+      _isCheckingEmail = true;
+      _emailCheckedAvailable = null;
+      _signupErrorMessage = null;
+    });
+    final available = await ApiService.isEmailAvailableForSignup(email);
+    if (!mounted) return;
+    setState(() {
+      _isCheckingEmail = false;
+      _emailCheckedAvailable = available;
+      if (available) {
+        _signupErrorMessage = null;
+        _lastVerifiedEmail = email;
+      } else {
+        _lastVerifiedEmail = null;
+      }
+    });
+    if (available) {
+      CommonToast.show(context, '사용 가능한 이메일입니다.');
+    } else {
+      CommonToast.show(context, '이미 가입된 이메일입니다. 다른 이메일을 입력해 주세요.');
     }
   }
 
@@ -260,16 +305,7 @@ class _SignupScreenState extends State<SignupScreen> {
                         ),
                         const SizedBox(height: 30),
 
-                        _buildTextField(
-                          '이메일 주소',
-                          '이메일을 입력하세요',
-                          _emailController,
-                          inputType: TextInputType.emailAddress,
-                          errorText:
-                              _isEmailValid || _emailController.text.isEmpty
-                              ? null
-                              : '올바른 이메일 형식을 입력해주세요',
-                        ),
+                        _buildEmailFieldWithCheck(),
                         const SizedBox(height: 16),
 
                         _buildTextField(
@@ -377,14 +413,31 @@ class _SignupScreenState extends State<SignupScreen> {
                           width: double.infinity,
                           height: 48,
                           child: ElevatedButton(
-                            onPressed: _isFormValid
+                                onPressed: _isFormValid
                                 ? () async {
                                     setState(() => _signupErrorMessage = null);
+                                    final email = _emailController.text.trim();
                                     final nickname = _nicknameController.text
                                         .trim();
-                                    final alreadyVerified =
+                                    // 이메일 중복 확인 (미확인 시 API 호출)
+                                    final emailAlreadyVerified =
+                                        (email == _lastVerifiedEmail);
+                                    if (!emailAlreadyVerified) {
+                                      final emailOk =
+                                          await ApiService.isEmailAvailableForSignup(
+                                            email,
+                                          );
+                                      if (!emailOk && mounted) {
+                                        setState(
+                                          () => _signupErrorMessage =
+                                              '이미 가입된 이메일입니다. 다른 이메일을 입력해 주세요.',
+                                        );
+                                        return;
+                                      }
+                                    }
+                                    final nicknameAlreadyVerified =
                                         (nickname == _lastVerifiedNickname);
-                                    if (!alreadyVerified) {
+                                    if (!nicknameAlreadyVerified) {
                                       final nicknameOk =
                                           await ApiService.isNicknameAvailableInUserProfilesForSignup(
                                             nickname,
@@ -675,6 +728,99 @@ class _SignupScreenState extends State<SignupScreen> {
             errorStyle: const TextStyle(color: Colors.red, fontSize: 11),
           ),
         ),
+      ],
+    );
+  }
+
+  Widget _buildEmailFieldWithCheck() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          '이메일 주소',
+          style: TextStyle(
+            fontSize: 12.25,
+            color: Colors.black,
+            fontWeight: FontWeight.w400,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _emailController,
+                keyboardType: TextInputType.emailAddress,
+                style: const TextStyle(color: Color(0xFF101727), fontSize: 14),
+                decoration: InputDecoration(
+                  hintText: '이메일을 입력하세요',
+                  hintStyle: const TextStyle(
+                    color: Color(0xFF717182),
+                    fontSize: 14,
+                  ),
+                  filled: true,
+                  fillColor: const Color(0xFFF3F3F5),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                  errorText:
+                      _isEmailValid || _emailController.text.isEmpty
+                          ? null
+                          : '올바른 이메일 형식을 입력해주세요',
+                  errorStyle: const TextStyle(color: Colors.red, fontSize: 11),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            SizedBox(
+              height: 48,
+              child: TextButton(
+                onPressed: _isCheckingEmail ? null : _onEmailDuplicateCheck,
+                style: TextButton.styleFrom(
+                  backgroundColor: const Color(0xFFE8F5E9),
+                  foregroundColor: const Color(0xFF00C853),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: _isCheckingEmail
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text(
+                        '중복 확인',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+              ),
+            ),
+          ],
+        ),
+        if (_emailCheckedAvailable != null) ...[
+          const SizedBox(height: 6),
+          Text(
+            _emailCheckedAvailable!
+                ? '사용 가능한 이메일입니다.'
+                : '이미 가입된 이메일입니다.',
+            style: TextStyle(
+              fontSize: 12,
+              color: _emailCheckedAvailable!
+                  ? const Color(0xFF00C853)
+                  : const Color(0xFFE53935),
+            ),
+          ),
+        ],
       ],
     );
   }

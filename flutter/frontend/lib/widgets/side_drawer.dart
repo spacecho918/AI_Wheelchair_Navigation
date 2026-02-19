@@ -12,6 +12,7 @@ import '../screens/history_screen.dart';
 import '../screens/saved_places_screen.dart';
 import '../screens/settings_screen.dart';
 import '../services/auth_service.dart';
+import '../services/recent_searches_service.dart';
 
 class SideDrawer extends StatefulWidget {
   const SideDrawer({super.key});
@@ -241,15 +242,29 @@ class _SideDrawerState extends State<SideDrawer> {
           ),
           const SizedBox(height: 10),
 
-          // 프로필 이미지
-          Container(
-            width: 60,
-            height: 60,
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-            ),
-            // TODO: Display profile image if available
+          // 프로필 이미지 (_userProfile은 비동기 로드되므로 null일 수 있음)
+          Builder(
+            builder: (context) {
+              final profileImageUrl = _userProfile?.profileImage;
+              final hasImage = profileImageUrl != null && profileImageUrl.isNotEmpty;
+              final nickname = _userProfile?.nickname ?? '사용자';
+              final initial = nickname.isNotEmpty ? nickname[0].toUpperCase() : '?';
+              return CircleAvatar(
+                radius: 30,
+                backgroundColor: hasImage ? Colors.white : Colors.grey.shade300,
+                backgroundImage: hasImage ? NetworkImage(profileImageUrl!) : null,
+                child: hasImage
+                    ? null
+                    : Text(
+                        initial,
+                        style: TextStyle(
+                          color: textDark,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+              );
+            },
           ),
           const SizedBox(height: 14),
 
@@ -398,6 +413,7 @@ class _SideDrawerState extends State<SideDrawer> {
           }, false),
           _buildFooterItem(Icons.logout, '로그아웃', () async {
             await AuthService.signOut();
+            RecentSearchesService.reload();
             if (!context.mounted) return;
             Navigator.pushAndRemoveUntil(
               context,

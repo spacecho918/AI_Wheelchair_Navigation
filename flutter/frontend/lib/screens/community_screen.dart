@@ -20,8 +20,18 @@ class _CommunityScreenState extends State<CommunityScreen> {
   ); // Light green background
 
   // State
-  final List<String> filters = ['전체', '높은 턱', '좁은 통로', '계단'];
-  String selectedFilter = '전체';
+  final List<String> filters = [
+    '전체',
+    '높은 턱',
+    '좁은 통로',
+    '계단',
+    '라바콘',
+    '볼라드',
+    '경사로',
+    '턱',
+  ];
+  /// 선택된 필터들 (빈 집합이거나 '전체' 포함 시 전체 표시)
+  Set<String> selectedFilters = {'전체'};
   bool isFilterVisible = false;
   String sortOption = 'latest'; // 'latest' or 'popular'
 
@@ -64,11 +74,22 @@ class _CommunityScreenState extends State<CommunityScreen> {
     }
   }
 
+  /// 게시물의 tag 문자열을 태그 목록으로 변환 (쉼표 구분, 공백 제거)
+  List<String> _parseTags(dynamic tagValue) {
+    if (tagValue == null) return [];
+    final s = tagValue.toString().trim();
+    if (s.isEmpty) return [];
+    return s.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+  }
+
   List<Map<String, dynamic>> getFilteredAndSortedReports() {
     // 1. Filter
+    final showAll = selectedFilters.isEmpty || selectedFilters.contains('전체');
     List<Map<String, dynamic>> filtered = _reports.where((report) {
-      if (selectedFilter == '전체') return true;
-      return report['tag'] == selectedFilter;
+      if (showAll) return true;
+      final reportTags = _parseTags(report['tag']);
+      // 선택된 필터 중 하나라도 게시물 태그에 있으면 표시 (OR)
+      return reportTags.any((tag) => selectedFilters.contains(tag));
     }).toList();
 
     // 2. Sort
@@ -164,13 +185,13 @@ class _CommunityScreenState extends State<CommunityScreen> {
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: Row(
                         children: filters.map((filter) {
-                          final isSelected = selectedFilter == filter;
+                          final isSelected = selectedFilters.contains(filter);
                           return Padding(
                             padding: const EdgeInsets.only(
                               right: 8,
                               top: 10,
                               bottom: 10,
-                            ), // Adjust padding for vertical center
+                            ),
                             child: ChoiceChip(
                               label: Text(
                                 filter,
@@ -194,7 +215,21 @@ class _CommunityScreenState extends State<CommunityScreen> {
                               ),
                               onSelected: (selected) {
                                 setState(() {
-                                  selectedFilter = filter;
+                                  if (filter == '전체') {
+                                    selectedFilters = selected ? {'전체'} : {};
+                                  } else {
+                                    if (selected) {
+                                      selectedFilters = Set.from(selectedFilters)
+                                        ..remove('전체')
+                                        ..add(filter);
+                                    } else {
+                                      selectedFilters = Set.from(selectedFilters)
+                                        ..remove(filter);
+                                    }
+                                    if (selectedFilters.isEmpty) {
+                                      selectedFilters = {'전체'};
+                                    }
+                                  }
                                 });
                               },
                               showCheckmark: false,
@@ -458,13 +493,22 @@ class _CommunityScreenState extends State<CommunityScreen> {
                                             backgroundColor:
                                                 Colors.grey.shade200,
                                             radius: 14,
-                                            child: Text(
-                                              report['user'][0],
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: textDark,
-                                              ),
-                                            ),
+                                            backgroundImage: report['user_avatar_url'] != null &&
+                                                    (report['user_avatar_url'] as String).isNotEmpty
+                                                ? NetworkImage(report['user_avatar_url'] as String)
+                                                : null,
+                                            child: report['user_avatar_url'] == null ||
+                                                    (report['user_avatar_url'] as String).isEmpty
+                                                ? Text(
+                                                    (report['user'] as String).isNotEmpty
+                                                        ? (report['user'] as String)[0]
+                                                        : '?',
+                                                    style: TextStyle(
+                                                      fontSize: 12,
+                                                      color: textDark,
+                                                    ),
+                                                  )
+                                                : null,
                                           ),
                                           const SizedBox(width: 8),
                                           Column(

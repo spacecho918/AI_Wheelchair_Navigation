@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:gilbeot/screens/login_screen.dart';
 import 'package:gilbeot/screens/map_screen.dart';
 import 'package:gilbeot/services/auth_service.dart';
+import 'package:gilbeot/services/recent_searches_service.dart';
 import 'package:gilbeot/services/session_storage_local_storage.dart';
 import 'package:gilbeot/services/theme_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -129,6 +130,8 @@ class _LoginScreenWrapperState extends State<LoginScreenWrapper> {
     // 첫 프레임 이후에만 세션 확인 → 항상 로그인 화면이 먼저 보이도록
     WidgetsBinding.instance.addPostFrameCallback((_) => _redirectIfSession());
     _authSub = AuthService.onAuthStateChange.listen((data) {
+      // 로그인/로그아웃 시 최근 검색 목록을 현재 사용자 기준으로 갱신
+      RecentSearchesService.reload();
       if (data.session != null) _redirectIfSession();
     });
   }

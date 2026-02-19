@@ -39,9 +39,7 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
   }
 
   Future<void> _loadRecentSearches() async {
-    if (!RecentSearchesService.isLoaded) {
-      await RecentSearchesService.load();
-    }
+    await RecentSearchesService.reload();
     if (mounted) {
       setState(() {});
     }

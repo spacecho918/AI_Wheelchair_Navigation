@@ -47,6 +47,7 @@ class KakaoService {
                     : doc['address_name'],
                 'lat': double.parse(doc['y']),
                 'lng': double.parse(doc['x']),
+                'place_id': doc['id']?.toString() ?? '',
                 'category': doc['category_group_code'], // Add category code
                 'phone': doc['phone'] ?? '',
                 'url': doc['place_url'] ?? '',

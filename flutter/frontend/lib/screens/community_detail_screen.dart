@@ -33,6 +33,16 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
     likeCount = widget.report['likes'] ?? 0;
     dislikeCount = widget.report['dislikes'] ?? 0;
     _fetchComments();
+    _loadMyReaction();
+  }
+
+  Future<void> _loadMyReaction() async {
+    final reaction = await ApiService.getMyReaction(widget.report['id']);
+    if (!mounted) return;
+    setState(() {
+      isLiked = reaction == true;
+      isDisliked = reaction == false;
+    });
   }
 
   Future<void> _fetchComments() async {
@@ -63,10 +73,20 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
     });
 
     final success = await ApiService.toggleLike(widget.report['id'], true);
-    if (!success) {
-      // Revert if failed
-      _fetchComments(); // Or fetch post details again to sync
-      // Ideally revert counts
+    if (!success && mounted) {
+      setState(() {
+        if (isLiked) {
+          likeCount--;
+          isLiked = false;
+        } else {
+          likeCount++;
+          isLiked = true;
+          if (isDisliked) {
+            dislikeCount--;
+            isDisliked = false;
+          }
+        }
+      });
     }
   }
 
@@ -86,7 +106,22 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
       }
     });
 
-    await ApiService.toggleLike(widget.report['id'], false);
+    final success = await ApiService.toggleLike(widget.report['id'], false);
+    if (!success && mounted) {
+      setState(() {
+        if (isDisliked) {
+          dislikeCount--;
+          isDisliked = false;
+        } else {
+          dislikeCount++;
+          isDisliked = true;
+          if (isLiked) {
+            likeCount--;
+            isLiked = false;
+          }
+        }
+      });
+    }
   }
 
   Future<void> _submitComment() async {
@@ -298,12 +333,19 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                           CircleAvatar(
                             backgroundColor: Colors.grey.shade200,
                             radius: 20,
-                            child: Text(
-                              widget.report['user'].isNotEmpty
-                                  ? widget.report['user'][0]
-                                  : '?',
-                              style: TextStyle(fontSize: 16, color: textDark),
-                            ),
+                            backgroundImage: widget.report['user_avatar_url'] != null &&
+                                    (widget.report['user_avatar_url'] as String).isNotEmpty
+                                ? NetworkImage(widget.report['user_avatar_url'] as String)
+                                : null,
+                            child: widget.report['user_avatar_url'] == null ||
+                                    (widget.report['user_avatar_url'] as String).isEmpty
+                                ? Text(
+                                    (widget.report['user'] as String).isNotEmpty
+                                        ? (widget.report['user'] as String)[0]
+                                        : '?',
+                                    style: TextStyle(fontSize: 16, color: textDark),
+                                  )
+                                : null,
                           ),
                           const SizedBox(width: 12),
                           Column(
@@ -614,11 +656,18 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                                   CircleAvatar(
                                     backgroundColor: Colors.grey.shade300,
                                     radius: 16,
-                                    child: const Icon(
-                                      Icons.person,
-                                      size: 20,
-                                      color: Colors.white,
-                                    ),
+                                    backgroundImage: comment['profile_image_url'] != null &&
+                                            (comment['profile_image_url'] as String).isNotEmpty
+                                        ? NetworkImage(comment['profile_image_url'] as String)
+                                        : null,
+                                    child: comment['profile_image_url'] == null ||
+                                            (comment['profile_image_url'] as String).isEmpty
+                                        ? const Icon(
+                                            Icons.person,
+                                            size: 20,
+                                            color: Colors.white,
+                                          )
+                                        : null,
                                   ),
                                   const SizedBox(width: 12),
                                   Expanded(
@@ -626,11 +675,8 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
                                       children: [
-                                        // We might not have user name if we only saved user_id in DB
-                                        // Ideally backend joins user table.
-                                        // For now show 'User' or user_id
                                         Text(
-                                          '사용자',
+                                          comment['nickname'] ?? '사용자',
                                           style: TextStyle(
                                             color: textDark,
                                             fontWeight: FontWeight.bold,

@@ -70,6 +70,10 @@ CREATE POLICY "obstacles_read_all" ON obstacles FOR SELECT USING (true);
 CREATE POLICY "edges_insert_service" ON edges FOR INSERT WITH CHECK (true);
 CREATE POLICY "obstacles_insert_auth" ON obstacles FOR INSERT WITH CHECK (true);
 
+-- 제보 삭제: 본인이 작성한 제보만 삭제 가능
+CREATE POLICY "obstacles_delete_own" ON obstacles FOR DELETE
+  USING (reported_by = auth.uid()::text);
+
 -- updated_at 자동 갱신 트리거
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
@@ -83,4 +87,30 @@ CREATE TRIGGER update_edges_updated_at BEFORE UPDATE ON edges
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TRIGGER update_obstacles_updated_at BEFORE UPDATE ON obstacles
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- 3. likes 테이블: 커뮤니티(obstacles) 게시글 좋아요/싫어요
+CREATE TABLE IF NOT EXISTS likes (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    obstacle_id UUID NOT NULL REFERENCES obstacles(id) ON DELETE CASCADE,
+    is_like BOOLEAN NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(user_id, obstacle_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_likes_obstacle_id ON likes(obstacle_id);
+CREATE INDEX IF NOT EXISTS idx_likes_user_id ON likes(user_id);
+
+ALTER TABLE likes ENABLE ROW LEVEL SECURITY;
+
+-- 읽기: 모든 사용자(목록/상세에서 집계용)
+CREATE POLICY "likes_read_all" ON likes FOR SELECT USING (true);
+-- 쓰기: 본인만 (insert/update/delete)
+CREATE POLICY "likes_insert_own" ON likes FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "likes_update_own" ON likes FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "likes_delete_own" ON likes FOR DELETE USING (auth.uid() = user_id);
+
+CREATE TRIGGER update_likes_updated_at BEFORE UPDATE ON likes
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
