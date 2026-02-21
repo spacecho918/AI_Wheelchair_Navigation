@@ -881,4 +881,30 @@ class ApiService {
       return false;
     }
   }
+
+  static Future<Map<String, dynamic>> deleteAccount() async {
+    try {
+      final session = supabase.Supabase.instance.client.auth.currentSession;
+
+      if (session == null) {
+        return {'success': false, 'message': '세션이 없습니다'};
+      }
+
+      final response = await http.delete(
+        Uri.parse('${ApiService.baseUrl}/delete-account'),
+        headers: {
+          'Authorization': 'Bearer ${session.accessToken}',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        await supabase.Supabase.instance.client.auth.signOut();
+        return {'success': true};
+      } else {
+        return {'success': false, 'message': response.body};
+      }
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
 }

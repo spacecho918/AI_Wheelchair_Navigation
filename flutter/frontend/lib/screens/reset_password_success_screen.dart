@@ -28,7 +28,9 @@ class _ResetPasswordSuccessScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF0FDF4),
+      backgroundColor: Theme.of(context).brightness == Brightness.dark
+        ? Theme.of(context).scaffoldBackgroundColor
+        : const Color(0xFFF0FDF4),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
@@ -42,9 +44,11 @@ class _ResetPasswordSuccessScreenState
                     mainAxisAlignment: MainAxisAlignment.start,
                     children: [
                       IconButton(
-                        icon: const Icon(
+                        icon: Icon(
                           Icons.arrow_back,
-                          color: Color(0xFF354152),
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? const Color(0xFFCBD5E1)
+                              : const Color(0xFF354152),
                         ),
                         onPressed: () => Navigator.pop(context),
                       ),
@@ -71,10 +75,12 @@ class _ResetPasswordSuccessScreenState
                         ),
                       ),
                       const SizedBox(width: 8),
-                      const Text(
+                      Text(
                         '길벗',
                         style: TextStyle(
-                          color: Color(0xFF101727),
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? const Color(0xFFF1F5F9)
+                              : const Color(0xFF101727),
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
                         ),
@@ -89,11 +95,15 @@ class _ResetPasswordSuccessScreenState
                     width: double.infinity,
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Theme.of(context).cardColor
+                          : Colors.white,
                       borderRadius: BorderRadius.circular(24),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.1),
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.black.withValues(alpha: 0.4)
+                              : Colors.black.withValues(alpha: 0.1),
                           blurRadius: 50,
                           offset: const Offset(0, 25),
                         ),
@@ -101,20 +111,24 @@ class _ResetPasswordSuccessScreenState
                     ),
                     child: Column(
                       children: [
-                        const Text(
+                        Text(
                           '비밀번호 재설정 메일 발송',
                           style: TextStyle(
-                            color: Color(0xFF101727),
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? const Color(0xFFF1F5F9)
+                                : const Color(0xFF101727),
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                         const SizedBox(height: 8),
-                        const Text(
+                        Text(
                           '메일함에서 재설정 링크를 클릭해주세요',
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            color: Color(0xFF495565),
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? const Color(0xFFB6C2CF)
+                                : const Color(0xFF495565),
                             fontSize: 12.25,
                           ),
                         ),
@@ -137,20 +151,24 @@ class _ResetPasswordSuccessScreenState
 
                         const SizedBox(height: 24),
 
-                        const Text(
+                        Text(
                           '재설정 메일을 보냈습니다!',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFF101727),
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? const Color(0xFFF1F5F9)
+                                : const Color(0xFF101727),
                           ),
                         ),
                         const SizedBox(height: 8),
-                        const Text(
+                        Text(
                           '링크를 클릭하여 비밀번호를 변경해주세요',
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            color: Color(0xFF697282),
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? const Color(0xFFB6C2CF)
+                                : const Color(0xFF697282),
                             fontSize: 14,
                           ),
                         ),
@@ -205,10 +223,12 @@ class _ResetPasswordSuccessScreenState
                         // Resend Link
                         Column(
                           children: [
-                            const Text(
+                            Text(
                               '메일을 받지 못하셨나요?',
                               style: TextStyle(
-                                color: Color(0xFF697282),
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? const Color(0xFF94A3B8)
+                                    : const Color(0xFF697282),
                                 fontSize: 12.25,
                               ),
                             ),

@@ -39,7 +39,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF0FDF4), // 배경색
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      // 배경색
       body: SafeArea(
         child: SingleChildScrollView(
           // 스크롤 가능하게 설정
@@ -57,9 +58,11 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                     mainAxisAlignment: MainAxisAlignment.start,
                     children: [
                       IconButton(
-                        icon: const Icon(
+                        icon: Icon(
                           Icons.arrow_back,
-                          color: Color(0xFF354152),
+                          color: Theme.of(context).brightness == Brightness.dark
+                      ? const Color(0xFF9CA3AF)
+                      : const Color(0xFF354152),
                         ),
                         onPressed: () => Navigator.pop(context),
                       ),
@@ -86,10 +89,12 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      const Text(
+                      Text(
                         '길벗',
                         style: TextStyle(
-                          color: Color(0xFF101727),
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? const Color(0xFFF1F5F9)
+                              : const Color(0xFF101727),
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
                         ),
@@ -104,7 +109,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                     width: double.infinity,
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Theme.of(context).cardColor,
                       borderRadius: BorderRadius.circular(24),
                       boxShadow: [
                         BoxShadow(
@@ -116,20 +121,24 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                     ),
                     child: Column(
                       children: [
-                        const Text(
+                        Text(
                           '비밀번호 재설정',
                           style: TextStyle(
-                            color: Color(0xFF101727),
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? const Color(0xFFF1F5F9)
+                                : const Color(0xFF101727),
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                         const SizedBox(height: 8),
-                        const Text(
+                        Text(
                           '비밀번호 재설정 링크를 받으려면 이메일을 입력하세요',
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            color: Color(0xFF495565),
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? const Color(0xFFB6C2CF)
+                                : const Color(0xFF495565),
                             fontSize: 12.25,
                           ),
                         ),
@@ -202,16 +211,20 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                             },
                             style: OutlinedButton.styleFrom(
                               side: BorderSide(
-                                color: Colors.black.withValues(alpha: 0.1),
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? const Color(0xFF2F3945)
+                                    : Colors.black.withValues(alpha: 0.1),
                               ),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(16),
                               ),
                             ),
-                            child: const Text(
+                            child: Text(
                               '로그인으로 돌아가기',
                               style: TextStyle(
-                                color: Color(0xFF0A0A0A),
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? const Color(0xFFF1F5F9)
+                                    : const Color(0xFF141414),
                                 fontWeight: FontWeight.bold,
                                 fontSize: 14,
                               ),
@@ -225,10 +238,12 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Text(
+                            Text(
                               '계정이 없으신가요?',
                               style: TextStyle(
-                                color: Color(0xFF697282),
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? const Color(0xFF9CA3AF)
+                                    : const Color(0xFF697282),
                                 fontSize: 12.25,
                               ),
                             ),
@@ -259,13 +274,15 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                   const SizedBox(height: 20),
 
                   // 하단 약관
-                  const Padding(
+                  Padding(
                     padding: EdgeInsets.symmetric(horizontal: 20),
                     child: Text(
                       '계정을 만들면 서비스 약관 및 개인정보 처리방침에 동의하게 됩니다',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: Color(0xFF697282),
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? const Color(0xFF9CA3AF)
+                            : const Color(0xFF697282),
                         fontSize: 10.5,
                       ),
                     ),
@@ -293,9 +310,11 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 12.25,
-            color: Colors.black,
+            color: Theme.of(context).brightness == Brightness.dark
+                ? const Color(0xFFCBD5E1)
+                : Colors.black,
             fontWeight: FontWeight.w400,
           ),
         ),
@@ -306,9 +325,13 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
           style: const TextStyle(fontSize: 14),
           decoration: InputDecoration(
             hintText: placeholder,
-            hintStyle: const TextStyle(color: Color(0xFF717182), fontSize: 14),
+            hintStyle: TextStyle(color: Theme.of(context).brightness == Brightness.dark
+                ? const Color(0xFF6B7280)
+                : const Color(0xFF717182), fontSize: 14),
             filled: true,
-            fillColor: const Color(0xFFF3F3F5),
+            fillColor: Theme.of(context).brightness == Brightness.dark
+                ? const Color(0xFF2A2A2A)
+                : const Color(0xFFF3F3F5),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 16,
               vertical: 14,

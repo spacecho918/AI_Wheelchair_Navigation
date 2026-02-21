@@ -104,7 +104,6 @@ class _MyAppState extends State<MyApp> {
           seedColor: const Color(0xFF00C853),
           brightness: Brightness.dark,
         ),
-        textTheme: const TextTheme(),
         fontFamily: 'Pretendard',
       ),
 

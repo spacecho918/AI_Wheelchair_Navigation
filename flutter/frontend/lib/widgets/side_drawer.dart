@@ -87,7 +87,9 @@ class _SideDrawerState extends State<SideDrawer> {
   Widget build(BuildContext context) {
     return PointerInterceptor(
       child: Drawer(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).brightness == Brightness.dark
+            ? Theme.of(context).cardColor
+            : Colors.white,
         shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
         child: SafeArea(
           // 상하단 시스템 영역 침범 방지
@@ -382,12 +384,16 @@ class _SideDrawerState extends State<SideDrawer> {
         iconPath,
         width: 20,
         height: 20,
-        colorFilter: ColorFilter.mode(textDark, BlendMode.srcIn),
+        colorFilter: ColorFilter.mode(Theme.of(context).brightness == Brightness.dark
+            ? Colors.white
+            :textDark, BlendMode.srcIn),
       ),
       title: Text(
         text,
         style: TextStyle(
-          color: textDark,
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.white
+              : textDark,
           fontSize: 14,
           fontWeight: FontWeight.w400,
         ),
@@ -424,7 +430,9 @@ class _SideDrawerState extends State<SideDrawer> {
           const SizedBox(height: 20),
           Text(
             'Gilbeot v1.0.0',
-            style: TextStyle(color: textGrey, fontSize: 11),
+            style: TextStyle(color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white
+                : textGrey, fontSize: 11),
           ),
         ],
       ),
@@ -468,7 +476,9 @@ class _FooterItemState extends State<_FooterItem> {
 
   @override
   Widget build(BuildContext context) {
-    final Color defaultColor = const Color(0xFF495565);
+    final Color defaultColor = Theme.of(context).brightness == Brightness.dark
+        ? Colors.white
+        : const Color(0xFF495565);
     // 로그아웃이면서 눌렸을 때만 빨간색
     final Color activeColor = widget.isLogout && _isPressed
         ? const Color(0xFFFF3B30)

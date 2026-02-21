@@ -47,7 +47,9 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF0FDF4),
+      backgroundColor: Theme.of(context).brightness == Brightness.dark
+          ? Theme.of(context).scaffoldBackgroundColor
+          : const Color(0xFFF0FDF4),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
@@ -61,9 +63,11 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                     mainAxisAlignment: MainAxisAlignment.start,
                     children: [
                       IconButton(
-                        icon: const Icon(
+                        icon: Icon(
                           Icons.arrow_back,
-                          color: Color(0xFF354152),
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? const Color(0xFFCBD5E1)
+                              : const Color(0xFF354152),
                         ),
                         onPressed: () => Navigator.pop(context),
                       ),
@@ -90,10 +94,12 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      const Text(
+                      Text(
                         '길벗',
                         style: TextStyle(
-                          color: Color(0xFF101727),
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? const Color(0xFFF1F5F9)
+                              : const Color(0xFF101727),
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
                         ),
@@ -108,7 +114,9 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                     width: double.infinity,
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Theme.of(context).cardColor
+                          : Colors.white,
                       borderRadius: BorderRadius.circular(24),
                       boxShadow: [
                         BoxShadow(
@@ -120,20 +128,24 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                     ),
                     child: Column(
                       children: [
-                        const Text(
+                        Text(
                           '이메일 인증',
                           style: TextStyle(
-                            color: Color(0xFF101727),
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? const Color(0xFFF1F5F9)
+                                : const Color(0xFF101727),
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                         const SizedBox(height: 8),
-                        const Text(
+                        Text(
                           '메일함에서 인증 링크를 클릭해주세요',
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            color: Color(0xFF4A5565),
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? const Color(0xFFB6C2CF)
+                                : const Color(0xFF4A5565),
                             fontSize: 12.25,
                           ),
                         ),
@@ -156,19 +168,23 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
 
                         const SizedBox(height: 24),
 
-                        const Text(
+                        Text(
                           '인증 메일을 보냈습니다!',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFF101727),
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? const Color(0xFFF1F5F9)
+                                : const Color(0xFF101727),
                           ),
                         ),
                         const SizedBox(height: 8),
-                        const Text(
+                        Text(
                           '메일함을 확인하고 인증 링크를 클릭해주세요',
                           style: TextStyle(
-                            color: Color(0xFF9EA6B8),
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? const Color(0xFF94A3B8)
+                                : const Color(0xFF9EA6B8),
                             fontSize: 14,
                           ),
                         ),
@@ -250,10 +266,12 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                         // Resend Link
                         Column(
                           children: [
-                            const Text(
+                            Text(
                               '메일을 받지 못하셨나요?',
                               style: TextStyle(
-                                color: Color(0xFF9EA6B8),
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? const Color(0xFF64748B)
+                                    : const Color(0xFF9EA6B8),
                                 fontSize: 12.25,
                               ),
                             ),
@@ -277,13 +295,15 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                   ),
 
                   const SizedBox(height: 20),
-                  const Padding(
+                  Padding(
                     padding: EdgeInsets.symmetric(horizontal: 20),
                     child: Text(
                       '계정을 생성하시면 서비스 약관 및 개인정보 처리방침에 동의하는 것으로 간주됩니다',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: Color(0xFF9EA6B8),
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? const Color(0xFF64748B)
+                            : const Color(0xFF9EA6B8),
                         fontSize: 10.5,
                       ),
                     ),

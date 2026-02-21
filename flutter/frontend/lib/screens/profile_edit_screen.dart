@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:gilbeot/widgets/custom_back_button.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../services/api_service.dart';
 import '../widgets/common_toast.dart';
+import '../screens/login_screen.dart';
 
 class ProfileEditScreen extends StatefulWidget {
   const ProfileEditScreen({super.key});
@@ -251,6 +253,18 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // signout check
+    final user = Supabase.instance.client.auth.currentUser;
+
+    if (user == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
+              (route) => false,
+        );
+      });
+      return const SizedBox();
+    }
     if (_isLoading) {
       return const Scaffold(
         backgroundColor: Colors.white,
@@ -1061,12 +1075,14 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(
+        title: Text(
           '계정 삭제',
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: Color(0xFF1F2937),
+            color: Theme.of(context).brightness == Brightness.dark
+                ?  Colors.white
+                : Color(0xFF1F2937) ,
           ),
         ),
         content: const Text(
@@ -1085,9 +1101,28 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
             ),
           ),
           TextButton(
-            onPressed: () {
+            onPressed: () async {
               // TODO: Implement account deletion
-              Navigator.pop(context);
+              Navigator.of(context).pop(); // 다이얼로그 닫기
+
+              setState(() => _isLoading = true);
+
+              final result = await ApiService.deleteAccount();
+
+              if (!mounted) return;
+
+              setState(() => _isLoading = false);
+
+              if (result['success'] == true) {
+
+                await Supabase.instance.client.auth.signOut();
+
+              } else {
+                CommonToast.show(
+                  context,
+                  result['message'] ?? '계정 삭제 실패',
+                );
+              }
             },
             child: const Text(
               '삭제',

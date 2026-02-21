@@ -210,7 +210,9 @@ class _SignupScreenState extends State<SignupScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF0FDF4),
+      backgroundColor: Theme.of(context).brightness == Brightness.dark
+          ? Theme.of(context).scaffoldBackgroundColor
+          : const Color(0xFFF0FDF4),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
@@ -225,9 +227,11 @@ class _SignupScreenState extends State<SignupScreen> {
                     mainAxisAlignment: MainAxisAlignment.start,
                     children: [
                       IconButton(
-                        icon: const Icon(
+                        icon: Icon(
                           Icons.arrow_back,
-                          color: Color(0xFF354152),
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? const Color(0xFFCBD5E1)
+                              : const Color(0xFF354152),
                         ),
                         onPressed: () => Navigator.pop(context),
                       ),
@@ -254,10 +258,12 @@ class _SignupScreenState extends State<SignupScreen> {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      const Text(
+                      Text(
                         '길벗',
                         style: TextStyle(
-                          color: Color(0xFF101727),
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? const Color(0xFFF1F5F9)
+                              : const Color(0xFF101727),
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
                         ),
@@ -272,7 +278,9 @@ class _SignupScreenState extends State<SignupScreen> {
                     width: double.infinity,
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Theme.of(context).cardColor
+                          : Colors.white,
                       borderRadius: BorderRadius.circular(24),
                       boxShadow: [
                         BoxShadow(
@@ -286,20 +294,24 @@ class _SignupScreenState extends State<SignupScreen> {
                     ),
                     child: Column(
                       children: [
-                        const Text(
+                        Text(
                           '계정 만들기',
                           style: TextStyle(
-                            color: Color(0xFF101727),
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? const Color(0xFFF1F5F9)
+                                : const Color(0xFF101727),
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                         const SizedBox(height: 8),
-                        const Text(
+                        Text(
                           '안전한 길안내를 시작하세요', // Changed text to match image "안전한 길안내를 시작하세요" (Start safe navigation) vs "수천 명의..."
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            color: Color(0xFF4A5565),
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? const Color(0xFFB6C2CF)
+                                : const Color(0xFF4A5565),
                             fontSize: 12.25,
                           ),
                         ),
@@ -342,9 +354,11 @@ class _SignupScreenState extends State<SignupScreen> {
                           alignment: Alignment.centerLeft,
                           child: Text(
                             '휠체어 타입',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12.25,
-                              color: Color(0xFF101727),
+                              color: Theme.of(context).brightness == Brightness.dark
+                                  ? const Color(0xFFCBD5E1)
+                                  : const Color(0xFF101727),
                               fontWeight: FontWeight.w400,
                             ),
                           ),
@@ -596,10 +610,12 @@ class _SignupScreenState extends State<SignupScreen> {
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  const Text(
+                                  Text(
                                     '이미 계정이 있으신가요?',
                                     style: TextStyle(
-                                      color: Color(0xFF697282),
+                                      color: Theme.of(context).brightness == Brightness.dark
+                                          ? const Color(0xFF94A3B8)
+                                          : const Color(0xFF697282),
                                       fontSize: 12.25,
                                     ),
                                   ),
@@ -632,13 +648,15 @@ class _SignupScreenState extends State<SignupScreen> {
                   ),
 
                   const SizedBox(height: 20),
-                  const Padding(
+                  Padding(
                     padding: EdgeInsets.symmetric(horizontal: 20),
                     child: Text(
                       '계정을 생성하시면 서비스 약관 및 개인정보 처리방침에 동의하는 것으로 간주됩니다',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: Color(0xFF697282),
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? const Color(0xFF64748B)
+                            : const Color(0xFF697282),
                         fontSize: 10.5,
                       ),
                     ),
@@ -660,7 +678,13 @@ class _SignupScreenState extends State<SignupScreen> {
         height: 48,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFE8F5E9) : Colors.white,
+          color: Theme.of(context).brightness == Brightness.dark
+              ? (isSelected
+              ? const Color(0xFF064E3B)
+              : Theme.of(context).scaffoldBackgroundColor)
+              : (isSelected
+              ? const Color(0xFFE8F5E9)
+              : Colors.white),
           border: Border.all(
             color: isSelected
                 ? const Color(0xFF00C853)
@@ -672,9 +696,13 @@ class _SignupScreenState extends State<SignupScreen> {
         child: Text(
           label,
           style: TextStyle(
-            color: isSelected
+            color: Theme.of(context).brightness == Brightness.dark
+                ? (isSelected
+                ? const Color(0xFF00E676)
+                : const Color(0xFFCBD5E1))
+                : (isSelected
                 ? const Color(0xFF00C853)
-                : const Color(0xFF101727),
+                : const Color(0xFF101727)),
             fontSize: 13,
             fontWeight: FontWeight.w400,
           ),
@@ -696,9 +724,11 @@ class _SignupScreenState extends State<SignupScreen> {
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 12.25,
-            color: Colors.black,
+            color: Theme.of(context).brightness == Brightness.dark
+                ? const Color(0xFFCBD5E1)
+                : Colors.black,
             fontWeight: FontWeight.w400,
           ),
         ),
@@ -707,15 +737,21 @@ class _SignupScreenState extends State<SignupScreen> {
           controller: controller,
           obscureText: isPassword,
           keyboardType: inputType,
-          style: const TextStyle(
-            color: Color(0xFF101727),
+          style: TextStyle(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white
+                : const Color(0xFF101727),
             fontSize: 14,
           ), // Input text style
           decoration: InputDecoration(
             hintText: placeholder,
-            hintStyle: const TextStyle(color: Color(0xFF717182), fontSize: 14),
+            hintStyle: TextStyle(color: Theme.of(context).brightness == Brightness.dark
+                ? const Color(0xFF64748B)
+                : const Color(0xFF717182), fontSize: 14),
             filled: true,
-            fillColor: const Color(0xFFF3F3F5),
+            fillColor: Theme.of(context).brightness == Brightness.dark
+                ? const Color(0xFF2A2A2A)
+                : const Color(0xFFF3F3F5),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 16,
               vertical: 14,
@@ -736,11 +772,13 @@ class _SignupScreenState extends State<SignupScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           '이메일 주소',
           style: TextStyle(
             fontSize: 12.25,
-            color: Colors.black,
+            color: Theme.of(context).brightness == Brightness.dark
+                ? const Color(0xFFCBD5E1)
+                : Colors.black,
             fontWeight: FontWeight.w400,
           ),
         ),
@@ -752,15 +790,21 @@ class _SignupScreenState extends State<SignupScreen> {
               child: TextField(
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
-                style: const TextStyle(color: Color(0xFF101727), fontSize: 14),
+                style: TextStyle(color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white
+                    : const Color(0xFF101727), fontSize: 14),
                 decoration: InputDecoration(
                   hintText: '이메일을 입력하세요',
-                  hintStyle: const TextStyle(
-                    color: Color(0xFF717182),
+                  hintStyle: TextStyle(
+                    color: Theme.of(context).brightness == Brightness.dark
+                      ? const Color(0xFF64748B)
+                      : const Color(0xFF717182),
                     fontSize: 14,
                   ),
                   filled: true,
-                  fillColor: const Color(0xFFF3F3F5),
+                  fillColor: Theme.of(context).brightness == Brightness.dark
+                      ? const Color(0xFF2A2A2A)
+                      : const Color(0xFFF3F3F5),
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: 16,
                     vertical: 14,
@@ -829,11 +873,13 @@ class _SignupScreenState extends State<SignupScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           '닉네임',
           style: TextStyle(
             fontSize: 12.25,
-            color: Colors.black,
+            color: Theme.of(context).brightness == Brightness.dark
+                ? const Color(0xFFCBD5E1)
+                : Colors.black,
             fontWeight: FontWeight.w400,
           ),
         ),
@@ -844,15 +890,21 @@ class _SignupScreenState extends State<SignupScreen> {
             Expanded(
               child: TextField(
                 controller: _nicknameController,
-                style: const TextStyle(color: Color(0xFF101727), fontSize: 14),
+                style: TextStyle(color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white
+                    : const Color(0xFF101727), fontSize: 14),
                 decoration: InputDecoration(
                   hintText: '닉네임을 입력하세요',
-                  hintStyle: const TextStyle(
-                    color: Color(0xFF717182),
+                  hintStyle: TextStyle(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? const Color(0xFF64748B)
+                        : const Color(0xFF717182),
                     fontSize: 14,
                   ),
                   filled: true,
-                  fillColor: const Color(0xFFF3F3F5),
+                  fillColor: Theme.of(context).brightness == Brightness.dark
+                      ? const Color(0xFF2A2A2A)
+                      : const Color(0xFFF3F3F5),
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: 16,
                     vertical: 14,

@@ -13,7 +13,7 @@ class LoginScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     // [수정 1] MaterialApp 제거 (main.dart에 이미 있으므로 중복 제거)
     return Scaffold(
-      backgroundColor: const Color(0xFFF0FDF4), // 배경색
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor, // 배경색
       body: SafeArea(
         // 화면 상단 바(노치) 침범 방지
         child: SingleChildScrollView(
@@ -127,20 +127,24 @@ class _GilbeotState extends State<Gilbeot> {
           ),
         ),
         const SizedBox(height: 14),
-        const Text(
+        Text(
           '길벗',
           textAlign: TextAlign.center,
           style: TextStyle(
-            color: Color(0xFF101727),
+            color: Theme.of(context).brightness == Brightness.dark
+                ? const Color(0xFFF1F5F9)
+                : const Color(0xFF101727),
             fontSize: 21,
             fontWeight: FontWeight.w700,
           ),
         ),
         const SizedBox(height: 4),
-        const Text(
+        Text(
           '모두를 위한 안전한 이동',
           textAlign: TextAlign.center,
-          style: TextStyle(color: Color(0xFF4A5565), fontSize: 14),
+          style: TextStyle(color: Theme.of(context).brightness == Brightness.dark
+              ? const Color(0xFFCBD5E1)
+              : const Color(0xFF4A5565), fontSize: 14),
         ),
 
         const SizedBox(height: 40),
@@ -150,7 +154,7 @@ class _GilbeotState extends State<Gilbeot> {
           width: double.infinity,
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Theme.of(context).cardColor,
             borderRadius: BorderRadius.circular(24),
             boxShadow: [
               BoxShadow(
@@ -162,9 +166,11 @@ class _GilbeotState extends State<Gilbeot> {
           ),
           child: Column(
             children: [
-              const Text(
+              Text(
                 '환영합니다',
-                style: TextStyle(color: Color(0xFF101727), fontSize: 14),
+                style: TextStyle(color: Theme.of(context).brightness == Brightness.dark
+                    ? const Color(0xFFF1F5F9)
+                    : const Color(0xFF101727), fontSize: 14),
               ),
               const SizedBox(height: 24),
 
@@ -411,12 +417,16 @@ class _GilbeotState extends State<Gilbeot> {
       children: [
         Text(
           label,
-          style: const TextStyle(fontSize: 12, color: Color(0xFF101727)),
+          style: TextStyle(fontSize: 12, color: Theme.of(context).brightness == Brightness.dark
+              ? const Color(0xFFE2E8F0) // 다크모드용 밝은 회색
+              : const Color(0xFF101727),),
         ),
         const SizedBox(height: 8),
         TextField(
           controller: controller,
-          style: const TextStyle(color: Color(0xFF101727), fontSize: 14),
+          style: TextStyle(color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.white
+              : const Color(0xFF101727), fontSize: 14),
           obscureText: isPassword ? obscureText : false,
           textInputAction: textInputAction,
           onSubmitted: onSubmitted,
@@ -424,7 +434,9 @@ class _GilbeotState extends State<Gilbeot> {
             hintText: placeholder,
             hintStyle: const TextStyle(color: Color(0xFF697282)),
             filled: true,
-            fillColor: const Color(0xFFF3F3F5),
+            fillColor: Theme.of(context).brightness == Brightness.dark
+                ? const Color(0xFF2A2A2A)
+                : const Color(0xFFF3F3F5),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 16,
               vertical: 14,
