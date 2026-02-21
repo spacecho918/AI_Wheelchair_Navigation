@@ -1102,7 +1102,6 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
           ),
           TextButton(
             onPressed: () async {
-              // TODO: Implement account deletion
               Navigator.of(context).pop(); // 다이얼로그 닫기
 
               setState(() => _isLoading = true);
@@ -1114,9 +1113,12 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
               setState(() => _isLoading = false);
 
               if (result['success'] == true) {
-
                 await Supabase.instance.client.auth.signOut();
-
+                if (!mounted) return;
+                Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                  (route) => false,
+                );
               } else {
                 CommonToast.show(
                   context,

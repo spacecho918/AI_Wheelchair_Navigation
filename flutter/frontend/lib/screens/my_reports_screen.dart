@@ -353,7 +353,7 @@ class _MyReportsScreenState extends State<MyReportsScreen>
                         child: Image.network(
                           report.imageUrl!.startsWith('http')
                               ? report.imageUrl!
-                              : 'http://localhost:8000${report.imageUrl}',
+                              : '${ApiService.baseUrl}${report.imageUrl}',
                           height: 150,
                           width: double.infinity,
                           fit: BoxFit.cover,

@@ -301,8 +301,10 @@ class ApiService {
         final userMatch = RegExp(r'\[User: (.*?)\]').firstMatch(content);
         final reportedBy = item['reported_by']?.toString();
         final authorProfile = reportedBy != null ? authorProfileMap[reportedBy] : null;
-        String user = authorProfile?['nickname'] ?? (userMatch != null ? userMatch.group(1)! : "알 수 없음");
-        if (userMatch != null && authorProfile == null) {
+        String user = reportedBy == null
+            ? '탈퇴한 사용자'
+            : (authorProfile?['nickname'] ?? (userMatch != null ? userMatch.group(1)! : "알 수 없음"));
+        if (userMatch != null && authorProfile == null && reportedBy != null) {
           user = userMatch.group(1)!;
           content = content.replaceAll(userMatch.group(0)!, '').trim();
         } else if (userMatch != null) {
@@ -552,13 +554,20 @@ class ApiService {
       final list = (data as List).map((e) => e as Map<String, dynamic>).toList();
       if (list.isEmpty) return list;
 
-      // user_profiles에서 닉네임 조회 후 댓글에 병합
+      // user_profiles에서 닉네임 조회 후 댓글에 병합 (user_id null = 탈퇴한 사용자)
       final userIds = list
           .map((c) => c['user_id'] as String?)
           .whereType<String>()
           .toSet()
           .toList();
-      if (userIds.isEmpty) return list;
+
+      if (userIds.isEmpty) {
+        for (final c in list) {
+          c['nickname'] = '탈퇴한 사용자';
+          c['profile_image_url'] = null;
+        }
+        return list;
+      }
 
       final profiles = await _supabase
           .from('user_profiles')
@@ -578,7 +587,8 @@ class ApiService {
 
       for (final c in list) {
         final uid = c['user_id']?.toString();
-        c['nickname'] = (uid != null ? nickMap[uid] : null) ?? '사용자';
+        final nick = uid != null ? nickMap[uid] : null;
+        c['nickname'] = nick ?? (uid == null ? '탈퇴한 사용자' : '사용자');
         c['profile_image_url'] = uid != null ? avatarMap[uid] : null;
       }
       return list;

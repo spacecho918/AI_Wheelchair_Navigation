@@ -219,7 +219,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                                         .toString()
                                         .startsWith('http')
                                     ? widget.report['imageUrl']
-                                    : 'http://localhost:8000${widget.report['imageUrl']}';
+                                    : '${ApiService.baseUrl}${widget.report['imageUrl']}';
 
                                 Navigator.push(
                                   context,
@@ -266,7 +266,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                                           .toString()
                                           .startsWith('http')
                                       ? widget.report['imageUrl']
-                                      : 'http://localhost:8000${widget.report['imageUrl']}',
+                                      : '${ApiService.baseUrl}${widget.report['imageUrl']}',
                                   height: 250,
                                   width: double.infinity,
                                   fit: BoxFit.cover,
@@ -676,7 +676,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                                           CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          comment['nickname'] ?? '사용자',
+                                          comment['nickname'] ?? '탈퇴한 사용자',
                                           style: TextStyle(
                                             color: textDark,
                                             fontWeight: FontWeight.bold,

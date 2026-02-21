@@ -9,7 +9,7 @@ OSM 기반 경로 탐색 + 실시간 장애물 반영
 # 경로 확인용 
 # http://localhost:8000/viewer
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, HTMLResponse
@@ -197,11 +197,17 @@ def initialize_system():
         app.state.route_calculator = route_calculator
         app.state.obstacle_manager = obstacle_manager
 
-        # Supabase 클라이언트 공유 (report_router의 Storage 업로드용)
-        if HAS_SUPABASE and supabase_url and supabase_key:
+        # Supabase 클라이언트 공유 (report_router: Storage 업로드 + obstacles insert)
+        # service_role 키가 있으면 사용 → Storage RLS 통과로 업로드 실패 방지, 다른 사용자에게도 이미지 표시 가능
+        supabase_service_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip()
+        report_key = supabase_service_key if supabase_service_key else supabase_key
+        if HAS_SUPABASE and supabase_url and report_key:
             try:
-                app.state.supabase_client = _create_supabase_client(supabase_url, supabase_key)
-                logger.info("Supabase 클라이언트 초기화 완료")
+                app.state.supabase_client = _create_supabase_client(supabase_url, report_key)
+                logger.info(
+                    "Supabase 클라이언트 초기화 완료 (report: %s)",
+                    "service_role" if supabase_service_key else "anon",
+                )
             except Exception as _sc_e:
                 logger.warning("Supabase 클라이언트 초기화 실패: %s", _sc_e)
                 app.state.supabase_client = None
@@ -559,6 +565,124 @@ async def test_endpoint(msg: TestMsg):
     """테스트 엔드포인트 (기존 호환성)"""
     print(f"앱에서 받은 메시지: {msg.message}")
     return {"status": "success", "echo": msg.message}
+
+
+# ===== 계정 삭제 =====
+PROFILE_IMAGE_BUCKET = "profile_image"
+
+
+def _get_supabase_admin_client():
+    """계정 삭제용 Supabase Admin 클라이언트 (SUPABASE_SERVICE_ROLE_KEY 사용)"""
+    url = os.getenv("SUPABASE_URL", "")
+    key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
+    if not url or not key:
+        return None
+    if not HAS_SUPABASE:
+        return None
+    try:
+        return _create_supabase_client(url, key)
+    except Exception as e:
+        logger.warning("Supabase Admin 클라이언트 초기화 실패: %s", e)
+        return None
+
+
+def _storage_path_from_profile_image_url(url: str, bucket: str) -> Optional[str]:
+    """
+    profile_image_url에서 Storage 객체 경로 추출.
+    예: https://xxx.supabase.co/storage/v1/object/public/profile_image/user_id/file.jpg
+    -> user_id/file.jpg
+    """
+    if not url or bucket not in url:
+        return None
+    try:
+        # .../profile_image/ 이후 부분이 객체 경로
+        idx = url.find(f"/{bucket}/")
+        if idx == -1:
+            return None
+        path = url[idx + len(f"/{bucket}/") :].strip()
+        # 쿼리 스트링 제거
+        if "?" in path:
+            path = path.split("?")[0]
+        return path if path else None
+    except Exception:
+        return None
+
+
+@app.delete("/delete-account")
+async def delete_account(authorization: Optional[str] = Header(None)):
+    """
+    로그인한 사용자 계정 삭제.
+    - Authorization: Bearer <access_token> 필요
+    - 장애물/댓글 익명 처리, 개인 데이터 삭제, user_profiles 삭제, 프로필 이미지 Storage 삭제, auth.users 삭제
+    """
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Authorization Bearer 토큰이 필요합니다")
+    token = authorization[7:].strip()
+    if not token:
+        raise HTTPException(status_code=401, detail="토큰이 비어 있습니다")
+
+    admin = _get_supabase_admin_client()
+    if not admin:
+        raise HTTPException(
+            status_code=503,
+            detail="계정 삭제 서비스를 사용할 수 없습니다. SUPABASE_SERVICE_ROLE_KEY를 확인하세요.",
+        )
+
+    try:
+        # JWT 검증 및 user_id 조회
+        user_response = admin.auth.get_user(jwt=token)
+        user = user_response.user
+        user_id = str(user.id)
+    except Exception as e:
+        logger.warning("delete-account: JWT 검증 실패: %s", e)
+        raise HTTPException(status_code=401, detail="유효하지 않거나 만료된 토큰입니다")
+
+    # 삭제 전 프로필 이미지 URL 조회 (user_profiles 삭제 후에는 못 가져옴)
+    profile_image_url = None
+    try:
+        r = admin.table("user_profiles").select("profile_image_url").eq("user_id", user_id).execute()
+        if r.data and len(r.data) > 0 and r.data[0].get("profile_image_url"):
+            profile_image_url = r.data[0]["profile_image_url"]
+    except Exception as e:
+        logger.warning("delete-account: profile_image_url 조회 실패: %s", e)
+
+    try:
+        # 1) 장애물 익명 처리 (reported_by)
+        admin.table("obstacles").update({"reported_by": None}).eq("reported_by", user_id).execute()
+
+        # 2) 댓글 익명 처리 (user_id SET NULL)
+        admin.table("comments").update({"user_id": None}).eq("user_id", user_id).execute()
+
+        # 3) likes 삭제
+        admin.table("likes").delete().eq("user_id", user_id).execute()
+
+        # 4) 개인 데이터 삭제
+        admin.table("drive_logs").delete().eq("user_id", user_id).execute()
+        admin.table("favorites").delete().eq("user_id", user_id).execute()
+        admin.table("recent_searches").delete().eq("user_id", user_id).execute()
+        admin.table("edit_requests").delete().eq("requester_id", user_id).execute()
+        admin.table("notifications").delete().eq("user_id", user_id).execute()
+
+        # 5) user_profiles 삭제
+        admin.table("user_profiles").delete().eq("user_id", user_id).execute()
+
+        # 6) 프로필 이미지 Storage 삭제
+        if profile_image_url:
+            path = _storage_path_from_profile_image_url(profile_image_url, PROFILE_IMAGE_BUCKET)
+            if path:
+                try:
+                    admin.storage.from_(PROFILE_IMAGE_BUCKET).remove([path])
+                except Exception as storage_err:
+                    logger.warning("delete-account: 프로필 이미지 Storage 삭제 실패: %s", storage_err)
+
+        # 7) auth.users 삭제 (Supabase Admin API)
+        admin.auth.admin.delete_user(user_id)
+
+    except Exception as e:
+        logger.exception("delete-account: 삭제 중 오류: %s", e)
+        raise HTTPException(status_code=500, detail="계정 삭제 처리 중 오류가 발생했습니다")
+
+    return {"success": True, "message": "계정이 삭제되었습니다"}
 
 
 # ===== 서버 실행 =====

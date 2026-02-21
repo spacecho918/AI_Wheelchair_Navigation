@@ -67,10 +67,10 @@ CREATE TABLE public.edges (
   CONSTRAINT edges_pkey PRIMARY KEY (id)
 );
 
--- 4. edit_requests 테이블: 게시글 수정 요청
+-- 4. edit_requests 테이블: 장애물(obstacles) 수정 요청
 CREATE TABLE public.edit_requests (
   edit_request_id uuid NOT NULL DEFAULT gen_random_uuid(),
-  post_id uuid NOT NULL,
+  obstacle_id uuid NOT NULL,
   requester_id uuid NOT NULL,
   photo_url text,
   description text,
@@ -81,8 +81,8 @@ CREATE TABLE public.edit_requests (
   new_lat double precision,
   new_lon double precision,
   CONSTRAINT edit_requests_pkey PRIMARY KEY (edit_request_id),
-  CONSTRAINT fk_edit_post FOREIGN KEY (post_id) REFERENCES public.posts(post_id),
-  CONSTRAINT fk_edit_user FOREIGN KEY (requester_id) REFERENCES public.user_profiles(user_id)
+  CONSTRAINT fk_edit_user FOREIGN KEY (requester_id) REFERENCES public.user_profiles(user_id),
+  CONSTRAINT fk_edit_obstacle FOREIGN KEY (obstacle_id) REFERENCES public.obstacles(id)
 );
 
 -- 5. favorites 테이블: 즐겨찾기 장소
@@ -145,7 +145,26 @@ CREATE TABLE public.obstacles (
   CONSTRAINT obstacles_pkey PRIMARY KEY (id)
 );
 
--- 9. recent_searches 테이블: 최근 검색 기록
+-- 9. posts 테이블: (레거시, 현재는 obstacles 사용)
+CREATE TABLE public.posts (
+  post_id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  title text NOT NULL,
+  post_content text NOT NULL,
+  post_image_url text,
+  like_count integer NOT NULL DEFAULT 0 CHECK (like_count >= 0),
+  comment_count integer NOT NULL DEFAULT 0 CHECK (comment_count >= 0),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  address text,
+  lat double precision NOT NULL,
+  lon double precision NOT NULL,
+  dislike_count integer NOT NULL DEFAULT 0 CHECK (dislike_count >= 0),
+  CONSTRAINT posts_pkey PRIMARY KEY (post_id),
+  CONSTRAINT posts_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.user_profiles(user_id)
+);
+
+-- 10. recent_searches 테이블: 최근 검색 기록
 CREATE TABLE public.recent_searches (
   recent_search_id bigint NOT NULL DEFAULT nextval('recent_searches_recent_search_id_seq'::regclass),
   user_id uuid NOT NULL,
@@ -160,7 +179,7 @@ CREATE TABLE public.recent_searches (
   CONSTRAINT recent_searches_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.user_profiles(user_id)
 );
 
--- 10. user_profiles 테이블: 사용자 프로필
+-- 11. user_profiles 테이블: 사용자 프로필
 CREATE TABLE public.user_profiles (
   user_id uuid NOT NULL,
   wheelchair_type text NOT NULL CHECK (wheelchair_type = ANY (ARRAY['electric'::text, 'manual'::text, 'assisted_manual'::text, 'none'::text])),  -- electric / manual / assisted_manual / none

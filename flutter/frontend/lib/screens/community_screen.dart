@@ -443,7 +443,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                                                     .toString()
                                                     .startsWith('http')
                                                 ? report['imageUrl']
-                                                : 'http://localhost:8000${report['imageUrl']}',
+                                                : '${ApiService.baseUrl}${report['imageUrl']}',
                                             height: 150,
                                             width: double.infinity,
                                             fit: BoxFit.cover,
