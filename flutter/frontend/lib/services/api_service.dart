@@ -62,11 +62,13 @@ class ApiService {
 
     if (kIsWeb && imageBytes != null) {
       // 웹: bytes로 직접 첨부 (blob URL은 MultipartFile.fromPath 불가)
-      request.files.add(http.MultipartFile.fromBytes(
-        'image',
-        imageBytes,
-        filename: 'photo.jpg',
-      ));
+      request.files.add(
+        http.MultipartFile.fromBytes(
+          'image',
+          imageBytes,
+          filename: 'photo.jpg',
+        ),
+      );
     } else if (!kIsWeb) {
       request.files.add(await http.MultipartFile.fromPath('image', imagePath));
     }
@@ -279,7 +281,8 @@ class ApiService {
             if (uid != null) {
               authorProfileMap[uid] = {
                 'nickname': p['nickname'] as String?,
-                'profile_image_url': (p['profile_image_url'] as String?)?.isNotEmpty == true
+                'profile_image_url':
+                    (p['profile_image_url'] as String?)?.isNotEmpty == true
                     ? p['profile_image_url'] as String
                     : null,
               };
@@ -300,10 +303,13 @@ class ApiService {
 
         final userMatch = RegExp(r'\[User: (.*?)\]').firstMatch(content);
         final reportedBy = item['reported_by']?.toString();
-        final authorProfile = reportedBy != null ? authorProfileMap[reportedBy] : null;
+        final authorProfile = reportedBy != null
+            ? authorProfileMap[reportedBy]
+            : null;
         String user = reportedBy == null
             ? '탈퇴한 사용자'
-            : (authorProfile?['nickname'] ?? (userMatch != null ? userMatch.group(1)! : "알 수 없음"));
+            : (authorProfile?['nickname'] ??
+                  (userMatch != null ? userMatch.group(1)! : "알 수 없음"));
         if (userMatch != null && authorProfile == null && reportedBy != null) {
           user = userMatch.group(1)!;
           content = content.replaceAll(userMatch.group(0)!, '').trim();
@@ -551,7 +557,9 @@ class ApiService {
           .eq('obstacle_id', reportId)
           .order('created_at', ascending: false);
 
-      final list = (data as List).map((e) => e as Map<String, dynamic>).toList();
+      final list = (data as List)
+          .map((e) => e as Map<String, dynamic>)
+          .toList();
       if (list.isEmpty) return list;
 
       // user_profiles에서 닉네임 조회 후 댓글에 병합 (user_id null = 탈퇴한 사용자)
@@ -851,6 +859,60 @@ class ApiService {
     }
   }
 
+  /// 주행 기록 저장: drive_logs 테이블에 Insert
+  static Future<bool> saveHistory({
+    required String startLocation,
+    required String endLocation,
+    required String totalDistance, // "1.2km" 형식
+    required String estimatedTime, // "15분" 형식
+    double? startLat,
+    double? startLon,
+    double? endLat,
+    double? endLon,
+  }) async {
+    final user = AuthService.currentUser;
+    if (user == null) return false;
+
+    // 숫자만 파싱
+    double distanceKm = 0;
+    int durationMin = 0;
+    try {
+      distanceKm = double.parse(
+        totalDistance.replaceAll(RegExp(r'[^0-9.]'), ''),
+      );
+    } catch (_) {}
+    try {
+      durationMin = int.parse(estimatedTime.replaceAll(RegExp(r'[^0-9]'), ''));
+    } catch (_) {}
+
+    final durationSec = durationMin * 60;
+    final now = DateTime.now().toUtc();
+
+    try {
+      await _supabase.from('drive_logs').insert({
+        'user_id': user.id,
+        'start_lat': startLat ?? 37.5665, // 기본값(null 방지)
+        'start_lon': startLon ?? 126.9780,
+        'end_lat': endLat ?? 37.5665,
+        'end_lon': endLon ?? 126.9780,
+        'duration_sec': durationSec,
+        'started_at': now
+            .subtract(Duration(seconds: durationSec))
+            .toIso8601String(),
+        'ended_at': now.toIso8601String(),
+        'start_label': startLocation,
+        'end_label': endLocation,
+        'distance_km': distanceKm,
+        // created_at, drive_log_id 는 Supabase default 값 자동 생성
+      });
+      debugPrint('saveHistory: saved successfully');
+      return true;
+    } catch (e) {
+      debugPrint('saveHistory error: $e');
+      return false;
+    }
+  }
+
   static Future<List<DrivingHistory>> getUserHistory() async {
     final user = AuthService.currentUser;
     if (user == null) return [];
@@ -902,9 +964,7 @@ class ApiService {
 
       final response = await http.delete(
         Uri.parse('${ApiService.baseUrl}/delete-account'),
-        headers: {
-          'Authorization': 'Bearer ${session.accessToken}',
-        },
+        headers: {'Authorization': 'Bearer ${session.accessToken}'},
       );
 
       if (response.statusCode == 200) {

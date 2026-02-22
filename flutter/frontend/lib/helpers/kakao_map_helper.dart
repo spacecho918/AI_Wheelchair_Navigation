@@ -82,20 +82,110 @@ class KakaoMapHelper {
     }
   }
 
+  static void setStartEndMarkers(
+    WebViewController? controller,
+    double? startLat,
+    double? startLng,
+    double? endLat,
+    double? endLng, {
+    String? mapId,
+  }) {
+    if (kIsWeb) {
+      platform.sendMapCommand({
+        'action': 'setStartEndMarkers',
+        'startLat': startLat,
+        'startLng': startLng,
+        'endLat': endLat,
+        'endLng': endLng,
+        if (mapId != null) 'mapId': mapId,
+      });
+    } else {
+      final sLatStr = startLat != null ? startLat.toString() : 'null';
+      final sLngStr = startLng != null ? startLng.toString() : 'null';
+      final eLatStr = endLat != null ? endLat.toString() : 'null';
+      final eLngStr = endLng != null ? endLng.toString() : 'null';
+      controller?.runJavaScript(
+        'setStartEndMarkers($sLatStr, $sLngStr, $eLatStr, $eLngStr)',
+      );
+    }
+  }
+
   static void drawRoute(
     WebViewController? controller,
     List<List<double>> path, {
+    String color = '#00C853',
+    bool showFullRoute = true,
     String? mapId,
   }) {
     if (kIsWeb) {
       platform.sendMapCommand({
         'action': 'drawRoute',
         'path': path,
+        'color': color,
+        'shouldFit': showFullRoute,
         if (mapId != null) 'mapId': mapId,
       });
     } else {
       final jsonPath = path.toString();
-      controller?.runJavaScript('drawRoute($jsonPath)');
+      controller?.runJavaScript(
+        "drawRoute($jsonPath, '$color', $showFullRoute)",
+      );
+    }
+  }
+
+  /// Draw all routes simultaneously with the selected one highlighted.
+  /// [routes] is a list of maps: { 'path': List<List<double>>, 'color': String }
+  /// [selectedIndex] is which route to highlight (0, 1, 2)
+  static void drawAllRoutes(
+    WebViewController? controller,
+    List<Map<String, dynamic>> routes,
+    int selectedIndex, {
+    String? mapId,
+  }) {
+    if (kIsWeb) {
+      platform.sendMapCommand({
+        'action': 'drawAllRoutes',
+        'routes': routes,
+        'selectedIndex': selectedIndex,
+        if (mapId != null) 'mapId': mapId,
+      });
+    } else {
+      final routesJson = routes.toString();
+      controller?.runJavaScript("drawAllRoutes($routesJson, $selectedIndex)");
+    }
+  }
+
+  /// Sets the map bounds to neatly fit the entire geometry path.
+  static void setBounds(
+    WebViewController? controller,
+    List<List<double>> path, {
+    String? mapId,
+  }) {
+    if (kIsWeb) {
+      platform.sendMapCommand({
+        'action': 'setBounds',
+        'path': path,
+        if (mapId != null) 'mapId': mapId,
+      });
+    } else {
+      final jsonPath = path.toString();
+      controller?.runJavaScript("setBounds($jsonPath)");
+    }
+  }
+
+  static void setLevel(
+    WebViewController? controller,
+    int level, {
+    String? mapId,
+  }) {
+    if (kIsWeb) {
+      platform.sendMapCommand({
+        'action': 'setLevel',
+        'level': level,
+        if (mapId != null) 'mapId': mapId,
+      });
+    } else {
+      controller?.runJavaScript("setLevel($level)");
     }
   }
 

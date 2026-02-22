@@ -6,7 +6,7 @@ import 'package:gilbeot/screens/report_success_screen.dart';
 import 'package:gilbeot/screens/obstacle_check_screen.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:flutter/services.dart';
-import 'dart:convert';
+
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
@@ -89,7 +89,7 @@ class _ReportConfirmScreenState extends State<ReportConfirmScreen> {
       final lng = _currentLocation.longitude;
       await _mapController!.loadRequest(
         Uri.parse(
-          '${Uri.base.origin}/kakao_map.html?lat=$lat&lng=$lng&marker=true',
+          '${Uri.base.origin}/kakao_map.html?v=${DateTime.now().millisecondsSinceEpoch}&lat=$lat&lng=$lng&marker=true',
         ),
       );
       Future.delayed(const Duration(milliseconds: 1000), () {
@@ -97,12 +97,9 @@ class _ReportConfirmScreenState extends State<ReportConfirmScreen> {
       });
     } else {
       String fileText = await rootBundle.loadString('assets/kakao_map.html');
-      await _mapController!.loadRequest(
-        Uri.dataFromString(
-          fileText,
-          mimeType: 'text/html',
-          encoding: Encoding.getByName('utf-8'),
-        ),
+      await _mapController!.loadHtmlString(
+        fileText,
+        baseUrl: 'https://gilbeot.app',
       );
     }
 

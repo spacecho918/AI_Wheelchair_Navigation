@@ -29,6 +29,7 @@ class RouteResult:
     estimated_time: int  # 예상 시간 (분)
     node_path: List[int]  # 노드 ID 경로
     geometry: List[Tuple[float, float]]  # (위도, 경도) 좌표 리스트
+    instructions: List[Dict[str, str]]  # 턴바이턴 안내 메시지 리스트 [{"instruction": "...", "distance": "..."}]
     avoided_obstacles: int  # 회피한 장애물 수
     total_weight: float  # 총 가중치
     mode: str  # 사용된 모드
@@ -350,6 +351,8 @@ class RouteCalculator:
         wheelchair_speed = self.WHEELCHAIR_SPEEDS.get(wheelchair_type, self.WHEELCHAIR_SPEED)
         estimated_time = int(total_dist / wheelchair_speed) + 1
         
+        instructions = self._generate_instructions(geometry)
+
         logger.info(f"경로 탐색 완료: 거리 {total_dist:.1f}m, 예상시간 {estimated_time}분")
         
         return RouteResult(
@@ -358,12 +361,102 @@ class RouteCalculator:
             estimated_time=estimated_time,
             node_path=path,
             geometry=geometry,
+            instructions=instructions,
             avoided_obstacles=avoided_count,
             total_weight=round(total_weight, 2),
             mode=mode,
             message="경로 탐색 성공"
         )
     
+    def _calculate_bearing(self, lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+        """두 좌표 사이의 방위각(Bearing)을 계산"""
+        lat1, lon1 = math.radians(lat1), math.radians(lon1)
+        lat2, lon2 = math.radians(lat2), math.radians(lon2)
+        dLon = lon2 - lon1
+        y = math.sin(dLon) * math.cos(lat2)
+        x = math.cos(lat1) * math.sin(lat2) - math.sin(lat1) * math.cos(lat2) * math.cos(dLon)
+        bearing = math.atan2(y, x)
+        bearing = math.degrees(bearing)
+        return (bearing + 360) % 360
+
+    def _haversine_distance(self, lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+        """두 좌표 사이의 거리 계산 (미터 단위)"""
+        R = 6371000 # 지구 반경 (미터)
+        phi1 = math.radians(lat1)
+        phi2 = math.radians(lat2)
+        delta_phi = math.radians(lat2 - lat1)
+        delta_lambda = math.radians(lon2 - lon1)
+        a = math.sin(delta_phi/2.0)**2 + math.cos(phi1) * math.cos(phi2) * math.sin(delta_lambda/2.0)**2
+        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
+        return R * c
+
+    def _get_turn_direction(self, bearing_diff: float) -> str:
+        """방위각 차이를 기반으로 방향 텍스트 반환"""
+        if bearing_diff > 180:
+            bearing_diff -= 360
+        elif bearing_diff < -180:
+            bearing_diff += 360
+            
+        if -20 <= bearing_diff <= 20:
+            return "직진"
+        elif 20 < bearing_diff <= 60:
+            return "우측 방향"
+        elif 60 < bearing_diff <= 120:
+            return "우회전"
+        elif 120 < bearing_diff <= 160:
+            return "크게 우회전"
+        elif -60 <= bearing_diff < -20:
+            return "좌측 방향"
+        elif -120 <= bearing_diff < -60:
+            return "좌회전"
+        elif -160 <= bearing_diff < -120:
+            return "크게 좌회전"
+        else:
+            return "유턴"
+
+    def _generate_instructions(self, geometry: List[Tuple[float, float]]) -> List[Dict[str, str]]:
+        """geometry를 기반으로 턴바이턴 안내 메시지 생성"""
+        if len(geometry) < 2:
+            return [{"instruction": "도착지에 도달했습니다", "distance": "0m"}]
+
+        instructions = []
+        current_distance = 0.0
+        
+        # 첫 번째 방향 (출발)
+        bearing = self._calculate_bearing(geometry[0][0], geometry[0][1], geometry[1][0], geometry[1][1])
+        instructions.append({"instruction": "안내를 시작합니다", "distance": "0m"})
+
+        for i in range(1, len(geometry) - 1):
+            p1 = geometry[i-1]
+            p2 = geometry[i]
+            p3 = geometry[i+1]
+            
+            seg_dist = self._haversine_distance(p1[0], p1[1], p2[0], p2[1])
+            current_distance += seg_dist
+            
+            bearing1 = self._calculate_bearing(p1[0], p1[1], p2[0], p2[1])
+            bearing2 = self._calculate_bearing(p2[0], p2[1], p3[0], p3[1])
+            
+            bearing_diff = bearing2 - bearing1
+            turn_dir = self._get_turn_direction(bearing_diff)
+            
+            # 직진이 아닌 유의미한 회전이 발생한 경우 명령 추가
+            if turn_dir != "직진":
+                instructions.append({
+                    "instruction": turn_dir,
+                    "distance": f"{int(current_distance)}m"
+                })
+                current_distance = 0.0 # 회전 후 누적 거리 초기화
+                
+        # 목적지 도착 안내
+        final_seg_dist = self._haversine_distance(geometry[-2][0], geometry[-2][1], geometry[-1][0], geometry[-1][1])
+        current_distance += final_seg_dist
+        instructions.append({
+            "instruction": "목적지에 도착했습니다",
+            "distance": f"{int(current_distance)}m"
+        })
+        
+        return instructions    
     def _get_route_geometry(self, node_path: List[int]) -> List[Tuple[float, float]]:
         """
         노드 경로를 좌표 리스트로 변환

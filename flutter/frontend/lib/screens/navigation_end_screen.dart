@@ -1,17 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:gilbeot/screens/map_screen.dart';
 import 'package:gilbeot/screens/camera_screen.dart';
+import 'package:gilbeot/services/api_service.dart';
 
 class NavigationEndScreen extends StatefulWidget {
   final String routeType;
   final String estimatedTime;
   final String totalDistance;
+  final String startLocationName;
+  final String endLocationName;
+  final double? startLat;
+  final double? startLon;
+  final double? endLat;
+  final double? endLon;
 
   const NavigationEndScreen({
     super.key,
     required this.routeType,
     required this.estimatedTime,
     required this.totalDistance,
+    this.startLocationName = '출발지',
+    this.endLocationName = '도착지',
+    this.startLat,
+    this.startLon,
+    this.endLat,
+    this.endLon,
   });
 
   @override
@@ -27,6 +40,22 @@ class _NavigationEndScreenState extends State<NavigationEndScreen> {
   bool? _hasObstacle; // true: Yes, false: No, null: None
 
   @override
+  void initState() {
+    super.initState();
+    // 주행 기록 저장 (schema에 맞춰 좌표와 함께 저장)
+    ApiService.saveHistory(
+      startLocation: widget.startLocationName,
+      endLocation: widget.endLocationName,
+      totalDistance: widget.totalDistance,
+      estimatedTime: widget.estimatedTime,
+      startLat: widget.startLat,
+      startLon: widget.startLon,
+      endLat: widget.endLat,
+      endLon: widget.endLon,
+    );
+  }
+
+  @override
   void dispose() {
     _feedbackController.dispose();
     super.dispose();
@@ -35,7 +64,7 @@ class _NavigationEndScreenState extends State<NavigationEndScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFE8F5E9), // Light Green Background
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -59,12 +88,14 @@ class _NavigationEndScreenState extends State<NavigationEndScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  const Text(
+                  Text(
                     '목적지 도착!',
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF101727),
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? const Color(0xFFF1F5F9)
+                          : const Color(0xFF101727),
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -78,7 +109,7 @@ class _NavigationEndScreenState extends State<NavigationEndScreen> {
                   Container(
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Theme.of(context).cardColor,
                       borderRadius: BorderRadius.circular(24),
                       boxShadow: [
                         BoxShadow(
@@ -97,21 +128,29 @@ class _NavigationEndScreenState extends State<NavigationEndScreen> {
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text(
+                                Text(
                                   '도착지',
                                   style: TextStyle(
                                     fontSize: 12,
-                                    color: Color(0xFF9EA6B8),
+                                    color:
+                                        Theme.of(context).brightness ==
+                                            Brightness.dark
+                                        ? const Color(0xFF94A3B8)
+                                        : const Color(0xFF9EA6B8),
                                   ),
                                 ),
                                 const SizedBox(height: 4),
                                 // Hardcoded for now, or could pass in
-                                const Text(
-                                  '강남역 2번 출구',
+                                Text(
+                                  widget.endLocationName,
                                   style: TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
-                                    color: Color(0xFF101727),
+                                    color:
+                                        Theme.of(context).brightness ==
+                                            Brightness.dark
+                                        ? const Color(0xFFF1F5F9)
+                                        : const Color(0xFF101727),
                                   ),
                                 ),
                               ],
@@ -186,7 +225,7 @@ class _NavigationEndScreenState extends State<NavigationEndScreen> {
                   Container(
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Theme.of(context).cardColor,
                       borderRadius: BorderRadius.circular(24),
                       boxShadow: [
                         BoxShadow(
@@ -199,12 +238,15 @@ class _NavigationEndScreenState extends State<NavigationEndScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           '오늘 이용한 경로가 어땠나요?',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFF101727),
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
+                                ? const Color(0xFFF1F5F9)
+                                : const Color(0xFF101727),
                           ),
                         ),
                         const SizedBox(height: 20),
@@ -247,24 +289,38 @@ class _NavigationEndScreenState extends State<NavigationEndScreen> {
                                       Container(
                                         padding: const EdgeInsets.all(16),
                                         decoration: BoxDecoration(
-                                          color: const Color(0xFFFFF5F5),
+                                          color:
+                                              Theme.of(context).brightness ==
+                                                  Brightness.dark
+                                              ? const Color(0xFF2A1F1F)
+                                              : const Color(0xFFFFF5F5),
                                           borderRadius: BorderRadius.circular(
                                             12,
                                           ),
                                           border: Border.all(
-                                            color: const Color(0xFFFFEBEE),
+                                            color:
+                                                Theme.of(context).brightness ==
+                                                    Brightness.dark
+                                                ? const Color(0xFF3D2323)
+                                                : const Color(0xFFFFEBEE),
                                           ),
                                         ),
                                         child: Column(
                                           crossAxisAlignment:
                                               CrossAxisAlignment.start,
                                           children: [
-                                            const Text(
+                                            Text(
                                               '어떤 점이 불편하셨나요?',
                                               style: TextStyle(
                                                 fontSize: 14,
                                                 fontWeight: FontWeight.bold,
-                                                color: Color(0xFF2D3748),
+                                                color:
+                                                    Theme.of(
+                                                          context,
+                                                        ).brightness ==
+                                                        Brightness.dark
+                                                    ? const Color(0xFFF1F5F9)
+                                                    : const Color(0xFF2D3748),
                                               ),
                                             ),
                                             const SizedBox(height: 8),
@@ -282,12 +338,26 @@ class _NavigationEndScreenState extends State<NavigationEndScreen> {
                                                   fontSize: 13,
                                                 ),
                                                 filled: true,
-                                                fillColor: Colors.white,
+                                                fillColor:
+                                                    Theme.of(
+                                                          context,
+                                                        ).brightness ==
+                                                        Brightness.dark
+                                                    ? const Color(0xFF1E1E1E)
+                                                    : Colors.white,
                                                 border: OutlineInputBorder(
                                                   borderRadius:
                                                       BorderRadius.circular(8),
                                                   borderSide: BorderSide(
-                                                    color: Colors.grey[300]!,
+                                                    color:
+                                                        Theme.of(
+                                                              context,
+                                                            ).brightness ==
+                                                            Brightness.dark
+                                                        ? const Color(
+                                                            0xFF333333,
+                                                          )
+                                                        : Colors.grey[300]!,
                                                   ),
                                                 ),
                                                 enabledBorder:
@@ -298,7 +368,14 @@ class _NavigationEndScreenState extends State<NavigationEndScreen> {
                                                           ),
                                                       borderSide: BorderSide(
                                                         color:
-                                                            Colors.grey[300]!,
+                                                            Theme.of(
+                                                                  context,
+                                                                ).brightness ==
+                                                                Brightness.dark
+                                                            ? const Color(
+                                                                0xFF333333,
+                                                              )
+                                                            : Colors.grey[300]!,
                                                       ),
                                                     ),
                                                 focusedBorder:
@@ -349,7 +426,7 @@ class _NavigationEndScreenState extends State<NavigationEndScreen> {
                   Container(
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Theme.of(context).cardColor,
                       borderRadius: BorderRadius.circular(24),
                       boxShadow: [
                         BoxShadow(
@@ -362,17 +439,32 @@ class _NavigationEndScreenState extends State<NavigationEndScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           '지도에 없던 장애물이 있었나요?',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFF101727),
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
+                                ? const Color(0xFFF1F5F9)
+                                : const Color(0xFF101727),
                           ),
                         ),
                         const SizedBox(height: 20),
                         Row(
                           children: [
+                            Expanded(
+                              child: _buildSelectButton(
+                                label: '아니요',
+                                isSelected: _hasObstacle == false,
+                                activeColorOverride: const Color(
+                                  0xFF00C853,
+                                ), // Green
+                                onTap: () =>
+                                    setState(() => _hasObstacle = false),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
                             Expanded(
                               child: _buildSelectButton(
                                 label: '예',
@@ -384,18 +476,6 @@ class _NavigationEndScreenState extends State<NavigationEndScreen> {
                                 ), // Orange for Yes
                                 onTap: () =>
                                     setState(() => _hasObstacle = true),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: _buildSelectButton(
-                                label: '아니요',
-                                isSelected: _hasObstacle == false,
-                                activeColorOverride: const Color(
-                                  0xFF00C853,
-                                ), // Green
-                                onTap: () =>
-                                    setState(() => _hasObstacle = false),
                               ),
                             ),
                           ],
@@ -412,20 +492,30 @@ class _NavigationEndScreenState extends State<NavigationEndScreen> {
                                 ? Container(
                                     padding: const EdgeInsets.all(16),
                                     decoration: BoxDecoration(
-                                      color: const Color(
-                                        0xFFFFF3E0,
-                                      ), // Light Orange
+                                      color:
+                                          Theme.of(context).brightness ==
+                                              Brightness.dark
+                                          ? const Color(0xFF3E2723)
+                                          : const Color(0xFFFFF3E0),
                                       borderRadius: BorderRadius.circular(12),
                                       border: Border.all(
-                                        color: const Color(0xFFFFE0B2),
+                                        color:
+                                            Theme.of(context).brightness ==
+                                                Brightness.dark
+                                            ? const Color(0xFF4E342E)
+                                            : const Color(0xFFFFE0B2),
                                       ),
                                     ),
                                     child: Column(
                                       children: [
-                                        const Text(
+                                        Text(
                                           '다른 사용자를 위해 장애물을 신고해주세요',
                                           style: TextStyle(
-                                            color: Color(0xFF5D4037),
+                                            color:
+                                                Theme.of(context).brightness ==
+                                                    Brightness.dark
+                                                ? const Color(0xFFFFCC80)
+                                                : const Color(0xFF5D4037),
                                             fontSize: 13,
                                           ),
                                         ),
@@ -453,7 +543,13 @@ class _NavigationEndScreenState extends State<NavigationEndScreen> {
                                                 borderRadius:
                                                     BorderRadius.circular(8),
                                               ),
-                                              backgroundColor: Colors.white,
+                                              backgroundColor:
+                                                  Theme.of(
+                                                        context,
+                                                      ).brightness ==
+                                                      Brightness.dark
+                                                  ? const Color(0xFF1E1E1E)
+                                                  : Colors.white,
                                             ),
                                             child: const Text(
                                               '장애물 신고하기',
@@ -526,7 +622,9 @@ class _NavigationEndScreenState extends State<NavigationEndScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8F9FA), // Very light grey
+        color: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF2E2E32)
+            : const Color(0xFFF8F9FA),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -534,11 +632,22 @@ class _NavigationEndScreenState extends State<NavigationEndScreen> {
         children: [
           Row(
             children: [
-              Icon(icon, size: 14, color: const Color(0xFF9EA6B8)),
+              Icon(
+                icon,
+                size: 14,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? const Color(0xFF94A3B8)
+                    : const Color(0xFF9EA6B8),
+              ),
               const SizedBox(width: 6),
               Text(
                 label,
-                style: const TextStyle(fontSize: 12, color: Color(0xFF4A5565)),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? const Color(0xFFCBD5E1)
+                      : const Color(0xFF4A5565),
+                ),
               ),
             ],
           ),
@@ -550,7 +659,9 @@ class _NavigationEndScreenState extends State<NavigationEndScreen> {
               fontWeight: FontWeight.bold,
               color: highlightValue
                   ? const Color(0xFFFF9800)
-                  : const Color(0xFF101727),
+                  : (Theme.of(context).brightness == Brightness.dark
+                        ? const Color(0xFFF1F5F9)
+                        : const Color(0xFF101727)),
             ),
           ),
         ],
@@ -570,7 +681,9 @@ class _NavigationEndScreenState extends State<NavigationEndScreen> {
         (isNegative ? const Color(0xFFFF5252) : const Color(0xFF101727));
     final borderColor = isSelected
         ? activeColor
-        : const Color(0xFFE2E8F0); // Grey 200
+        : (Theme.of(context).brightness == Brightness.dark
+              ? const Color(0xFF333333)
+              : const Color(0xFFE2E8F0));
 
     return GestureDetector(
       onTap: onTap,
@@ -578,7 +691,7 @@ class _NavigationEndScreenState extends State<NavigationEndScreen> {
         duration: const Duration(milliseconds: 200),
         height: 52,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: borderColor, width: isSelected ? 1.5 : 1.0),
           boxShadow: isSelected
@@ -597,7 +710,11 @@ class _NavigationEndScreenState extends State<NavigationEndScreen> {
             child: Text(
               label,
               style: TextStyle(
-                color: isSelected ? activeColor : const Color(0xFF4A5565),
+                color: isSelected
+                    ? activeColor
+                    : (Theme.of(context).brightness == Brightness.dark
+                          ? const Color(0xFFCBD5E1)
+                          : const Color(0xFF4A5565)),
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                 fontSize: 15,
               ),

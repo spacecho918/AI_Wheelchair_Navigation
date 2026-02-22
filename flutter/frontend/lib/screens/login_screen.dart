@@ -13,7 +13,9 @@ class LoginScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     // [수정 1] MaterialApp 제거 (main.dart에 이미 있으므로 중복 제거)
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor, // 배경색
+      backgroundColor: Theme.of(context).brightness == Brightness.dark
+          ? Colors.black
+          : const Color(0xFFF0FDF4),
       body: SafeArea(
         // 화면 상단 바(노치) 침범 방지
         child: SingleChildScrollView(
@@ -142,9 +144,12 @@ class _GilbeotState extends State<Gilbeot> {
         Text(
           '모두를 위한 안전한 이동',
           textAlign: TextAlign.center,
-          style: TextStyle(color: Theme.of(context).brightness == Brightness.dark
-              ? const Color(0xFFCBD5E1)
-              : const Color(0xFF4A5565), fontSize: 14),
+          style: TextStyle(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? const Color(0xFFCBD5E1)
+                : const Color(0xFF4A5565),
+            fontSize: 14,
+          ),
         ),
 
         const SizedBox(height: 40),
@@ -168,9 +173,12 @@ class _GilbeotState extends State<Gilbeot> {
             children: [
               Text(
                 '환영합니다',
-                style: TextStyle(color: Theme.of(context).brightness == Brightness.dark
-                    ? const Color(0xFFF1F5F9)
-                    : const Color(0xFF101727), fontSize: 14),
+                style: TextStyle(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? const Color(0xFFF1F5F9)
+                      : const Color(0xFF101727),
+                  fontSize: 14,
+                ),
               ),
               const SizedBox(height: 24),
 
@@ -417,16 +425,22 @@ class _GilbeotState extends State<Gilbeot> {
       children: [
         Text(
           label,
-          style: TextStyle(fontSize: 12, color: Theme.of(context).brightness == Brightness.dark
-              ? const Color(0xFFE2E8F0) // 다크모드용 밝은 회색
-              : const Color(0xFF101727),),
+          style: TextStyle(
+            fontSize: 12,
+            color: Theme.of(context).brightness == Brightness.dark
+                ? const Color(0xFFE2E8F0) // 다크모드용 밝은 회색
+                : const Color(0xFF101727),
+          ),
         ),
         const SizedBox(height: 8),
         TextField(
           controller: controller,
-          style: TextStyle(color: Theme.of(context).brightness == Brightness.dark
-              ? Colors.white
-              : const Color(0xFF101727), fontSize: 14),
+          style: TextStyle(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white
+                : const Color(0xFF101727),
+            fontSize: 14,
+          ),
           obscureText: isPassword ? obscureText : false,
           textInputAction: textInputAction,
           onSubmitted: onSubmitted,

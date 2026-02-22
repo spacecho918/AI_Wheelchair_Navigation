@@ -1,5 +1,5 @@
 import 'dart:ui';
-import 'dart:convert';
+
 import 'package:flutter/foundation.dart'; // for kIsWeb
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // rootBundle
@@ -112,7 +112,8 @@ class _RouteSearchScreenState extends State<RouteSearchScreen> {
       if (kIsWeb) {
         // 웹: URL 파라미터로 초기화
         // mapId 전달, level=3 적당한 줌
-        var url = '${Uri.base.origin}/kakao_map.html?mapId=$_mapId&level=3';
+        var url =
+            '${Uri.base.origin}/kakao_map.html?v=${DateTime.now().millisecondsSinceEpoch}&mapId=$_mapId&level=3';
 
         // 출발지 좌표가 있으면 거기를 중심으로 (없으면 기본 서울)
         final startLatLng = _getPlaceLatLng(_startPlace);
@@ -131,6 +132,7 @@ class _RouteSearchScreenState extends State<RouteSearchScreen> {
             },
             onPageFinished: (String url) {
               debugPrint('WebView: Page finished loading: $url');
+              _updateMapMarkers();
             },
             onWebResourceError: (WebResourceError error) {
               debugPrint('WebView Error: ${error.description}');
@@ -139,12 +141,9 @@ class _RouteSearchScreenState extends State<RouteSearchScreen> {
         );
 
         String fileText = await rootBundle.loadString('assets/kakao_map.html');
-        _mapController!.loadRequest(
-          Uri.dataFromString(
-            fileText,
-            mimeType: 'text/html',
-            encoding: Encoding.getByName('utf-8'),
-          ),
+        await _mapController!.loadHtmlString(
+          fileText,
+          baseUrl: 'https://gilbeot.app',
         );
       }
     } catch (e) {
@@ -185,41 +184,80 @@ class _RouteSearchScreenState extends State<RouteSearchScreen> {
     );
   }
 
-  /// 선택된 경로를 지도에 그리기
+  /// 선택된 경로를 지도에 그리기 (모든 경로를 동시에 표시)
   void _drawRoute(int index) {
-    if (_comparisonData == null || _mapController == null) return;
+    debugPrint('>>> _drawRoute called with index=$index');
+    if (_comparisonData == null || _mapController == null) {
+      debugPrint(
+        '>>> _drawRoute ABORTED: comparisonData=${_comparisonData != null}, controller=${_mapController != null}',
+      );
+      return;
+    }
 
     final modes = ['optimal', 'short', 'safe'];
-    if (index < 0 || index >= modes.length) return;
+    final colors = [
+      '#00C853', // Optimal - Green
+      '#2979FF', // Short - Blue
+      '#9C27B0', // Safe - Purple
+    ];
 
-    final mode = modes[index];
-    final routeData = _comparisonData![mode];
+    // Build route data for ALL 3 routes
+    final List<Map<String, dynamic>> allRoutes = [];
+    for (int i = 0; i < modes.length; i++) {
+      final mode = modes[i];
+      final routeData = _comparisonData![mode];
 
-    if (routeData != null && routeData['geometry'] != null) {
-      try {
-        final rawGeometry = routeData['geometry'] as List;
-
-        // API 리턴(GeoJSON)은 [lng, lat] 순서일 가능성 높음.
-        // kakao_map.html의 drawRoute는 받은 좌표를 그대로 new LatLng(x, y) 하므로
-        // Dart에서 [lat, lng] 순서로 맞춰서 보내야 함.
-        final List<List<double>> path = rawGeometry
-            .map((coord) {
-              final c = (coord as List)
-                  .map((e) => (e as num).toDouble())
-                  .toList();
-              if (c.length >= 2) {
-                // c[0]=lng, c[1]=lat  -->  [lat, lng]
-                return [c[1], c[0]];
-              }
-              return null;
-            })
-            .whereType<List<double>>()
-            .toList();
-
-        KakaoMapHelper.drawRoute(_mapController, path, mapId: _mapId);
-      } catch (e) {
-        debugPrint('Error drawing route preview: $e');
+      List<List<double>> path = [];
+      if (routeData != null && routeData['geometry'] != null) {
+        try {
+          final rawGeometry = routeData['geometry'] as List;
+          path = rawGeometry
+              .map((coord) {
+                final c = (coord as List)
+                    .map((e) => (e as num).toDouble())
+                    .toList();
+                if (c.length >= 2) {
+                  return [c[0], c[1]];
+                }
+                return null;
+              })
+              .whereType<List<double>>()
+              .toList();
+        } catch (e) {
+          debugPrint('Error parsing route $mode geometry: $e');
+        }
       }
+
+      allRoutes.add({'path': path, 'color': colors[i]});
+      debugPrint('>>> Route $mode: ${path.length} points, color=${colors[i]}');
+    }
+
+    debugPrint(
+      '>>> Sending drawAllRoutes with selectedIndex=$index, mapId=$_mapId',
+    );
+    KakaoMapHelper.drawAllRoutes(
+      _mapController,
+      allRoutes,
+      index,
+      mapId: _mapId,
+    );
+  }
+
+  void _updateMapMarkers() {
+    if (_mapController == null) return;
+
+    final startLatLng = _getPlaceLatLng(_startPlace);
+    final endLatLng = _getPlaceLatLng(_endPlace);
+
+    if (startLatLng != null || endLatLng != null) {
+      KakaoMapHelper.setStartEndMarkers(
+        _mapController,
+        startLatLng?.latitude,
+        startLatLng?.longitude,
+        endLatLng?.latitude,
+        endLatLng?.longitude,
+        mapId: _mapId,
+      );
     }
   }
 
@@ -264,9 +302,18 @@ class _RouteSearchScreenState extends State<RouteSearchScreen> {
       // 장소 변경 시 경로 비교 자동 조회
       _tryFetchRouteComparison();
 
-      // 지도 이동 로직 추가
+      // 마커 업데이트
+      _updateMapMarkers();
+
+      // 지도 이동 로직: setCenter + panTo로 맵 뷰포트를 새 위치로 확실히 이동
       final latLng = _getPlaceLatLng(isStart ? _startPlace : _endPlace);
       if (latLng != null && _mapController != null) {
+        KakaoMapHelper.setCenter(
+          _mapController!,
+          latLng.latitude,
+          latLng.longitude,
+          mapId: _mapId,
+        );
         KakaoMapHelper.panTo(
           _mapController!,
           latLng.latitude,
@@ -284,6 +331,7 @@ class _RouteSearchScreenState extends State<RouteSearchScreen> {
       _startPlace = _endPlace;
       _endPlace = temp;
     });
+    _updateMapMarkers();
     _tryFetchRouteComparison();
   }
 
@@ -486,14 +534,24 @@ class _RouteSearchScreenState extends State<RouteSearchScreen> {
 
                       if (!hasRoute) return const SizedBox.shrink();
 
+                      // 목적 높이: 드래그 핸들(~40) + 캐러셀(124) + 인디케이터(~20) + 버튼(~50) + 최소 패딩 = 약 270px
+                      final double targetHeight = 270.0;
+                      final double ratio =
+                          (targetHeight / constraints.maxHeight).clamp(
+                            0.15,
+                            1.0,
+                          );
+
                       // Draggable Sheet Logic
                       return DraggableScrollableSheet(
                         controller: _sheetController,
-                        initialChildSize: hasRoute ? 0.6 : 0.4,
+                        initialChildSize: hasRoute ? ratio : 0.4,
                         minChildSize: 0.15,
-                        maxChildSize: 1.0,
+                        maxChildSize: hasRoute ? ratio : 1.0,
                         snap: true,
-                        snapSizes: const [0.15, 0.6, 1.0],
+                        snapSizes: hasRoute
+                            ? [0.15, ratio]
+                            : const [0.15, 0.6, 1.0],
                         builder: (context, scrollController) {
                           return PointerInterceptor(
                             child: Container(
@@ -520,7 +578,7 @@ class _RouteSearchScreenState extends State<RouteSearchScreen> {
                                   21,
                                   10,
                                   21,
-                                  30,
+                                  0,
                                 ),
                                 children: [
                                   // Drag Handle
@@ -533,7 +591,7 @@ class _RouteSearchScreenState extends State<RouteSearchScreen> {
                                           -details.delta.dy / sheetHeight;
                                       final currentSize = _sheetController.size;
                                       final newSize = (currentSize + delta)
-                                          .clamp(0.15, 1.0);
+                                          .clamp(0.15, hasRoute ? ratio : 1.0);
                                       _sheetController.jumpTo(newSize);
                                     },
                                     child: Container(
@@ -613,7 +671,7 @@ class _RouteSearchScreenState extends State<RouteSearchScreen> {
                                       children: [
                                         // Carousel
                                         SizedBox(
-                                          height: 140,
+                                          height: 124,
                                           child: useRowLayout
                                               ? Row(
                                                   mainAxisAlignment:
@@ -628,10 +686,33 @@ class _RouteSearchScreenState extends State<RouteSearchScreen> {
                                                           ),
                                                       child: SizedBox(
                                                         width: 320,
-                                                        child:
-                                                            _buildSelectableRouteCard(
-                                                              index,
-                                                            ),
+                                                        child: GestureDetector(
+                                                          onTap: () {
+                                                            setState(() {
+                                                              _selectedRouteIndex =
+                                                                  index;
+                                                            });
+                                                            _drawRoute(index);
+                                                            if (!useRowLayout &&
+                                                                _pageController !=
+                                                                    null) {
+                                                              _pageController!.animateToPage(
+                                                                index,
+                                                                duration:
+                                                                    const Duration(
+                                                                      milliseconds:
+                                                                          300,
+                                                                    ),
+                                                                curve: Curves
+                                                                    .easeInOut,
+                                                              );
+                                                            }
+                                                          },
+                                                          child:
+                                                              _buildSelectableRouteCard(
+                                                                index,
+                                                              ),
+                                                        ),
                                                       ),
                                                     );
                                                   }),
@@ -650,15 +731,38 @@ class _RouteSearchScreenState extends State<RouteSearchScreen> {
                                                   itemBuilder: (context, index) {
                                                     return SizedBox(
                                                       width: 320,
-                                                      child:
-                                                          _buildSelectableRouteCard(
-                                                            index,
-                                                          ),
+                                                      child: GestureDetector(
+                                                        onTap: () {
+                                                          setState(() {
+                                                            _selectedRouteIndex =
+                                                                index;
+                                                          });
+                                                          _drawRoute(index);
+                                                          if (_pageController !=
+                                                              null) {
+                                                            _pageController!
+                                                                .animateToPage(
+                                                                  index,
+                                                                  duration:
+                                                                      const Duration(
+                                                                        milliseconds:
+                                                                            300,
+                                                                      ),
+                                                                  curve: Curves
+                                                                      .easeInOut,
+                                                                );
+                                                          }
+                                                        },
+                                                        child:
+                                                            _buildSelectableRouteCard(
+                                                              index,
+                                                            ),
+                                                      ),
                                                     );
                                                   },
                                                 ),
                                         ),
-                                        const SizedBox(height: 16),
+                                        const SizedBox(height: 12),
                                         // Dots
                                         Row(
                                           mainAxisAlignment:
@@ -684,12 +788,9 @@ class _RouteSearchScreenState extends State<RouteSearchScreen> {
                                             );
                                           }),
                                         ),
-                                        const SizedBox(height: 24),
+                                        const SizedBox(height: 12),
                                         // Start Navigation Button
                                         _buildStartNavigationButton(),
-                                        const SizedBox(
-                                          height: 24,
-                                        ), // Bottom padding
                                       ],
                                     ),
                                 ],
@@ -813,6 +914,12 @@ class _RouteSearchScreenState extends State<RouteSearchScreen> {
             .map((e) => (e as List).map((c) => c as double).toList())
             .toList();
 
+        final instructions =
+            (routeData['instructions'] as List?)
+                ?.map((e) => Map<String, String>.from(e as Map))
+                .toList() ??
+            [];
+
         String routeTitle = _selectedRouteIndex == 0
             ? '추천 경로'
             : _selectedRouteIndex == 1
@@ -820,6 +927,12 @@ class _RouteSearchScreenState extends State<RouteSearchScreen> {
             : '안전 경로';
 
         if (mounted) {
+          // 장소 이름 추출 (표시용)
+          final startName = _startPlace?['isCurrentLocation'] == true
+              ? '현재 위치'
+              : (_startPlace?['name'] ?? '출발지');
+          final endName = _endPlace?['name'] ?? '도착지';
+
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -830,7 +943,10 @@ class _RouteSearchScreenState extends State<RouteSearchScreen> {
                 startLocation: LatLng(startLat, startLon),
                 endLocation: LatLng(endLat, endLon),
                 routeGeometry: geometry,
+                instructions: instructions,
                 avoidedObstacles: avoidedObstacles,
+                startLocationName: startName,
+                endLocationName: endName,
               ),
               settings: const RouteSettings(name: 'navigation'),
             ),
@@ -936,7 +1052,7 @@ class _RouteSearchScreenState extends State<RouteSearchScreen> {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       margin: const EdgeInsets.symmetric(horizontal: 6),
-      padding: const EdgeInsets.all(16), // 패딩 늘림
+      padding: const EdgeInsets.all(12), // 패딩 줄임 (16 -> 12)
       decoration: BoxDecoration(
         color: isSelected
             ? Color.lerp(Colors.white, themeColor, 0.05)!
@@ -1012,7 +1128,7 @@ class _RouteSearchScreenState extends State<RouteSearchScreen> {
                 ),
             ],
           ),
-          const SizedBox(height: 10), // 간격 통일 (8 -> 10)
+          const SizedBox(height: 8), // 간격 축소 (10 -> 8)
           // Info Info
           Row(
             children: [
@@ -1058,7 +1174,7 @@ class _RouteSearchScreenState extends State<RouteSearchScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 10), // 간격 통일 (6 -> 10)
+          const SizedBox(height: 8), // 간격 축소 (10 -> 8)
           // Tags
           Wrap(
             spacing: 4,
@@ -1155,6 +1271,7 @@ class _RouteSearchScreenState extends State<RouteSearchScreen> {
         setState(() {
           _selectedRouteIndex = index;
         });
+        _drawRoute(index);
         if (_pageController != null && _pageController!.hasClients) {
           _pageController!.animateToPage(
             index,

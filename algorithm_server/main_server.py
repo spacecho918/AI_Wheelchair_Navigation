@@ -397,6 +397,7 @@ async def find_route(request: RouteRequest):
                     "distance": result.distance,
                     "estimated_time": result.estimated_time,
                     "geometry": result.geometry,
+                    "instructions": result.instructions,
                     "avoided_obstacles": result.avoided_obstacles,
                     "mode": result.mode,
                     "wheelchair_type": request.wheelchair_type,
@@ -452,6 +453,7 @@ async def compare_routes(request: RouteRequest):
                     "distance": result.distance,
                     "estimated_time": result.estimated_time,
                     "geometry": result.geometry,
+                    "instructions": result.instructions,
                     "avoided_obstacles": result.avoided_obstacles,
                     "total_weight": result.total_weight
                 }

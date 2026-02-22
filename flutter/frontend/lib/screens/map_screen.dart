@@ -349,7 +349,9 @@ class _MapScreenState extends State<MapScreen> {
 
     if (kIsWeb) {
       _mapController!.loadRequest(
-        Uri.parse('${Uri.base.origin}/kakao_map.html'),
+        Uri.parse(
+          '${Uri.base.origin}/kakao_map.html?v=${DateTime.now().millisecondsSinceEpoch}',
+        ),
       );
     } else {
       // Load HTML content with a base URL registered in Kakao Developer Console

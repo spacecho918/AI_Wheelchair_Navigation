@@ -164,7 +164,9 @@ class _LocationAdjustScreenState extends State<LocationAdjustScreen> {
         debugPrint('Loading web map with initial center: $lat, $lng');
 
         await _mapController!.loadRequest(
-          Uri.parse('${Uri.base.origin}/kakao_map.html?lat=$lat&lng=$lng'),
+          Uri.parse(
+            '${Uri.base.origin}/kakao_map.html?v=${DateTime.now().millisecondsSinceEpoch}&lat=$lat&lng=$lng',
+          ),
         );
 
         // Still keep the delayed setCenter calls as backup, just in case
@@ -184,12 +186,9 @@ class _LocationAdjustScreenState extends State<LocationAdjustScreen> {
         });
       } else {
         String fileText = await rootBundle.loadString('assets/kakao_map.html');
-        await _mapController!.loadRequest(
-          Uri.dataFromString(
-            fileText,
-            mimeType: 'text/html',
-            encoding: Encoding.getByName('utf-8'),
-          ),
+        await _mapController!.loadHtmlString(
+          fileText,
+          baseUrl: 'https://gilbeot.app',
         );
       }
     } catch (e) {
