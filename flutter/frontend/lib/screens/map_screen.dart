@@ -16,6 +16,7 @@ import 'route_search_screen.dart'; // Import user's new screen
 import 'package:latlong2/latlong.dart' as latlong;
 import 'package:gilbeot/helpers/kakao_map_helper.dart';
 import 'wheelchair_settings_screen.dart';
+import 'package:gilbeot/app_route_observer.dart';
 import '../services/api_service.dart';
 import '../models/driving_history.dart';
 import 'package:gilbeot/widgets/common_toast.dart';
@@ -27,8 +28,9 @@ class MapScreen extends StatefulWidget {
   State<MapScreen> createState() => _MapScreenState();
 }
 
-class _MapScreenState extends State<MapScreen> {
+class _MapScreenState extends State<MapScreen> with RouteAware {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  bool _routeObserverSubscribed = false;
   final DraggableScrollableController _sheetController =
       DraggableScrollableController();
   WebViewController? _mapController;
@@ -59,6 +61,31 @@ class _MapScreenState extends State<MapScreen> {
         _showWheelchairSettingDialog();
       }
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_routeObserverSubscribed) {
+      final route = ModalRoute.of(context);
+      if (route != null) {
+        routeObserver.subscribe(this, route);
+        _routeObserverSubscribed = true;
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    if (_routeObserverSubscribed) {
+      routeObserver.unsubscribe(this);
+    }
+    super.dispose();
+  }
+
+  @override
+  void didPopNext() {
+    _loadDashboardData();
   }
 
   Future<void> _loadDashboardData() async {
@@ -368,11 +395,6 @@ class _MapScreenState extends State<MapScreen> {
         baseUrl: 'https://gilbeot.app',
       );
     }
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
   }
 
   // 현재 위치로 이동하는 함수

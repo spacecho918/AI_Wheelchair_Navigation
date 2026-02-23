@@ -1,4 +1,6 @@
 import 'package:flutter/foundation.dart';
+import 'package:gilbeot/services/pkce_async_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AuthService {
@@ -74,10 +76,13 @@ class AuthService {
     }
   }
 
-  /// 로그아웃
+  /// 로그아웃 (OAuth PKCE code_verifier 키 삭제 → 재로그인 시 새 PKCE로 진행)
   static Future<void> signOut() async {
     try {
       await _client.auth.signOut();
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(supabasePkceCodeVerifierKey);
+      debugPrint('>>> [OAuth] 로그아웃: PKCE code_verifier 키 삭제');
     } catch (e) {
       debugPrint('SignOut Error: $e');
       rethrow;

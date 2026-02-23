@@ -44,6 +44,7 @@ dependencies:
   webview_flutter_web: ^0.2.3
   pointer_interceptor: ^0.10.1
   url_launcher: ^6.3.2
+  app_links: ^6.4.0
   shared_preferences: ^2.2.0
   supabase_flutter: ^2.8.0
   flutter_compass: ^0.8.1

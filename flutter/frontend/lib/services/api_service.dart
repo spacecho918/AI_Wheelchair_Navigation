@@ -17,7 +17,7 @@ class ApiService {
   // 서버 주소 (AI 분석 및 길찾기용)
   static String get baseUrl {
     if (kIsWeb) return "http://localhost:8000";
-    if (Platform.isAndroid) return "http://10.0.2.2:8000";
+    if (Platform.isAndroid) return "http://172.30.1.7:8000";
     return "http://localhost:8000";
   }
 

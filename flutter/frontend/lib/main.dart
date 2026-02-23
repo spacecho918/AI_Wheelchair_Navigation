@@ -1,6 +1,10 @@
 import 'dart:async';
 
+import 'package:app_links/app_links.dart';
+import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:gilbeot/app_route_observer.dart';
 import 'package:gilbeot/screens/login_screen.dart';
 import 'package:gilbeot/screens/map_screen.dart';
 import 'package:gilbeot/services/auth_service.dart';
@@ -8,6 +12,19 @@ import 'package:gilbeot/services/recent_searches_service.dart';
 import 'package:gilbeot/services/session_storage_local_storage.dart';
 import 'package:gilbeot/services/theme_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+bool _isOurAuthScheme(Uri uri) =>
+    uri.scheme == 'com.example.gilbeot' && uri.host == 'auth';
+
+bool _isAuthCallbackUri(Uri uri) {
+  if (uri.scheme != 'com.example.gilbeot' || uri.host != 'auth') return false;
+  return uri.queryParameters.containsKey('code') ||
+      uri.fragment.contains('access_token') ||
+      uri.fragment.contains('error_description');
+}
+
+String? _lastProcessedAuthCodeOAuth;
+final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -22,8 +39,38 @@ void main() async {
         '***REMOVED***',
     authOptions: FlutterAuthClientOptions(
       localStorage: SessionStorageLocalStorage(persistSessionKey: persistKey),
+      detectSessionInUri: false,
+      pkceAsyncStorage: SharedPreferencesGotrueAsyncStorage(),
     ),
   );
+
+  if (kIsWeb) {
+    // 웹: 카카오/구글 로그인 후 리다이렉트된 URL에서 세션 복구 (detectSessionInUri: false라 수동 처리)
+    try {
+      final uri = Uri.base;
+      if (uri.queryParameters.containsKey('code') ||
+          uri.fragment.contains('access_token') ||
+          uri.fragment.contains('error') ||
+          uri.fragment.contains('error_description')) {
+        debugPrint('>>> [OAuth] 웹 초기 URI: ${uri.origin}${uri.path} ...');
+        await Supabase.instance.client.auth.getSessionFromUrl(uri);
+        debugPrint('>>> [OAuth] getSessionFromUrl(웹 초기) 성공');
+      }
+    } catch (e, st) {
+      debugPrint('>>> [OAuth] getSessionFromUrl(웹 초기) 실패: $e\n$st');
+    }
+  } else {
+    try {
+      final initialUri = await AppLinks().getInitialLink();
+      debugPrint('>>> [OAuth] getInitialLink: $initialUri');
+      if (initialUri != null && _isOurAuthScheme(initialUri)) {
+        await Supabase.instance.client.auth.getSessionFromUrl(initialUri);
+        debugPrint('>>> [OAuth] getSessionFromUrl(초기) 성공');
+      }
+    } catch (e, st) {
+      debugPrint('>>> [OAuth] getSessionFromUrl(초기) 실패: $e\n$st');
+    }
+  }
 
   runApp(const MyApp());
 }
@@ -41,11 +88,46 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   ThemeMode _themeMode = ThemeMode.light;
   ThemeMode get currentThemeMode => _themeMode;
+  StreamSubscription<dynamic>? _oauthEventSub;
 
   @override
   void initState() {
     super.initState();
     _loadTheme();
+    if (!kIsWeb) {
+      _oauthEventSub = const EventChannel('com.example.gilbeot/oauth_events')
+          .receiveBroadcastStream()
+          .listen((dynamic data) => _onOAuthUriFromNative(data));
+    }
+  }
+
+  @override
+  void dispose() {
+    _oauthEventSub?.cancel();
+    super.dispose();
+  }
+
+  static Future<void> _onOAuthUriFromNative(dynamic data) async {
+    if (data is! String || data.isEmpty) return;
+    final uri = Uri.tryParse(data);
+    if (uri == null || !_isOurAuthScheme(uri)) return;
+    final code = uri.queryParameters['code'];
+    if (code != null && code == _lastProcessedAuthCodeOAuth) {
+      debugPrint('>>> [OAuth] (앱 루트) 이미 처리한 code 건너뜀');
+      return;
+    }
+    if (code != null) _lastProcessedAuthCodeOAuth = code;
+    debugPrint('>>> [OAuth] (앱 루트) EventChannel 수신: $uri');
+    try {
+      await Supabase.instance.client.auth.getSessionFromUrl(uri);
+      debugPrint('>>> [OAuth] getSessionFromUrl 성공');
+      _rootNavigatorKey.currentState?.pushReplacement(
+        MaterialPageRoute(builder: (_) => const MapScreen()),
+      );
+    } catch (e, st) {
+      debugPrint('>>> [OAuth] getSessionFromUrl 실패: $e\n$st');
+      if (code != null) _lastProcessedAuthCodeOAuth = null;
+    }
   }
 
   Future<void> _loadTheme() async {
@@ -65,6 +147,8 @@ class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: _rootNavigatorKey,
+      navigatorObservers: [routeObserver],
       debugShowCheckedModeBanner: false,
       title: 'Flutter Demo',
       themeMode: _themeMode,
@@ -120,19 +204,90 @@ class LoginScreenWrapper extends StatefulWidget {
   State<LoginScreenWrapper> createState() => _LoginScreenWrapperState();
 }
 
-class _LoginScreenWrapperState extends State<LoginScreenWrapper> {
+class _LoginScreenWrapperState extends State<LoginScreenWrapper>
+    with WidgetsBindingObserver {
   StreamSubscription<AuthState>? _authSub;
+  StreamSubscription<Uri?>? _deeplinkSub;
+  static final AppLinks _appLinks = AppLinks();
 
   @override
   void initState() {
     super.initState();
-    // 첫 프레임 이후에만 세션 확인 → 항상 로그인 화면이 먼저 보이도록
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) => _redirectIfSession());
     _authSub = AuthService.onAuthStateChange.listen((data) {
-      // 로그인/로그아웃 시 최근 검색 목록을 현재 사용자 기준으로 갱신
       RecentSearchesService.reload();
-      if (data.session != null) _redirectIfSession();
+      if (data.session != null) {
+        _redirectIfSession();
+      } else {
+        _lastProcessedAuthCodeOAuth = null;
+      }
     });
+    if (!kIsWeb) {
+      _deeplinkSub = _appLinks.uriLinkStream.listen((Uri? uri) {
+        debugPrint('>>> [OAuth] uriLinkStream 수신: $uri');
+        _handleAuthUri(uri);
+      });
+    }
+  }
+
+  Future<void> _handleAuthUri(Uri? uri) async {
+    if (uri == null || !_isOurAuthScheme(uri)) return;
+    final code = uri.queryParameters['code'];
+    if (code != null && code == _lastProcessedAuthCodeOAuth) {
+      debugPrint('>>> [OAuth] 이미 처리한 code 건너뜀 (이중 exchange 방지)');
+      if (mounted) _redirectIfSession();
+      return;
+    }
+    if (code != null) _lastProcessedAuthCodeOAuth = code;
+    await Future.delayed(const Duration(milliseconds: 200));
+    if (!mounted) return;
+    try {
+      await Supabase.instance.client.auth.getSessionFromUrl(uri);
+      debugPrint('>>> [OAuth] getSessionFromUrl 성공');
+      if (mounted) _redirectIfSession();
+    } catch (e, st) {
+      debugPrint('>>> [OAuth] getSessionFromUrl 실패: $e\n$st');
+      if (code != null) _lastProcessedAuthCodeOAuth = null;
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (kIsWeb || state != AppLifecycleState.resumed) return;
+    void tryGetAuthUri({required int attempt}) {
+      if (!mounted) return;
+      const channel = MethodChannel('com.example.gilbeot/oauth');
+      channel.invokeMethod<String>('getPendingAuthUri').then((String? uriStr) {
+        if (!mounted) return;
+        if (uriStr != null && uriStr.isNotEmpty) {
+          final uri = Uri.parse(uriStr);
+          if (_isOurAuthScheme(uri)) {
+            debugPrint('>>> [OAuth] resumed (attempt $attempt) → getPendingAuthUri: $uri');
+            _handleAuthUri(uri);
+            return;
+          }
+        }
+        _appLinks.getLatestLink().then((Uri? uri) {
+          if (!mounted) return;
+          if (uri == null || !_isOurAuthScheme(uri)) return;
+          debugPrint('>>> [OAuth] resumed (attempt $attempt) → getLatestLink: $uri');
+          _handleAuthUri(uri);
+        });
+      }).catchError((_) {
+        if (!mounted) return;
+        _appLinks.getLatestLink().then((Uri? uri) {
+          if (uri == null || !_isOurAuthScheme(uri)) return;
+          debugPrint('>>> [OAuth] resumed (attempt $attempt) → getLatestLink: $uri');
+          _handleAuthUri(uri);
+        });
+      });
+    }
+    Future.delayed(const Duration(milliseconds: 300), () => tryGetAuthUri(attempt: 1));
+    Future.delayed(const Duration(milliseconds: 600), () => tryGetAuthUri(attempt: 2));
+    Future.delayed(const Duration(milliseconds: 500), () => tryGetAuthUri(attempt: 3));
+    Future.delayed(const Duration(milliseconds: 1000), () => tryGetAuthUri(attempt: 4));
   }
 
   void _redirectIfSession() {
@@ -146,7 +301,9 @@ class _LoginScreenWrapperState extends State<LoginScreenWrapper> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _authSub?.cancel();
+    _deeplinkSub?.cancel();
     super.dispose();
   }
 

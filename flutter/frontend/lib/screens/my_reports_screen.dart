@@ -104,6 +104,7 @@ class _MyReportsScreenState extends State<MyReportsScreen>
       'comments': item['comments'] ?? 0,
       'tag': item['title'], // Map title to tag
       'commentContent': isComment ? item['content'] : null,
+      'imageUrl': item['imageUrl'],
     };
 
     Navigator.push(
@@ -285,6 +286,7 @@ class _MyReportsScreenState extends State<MyReportsScreen>
           'comments': report.commentCount,
           'status': report.status,
           'date': report.date,
+          'imageUrl': report.imageUrl,
         };
 
         return Center(
