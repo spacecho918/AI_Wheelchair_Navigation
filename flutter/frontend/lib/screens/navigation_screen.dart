@@ -82,7 +82,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
 
         if (_mapController != null) {
           // 마커 위치 업데이트
-          KakaoMapHelper.setMarker(
+          KakaoMapHelper.setCurrentLocation(
             _mapController,
             position.latitude,
             position.longitude,
@@ -179,29 +179,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
 
       const mapId = 'navigation';
 
-      // 출발지(현재위치)로 센터 이동 + 마커 표시
-      final startLoc = _currentLiveLocation ?? widget.startLocation;
-      if (startLoc != null) {
-        KakaoMapHelper.setCenter(
-          _mapController,
-          startLoc.latitude,
-          startLoc.longitude,
-          mapId: mapId,
-        );
-        KakaoMapHelper.setMarker(
-          _mapController,
-          startLoc.latitude,
-          startLoc.longitude,
-          mapId: mapId,
-        );
-        KakaoMapHelper.setLevel(
-          _mapController,
-          1, // 최대 상세 (1단계)
-          mapId: mapId,
-        );
-      }
-
-      // 경로 그리기 (전체 경로 자동 맞춤 비활성화)
+      // 1. 경로 그리기 (전체 경로 자동 맞춤 비활성화)
       if (widget.routeGeometry != null && widget.routeGeometry!.isNotEmpty) {
         KakaoMapHelper.drawRoute(
           _mapController,
@@ -209,6 +187,45 @@ class _NavigationScreenState extends State<NavigationScreen> {
           showFullRoute: false,
           mapId: mapId,
         );
+      }
+
+      final startLoc = _currentLiveLocation ?? widget.startLocation;
+      if (startLoc != null) {
+        // 2. 출발지/도착지 핀 표시
+        if (widget.startLocation != null && widget.endLocation != null) {
+          KakaoMapHelper.setStartEndMarkers(
+            _mapController,
+            widget.startLocation!.latitude,
+            widget.startLocation!.longitude,
+            widget.endLocation!.latitude,
+            widget.endLocation!.longitude,
+            mapId: mapId,
+          );
+        }
+
+        // 3. 현재 위치 오버레이 표시
+        KakaoMapHelper.setCurrentLocation(
+          _mapController,
+          startLoc.latitude,
+          startLoc.longitude,
+          mapId: mapId,
+        );
+
+        // 4. 지도 중심 현위치로 강제 + 최대 확대 적용
+        Future.delayed(const Duration(milliseconds: 200), () {
+          if (!mounted || _mapController == null) return;
+          KakaoMapHelper.setCenter(
+            _mapController,
+            startLoc.latitude,
+            startLoc.longitude,
+            mapId: mapId,
+          );
+          KakaoMapHelper.setLevel(
+            _mapController,
+            1, // 최대 상세 (1단계)
+            mapId: mapId,
+          );
+        });
       }
     });
   }
@@ -224,7 +241,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
       // 웹: URL 파라미터로 초기화 + 캐시 방지
       // level=1 (최대 확대), mapId=navigation (iframe 식별용)
       var url =
-          '${Uri.base.origin}/kakao_map.html?lat=$lat&lng=$lng&marker=true&level=1&mapId=navigation&t=${DateTime.now().millisecondsSinceEpoch}';
+          '${Uri.base.origin}/kakao_map.html?lat=$lat&lng=$lng&marker=false&level=1&mapId=navigation&t=${DateTime.now().millisecondsSinceEpoch}';
 
       _mapController!.loadRequest(Uri.parse(url));
 

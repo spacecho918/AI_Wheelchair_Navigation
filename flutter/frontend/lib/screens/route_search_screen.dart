@@ -939,11 +939,20 @@ class _RouteSearchScreenState extends State<RouteSearchScreen> {
             : '안전 경로';
 
         if (mounted) {
-          // 장소 이름 추출 (표시용)
+          // 장소 이름 추출 (표시용 및 저장용)
           final startName = _startPlace?['isCurrentLocation'] == true
-              ? '현재 위치'
+              ? (_startPlace?['address'] != null &&
+                        _startPlace!['address'].toString().isNotEmpty
+                    ? _startPlace!['address']
+                    : '현재 위치')
               : (_startPlace?['name'] ?? '출발지');
-          final endName = _endPlace?['name'] ?? '도착지';
+
+          final endName = _endPlace?['isCurrentLocation'] == true
+              ? (_endPlace?['address'] != null &&
+                        _endPlace!['address'].toString().isNotEmpty
+                    ? _endPlace!['address']
+                    : '현재 위치')
+              : (_endPlace?['name'] ?? '도착지');
 
           Navigator.push(
             context,

@@ -273,6 +273,23 @@
             currentMarker.setMap(map);
         }
 
+        var currentLocOverlay = null;
+
+        function setCurrentLocation(lat, lng) {
+            var position = new kakao.maps.LatLng(lat, lng);
+            if (currentLocOverlay) {
+                currentLocOverlay.setPosition(position);
+            } else {
+                var content = '<div style="width: 16px; height: 16px; background-color: #2196F3; border: 3px solid white; border-radius: 50%; box-shadow: 0 0 5px rgba(0,0,0,0.5);"></div>';
+                currentLocOverlay = new kakao.maps.CustomOverlay({
+                    position: position,
+                    content: content,
+                    zIndex: 3
+                });
+                currentLocOverlay.setMap(map);
+            }
+        }
+
         var startMarker = null;
         var endMarker = null;
 
@@ -385,6 +402,8 @@
                     panTo(data.lat, data.lng);
                 } else if (data.action === 'setMarker' && data.lat && data.lng) {
                     setMarker(data.lat, data.lng);
+                } else if (data.action === 'setCurrentLocation' && data.lat && data.lng) {
+                    setCurrentLocation(data.lat, data.lng);
                 } else if (data.action === 'setStartEndMarkers') {
                     setStartEndMarkers(data.startLat, data.startLng, data.endLat, data.endLng);
                 } else if (data.action === 'setStaticMode') {

@@ -339,6 +339,11 @@ class _MapScreenState extends State<MapScreen> {
         position.latitude,
         position.longitude,
       );
+      KakaoMapHelper.setCurrentLocation(
+        _mapController,
+        position.latitude,
+        position.longitude,
+      );
     } catch (e) {
       debugPrint('Error getting initial location: $e');
     }
@@ -414,6 +419,11 @@ class _MapScreenState extends State<MapScreen> {
       Position position = await Geolocator.getCurrentPosition();
       debugPrint("Location found: ${position.latitude}, ${position.longitude}");
       KakaoMapHelper.setCenter(
+        _mapController,
+        position.latitude,
+        position.longitude,
+      );
+      KakaoMapHelper.setCurrentLocation(
         _mapController,
         position.latitude,
         position.longitude,

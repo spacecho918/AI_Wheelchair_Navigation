@@ -46,6 +46,7 @@ dependencies:
   url_launcher: ^6.3.2
   shared_preferences: ^2.2.0
   supabase_flutter: ^2.8.0
+  flutter_compass: ^0.8.1
 
 dev_dependencies:
   flutter_test:

@@ -66,6 +66,24 @@ class KakaoMapHelper {
     }
   }
 
+  static void setCurrentLocation(
+    WebViewController? controller,
+    double lat,
+    double lng, {
+    String? mapId,
+  }) {
+    if (kIsWeb) {
+      platform.sendMapCommand({
+        'action': 'setCurrentLocation',
+        'lat': lat,
+        'lng': lng,
+        if (mapId != null) 'mapId': mapId,
+      });
+    } else {
+      controller?.runJavaScript('setCurrentLocation($lat, $lng)');
+    }
+  }
+
   static void setStaticMode(
     WebViewController? controller,
     bool isStatic, {
