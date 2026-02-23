@@ -618,6 +618,14 @@ class ApiService {
           .select()
           .eq('user_id', user.id)
           .maybeSingle();
+
+       // 제보 개수 카운트
+      final reportCountRes = await _supabase
+          .from('obstacles')
+          .select('id')
+          .eq('reported_by', user.id);
+
+      final realReportCount = (reportCountRes as List).length;
       if (res != null) {
         final nick = res['nickname'] as String?;
         var wt = res['wheelchair_type'] as String?;
@@ -648,9 +656,7 @@ class ApiService {
             wt ?? metadata?['wheelchair_type'] ?? 'none',
           ),
           driveCount: metadata?['drive_count'] ?? 0,
-          reportCount: reportLevel is int
-              ? reportLevel
-              : (metadata?['report_count'] ?? 0),
+          reportCount: realReportCount,
           likeCount: metadata?['like_count'] ?? 0,
           commentCount: metadata?['comment_count'] ?? 0,
         );

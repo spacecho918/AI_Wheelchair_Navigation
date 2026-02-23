@@ -338,7 +338,19 @@ class _RouteSearchScreenState extends State<RouteSearchScreen> {
   /// 출발지/도착지 좌표 추출 헬퍼
   LatLng? _getPlaceLatLng(Map<String, dynamic>? place) {
     if (place == null) return null;
-    if (place['latlng'] != null) return place['latlng'] as LatLng;
+
+    // latlng 객체가 있는 경우
+    if (place['latlng'] != null) {
+      return place['latlng'] as LatLng;
+    }
+    // lat / lng 필드가 있는 경우 (SavedPlaces용)
+    if (place['lat'] != null && place['lng'] != null) {
+      return LatLng(
+        (place['lat'] as num).toDouble(),
+        (place['lng'] as num).toDouble(),
+      );
+    }
+    // 현재 위치
     if (place['isCurrentLocation'] == true && widget.userLocation != null) {
       return widget.userLocation!;
     }

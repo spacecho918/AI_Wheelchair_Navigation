@@ -40,17 +40,38 @@ class _SavedPlacesScreenState extends State<SavedPlacesScreen> {
 
     if (savedPlaces != null) {
       setState(() {
-        _allPlaces = savedPlaces
-            .map((e) => Map<String, dynamic>.from(e))
-            .toList();
+        _allPlaces = savedPlaces.map((e) {
+          final map = Map<String, dynamic>.from(e);
+
+          // 기존 work 데이터 마이그레이션 처리
+          if (map['type'] == 'work') {
+            map.putIfAbsent('company_address', () => map['address'] ?? '');
+            map.putIfAbsent('company_lat', () => map['lat']);
+            map.putIfAbsent('company_lng', () => map['lng']);
+            map.putIfAbsent('school_address', () => '');
+            map.putIfAbsent('school_lat', () => null);
+            map.putIfAbsent('school_lng', () => null);
+          }
+
+          return map;
+        }).toList();
+
         _isLoading = false;
       });
     } else {
-      // Initialize with default empty home/work slots
       setState(() {
         _allPlaces = [
           {'type': 'home', 'name': '집', 'address': ''},
-          {'type': 'work', 'name': '회사', 'address': ''},
+          {
+            'type': 'work',
+            'name': '회사',
+            'company_address': '',
+            'company_lat': null,
+            'company_lng': null,
+            'school_address': '',
+            'school_lat': null,
+            'school_lng': null,
+          },
         ];
         _isLoading = false;
       });
@@ -171,6 +192,8 @@ class _SavedPlacesScreenState extends State<SavedPlacesScreen> {
                           'type': 'saved',
                           'name': result['name'],
                           'address': result['address'],
+                          'lat': result['latlng']?.latitude,
+                          'lng': result['latlng']?.longitude,
                         });
                       });
                       await _savePlacesToServer();
@@ -210,12 +233,29 @@ class _SavedPlacesScreenState extends State<SavedPlacesScreen> {
 
   Future<void> _deletePlace(Map<String, dynamic> place) async {
     setState(() {
-      if (place['type'] == 'home' || place['type'] == 'work') {
-        final index = _allPlaces.indexOf(place);
-        if (index != -1) {
-          _allPlaces[index] = {...place, 'address': ''};
-        }
-      } else {
+      final index = _allPlaces.indexOf(place);
+      if (index == -1) return;
+
+      if (place['type'] == 'home') {
+        _allPlaces[index] = {
+          ...place,
+          'address': '',
+          'lat': null,
+          'lng': null,
+        };
+      }
+      else if (place['type'] == 'work') {
+        _allPlaces[index] = {
+          ...place,
+          'company_address': '',
+          'company_lat': null,
+          'company_lng': null,
+          'school_address': '',
+          'school_lat': null,
+          'school_lng': null,
+        };
+      }
+      else {
         _allPlaces.remove(place);
       }
     });
@@ -261,16 +301,35 @@ class _SavedPlacesScreenState extends State<SavedPlacesScreen> {
         place['type'] == 'work' ||
         place['type'] == 'saved';
 
+    // 학교 , 회사 분리
+    String address = '';
+    double? lat;
+    double? lng;
+    if (place['type'] == 'work') {
+      if (place['name'] == '회사') {
+        address = place['company_address'] ?? '';
+        lat = place['company_lat'];
+        lng = place['company_lng'];
+      } else {
+        address = place['school_address'] ?? '';
+        lat = place['school_lat'];
+        lng = place['school_lng'];
+      }
+    } else {
+      address = place['address'] ?? '';
+      lat = place['lat'];
+      lng = place['lng'];
+    }
+
     return InkWell(
       onTap: () {
         // Only return if the place has an address
-        if (place['address'] != null &&
-            place['address'].toString().isNotEmpty) {
+        if (address.isNotEmpty) {
           Navigator.pop(context, {
             'name': place['name'],
-            'address': place['address'],
-            'lat': place['lat'],
-            'lng': place['lng'],
+            'address': address,
+            'lat': lat,
+            'lng': lng,
           });
         }
       },
@@ -308,12 +367,15 @@ class _SavedPlacesScreenState extends State<SavedPlacesScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // 회사, 학교 토글
                   if (isSaved && place['type'] == 'work')
                     GestureDetector(
-                      onTap: () {
+                      onTap: () async {
                         setState(() {
-                          place['name'] = place['name'] == '회사' ? '학교' : '회사';
+                          place['name'] =
+                          place['name'] == '회사' ? '학교' : '회사';
                         });
+                        await _savePlacesToServer();
                       },
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -344,10 +406,12 @@ class _SavedPlacesScreenState extends State<SavedPlacesScreen> {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
+
                   const SizedBox(height: 2),
-                  if (place['address'] != null && place['address'].isNotEmpty)
+
+                  if (address.isNotEmpty)
                     Text(
-                      place['address'],
+                      address,
                       style: const TextStyle(
                         color: Color(0xFF4A5565),
                         fontSize: 12,
@@ -373,22 +437,41 @@ class _SavedPlacesScreenState extends State<SavedPlacesScreen> {
                     setState(() {
                       final index = _allPlaces.indexOf(place);
                       if (index != -1) {
-                        bool isHomeOrWork =
-                            place['type'] == 'home' || place['type'] == 'work';
-                        _allPlaces[index] = {
-                          ...place,
-                          'name': isHomeOrWork ? place['name'] : result['name'],
-                          'address': result['address'],
-                        };
+
+                        if (place['type'] == 'work') {
+                          if (place['name'] == '회사') {
+                            _allPlaces[index] = {
+                              ...place,
+                              'company_address': result['address'],
+                              'company_lat': result['latlng']?.latitude,
+                              'company_lng': result['latlng']?.longitude,
+                            };
+                          } else {
+                            _allPlaces[index] = {
+                              ...place,
+                              'school_address': result['address'],
+                              'school_lat': result['latlng']?.latitude,
+                              'school_lng': result['latlng']?.longitude,
+                            };
+                          }
+                        } else {
+                          _allPlaces[index] = {
+                            ...place,
+                            'address': result['address'],
+                            'lat': result['latlng']?.latitude,
+                            'lng': result['latlng']?.longitude,
+                          };
+                        }
                       }
                     });
+
                     await _savePlacesToServer();
                     CommonToast.show(context, '장소가 수정되었습니다.');
                   }
                 },
                 icon: const Icon(Icons.edit, color: Color(0xFF9EA6B8)),
               ),
-            // Delete Button
+
             if (place['type'] == 'saved')
               IconButton(
                 onPressed: () => _deletePlace(place),
