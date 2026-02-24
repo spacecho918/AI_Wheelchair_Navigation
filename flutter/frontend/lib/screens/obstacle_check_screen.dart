@@ -48,7 +48,7 @@ class _ObstacleCheckScreenState extends State<ObstacleCheckScreen> {
   // ── 상태 ──────────────────────────────────────────────────────────────────
   bool _isAnalyzing = true;
   Uint8List? _annotatedImageBytes;
-  String? _serverDetectedType;
+  List<String> _serverDetectedTypes = [];
 
   late Set<String> _selectedIds;
   final List<TextEditingController> _otherControllers = [];
@@ -120,9 +120,26 @@ class _ObstacleCheckScreenState extends State<ObstacleCheckScreen> {
         setState(() {
           _isAnalyzing = false;
           if (newBytes != null) _annotatedImageBytes = newBytes;
-          _serverDetectedType = detectedType;
-          // 인식된 장애물만 자동 선택 (모를 때는 미선택)
-          _applyInitialObstacle(detectedType ?? widget.initialObstacle);
+
+          final detectionsList = result['detections'] as List?;
+          if (detectionsList != null && detectionsList.isNotEmpty) {
+            for (final d in detectionsList) {
+              final type = d['class'] as String?;
+              if (type != null) {
+                if (!_serverDetectedTypes.contains(type)) {
+                  _serverDetectedTypes.add(type);
+                }
+                _applyInitialObstacle(type);
+              }
+            }
+          } else {
+            if (detectedType != null) {
+              _serverDetectedTypes.add(detectedType!);
+              _applyInitialObstacle(detectedType);
+            } else if (widget.initialObstacle.isNotEmpty) {
+              _applyInitialObstacle(widget.initialObstacle);
+            }
+          }
         });
       }
     } catch (e) {
@@ -135,11 +152,25 @@ class _ObstacleCheckScreenState extends State<ObstacleCheckScreen> {
   /// - 클래스가 알려진 것이면 자동 선택
   /// - 모르거나 비어있으면 선택 안 함 (null 전달 시 아무것도 선택 안 됨)
   void _applyInitialObstacle(String? rawClass) {
-    if (rawClass == null || rawClass.isEmpty) return;
-    final id = _classToId[rawClass.toLowerCase()] ??
-        (obstacles.any((e) => e['id'] == rawClass) ? rawClass : null);
-    if (id != null) {
-      _selectedIds.add(id);
+    if (rawClass == null || rawClass.trim().isEmpty) return;
+    
+    final cleanClass = rawClass.trim().toLowerCase();
+    String? matchedId = _classToId[cleanClass];
+
+    // AI 영문 클래스에서 매칭되지 않았다면, 한글 라벨이나 직접 ID 매칭 시도 (fallback)
+    if (matchedId == null) {
+      try {
+        final match = obstacles.firstWhere(
+          (e) => e['id'] == cleanClass || e['label'] == rawClass.trim(),
+        );
+        matchedId = match['id'];
+      } catch (_) {
+        matchedId = null; // 매칭 실패
+      }
+    }
+
+    if (matchedId != null) {
+      _selectedIds.add(matchedId);
     }
     // 인식 실패시는 자동 선택 안 함
   }
@@ -320,8 +351,8 @@ class _ObstacleCheckScreenState extends State<ObstacleCheckScreen> {
 
                         // 서브타이틀 (AI 감지 결과 명시 - 한글)
                         Text(
-                          _serverDetectedType != null
-                              ? "AI가 '${_getLocalizedLabel(_serverDetectedType!)}'(을)를 감지했습니다.\n맞는지 확인하거나 수정해주세요."
+                          _serverDetectedTypes.isNotEmpty
+                              ? "AI가 '${_serverDetectedTypes.map((t) => _getLocalizedLabel(t)).join(', ')}'(을)를 감지했습니다.\n맞는지 확인하거나 수정해주세요."
                               : 'AI가 감지한 결과입니다. 맞는지 확인하거나 선택해주세요.',
                           textAlign: TextAlign.center,
                           style: const TextStyle(

@@ -234,6 +234,15 @@ async def startup_event():
         logger.error("시스템 초기화 실패")
     else:
         logger.info("시스템 초기화 완료")
+        
+    # YOLO 모델 미리 로드 (콜드 스타트 방지)
+    try:
+        from yolo_service import warmup_models
+        # 앱 시작이 차단되지 않게 백그라운드로 로드할 수도 있으나, 
+        # 첫 번째 요청 시 3-5초 지연을 방지하기 위해 일단 이 단계에서 로드
+        warmup_models()
+    except Exception as e:
+        logger.warning(f"YOLO 모델 사전 로드 실패 (사용 시지연 발생 가능): {e}")
 
 
 @app.get("/")

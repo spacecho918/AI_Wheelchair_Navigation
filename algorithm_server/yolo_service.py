@@ -63,13 +63,27 @@ def _get_privacy_model():
         logger.info("Privacy 모델 로드 완료")
     return _privacy_model
 
+def warmup_models():
+    """서버 구동 시 모델을 메모리에 미리 로드하여 첫 요청 지연시간(Cold Start) 방지"""
+    _get_obstacle_model()
+    _get_privacy_model()
+    logger.info("YOLO 모델 워밍업 완료")
 
-def _bytes_to_bgr(image_bytes: bytes) -> np.ndarray:
-    """bytes → OpenCV BGR ndarray 변환."""
+
+def _bytes_to_bgr(image_bytes: bytes, max_size: int = 1024) -> np.ndarray:
+    """bytes → OpenCV BGR ndarray 변환 + 필요시 리사이즈."""
     arr = np.frombuffer(image_bytes, np.uint8)
     img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
     if img is None:
         raise ValueError("이미지를 디코딩할 수 없습니다.")
+        
+    # 이미지가 너무 크면 연산/전송 속도 최적화를 위해 max_size로 제한
+    h, w = img.shape[:2]
+    if max(h, w) > max_size:
+        scale = max_size / max(h, w)
+        new_w, new_h = int(w * scale), int(h * scale)
+        img = cv2.resize(img, (new_w, new_h), interpolation=cv2.INTER_AREA)
+        
     return img
 
 
@@ -107,14 +121,15 @@ def analyze_obstacle(
     image_bytes: bytes,
     conf: float = 0.28,
     iou: float  = 0.45,
-    imgsz: int  = 960,
+    imgsz: int  = 640,
 ) -> tuple[bytes, list[dict]]:
     """
     장애물 감지 후 bbox가 그려진 이미지와 감지 목록을 반환합니다.
     (Segmentation 모델이 아니므로 반투명 박스로 영역을 표시합니다.)
     """
     model = _get_obstacle_model()
-    img   = _bytes_to_bgr(image_bytes)
+    # 통신 및 처리 최적화를 위해 입력을 1024px로 제한
+    img   = _bytes_to_bgr(image_bytes, max_size=1024)
 
     results = model(img, conf=conf, iou=iou, imgsz=imgsz, verbose=False)
 
@@ -199,7 +214,7 @@ def blur_privacy(
     image_bytes: bytes,
     conf: float        = 0.15,
     iou: float         = 0.45,
-    imgsz: int         = 1280,
+    imgsz: int         = 640,
     shrink_ratio: float = 0.15,
     blur_ksize: int    = 51,
 ) -> bytes:
@@ -207,7 +222,7 @@ def blur_privacy(
     얼굴·번호판을 감지하여 GaussianBlur 처리한 이미지를 반환합니다.
     """
     model = _get_privacy_model()
-    img   = _bytes_to_bgr(image_bytes)
+    img   = _bytes_to_bgr(image_bytes, max_size=1024)
     h_img, w_img = img.shape[:2]
 
     results = model(img, conf=conf, iou=iou, imgsz=imgsz, verbose=False)
