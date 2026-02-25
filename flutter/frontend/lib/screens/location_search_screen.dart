@@ -10,6 +10,7 @@ import 'package:gilbeot/screens/saved_places_screen.dart';
 import 'package:gilbeot/widgets/custom_back_button.dart';
 import '../services/recent_searches_service.dart';
 import 'package:gilbeot/widgets/common_toast.dart';
+import '../services/auth_service.dart';
 
 class LocationSearchScreen extends StatefulWidget {
   final LatLng? searchLocation;
@@ -32,10 +33,34 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
   List<dynamic> _searchResults = [];
   bool _isLoading = false;
 
+  // Favorites Data
+  String _workLabel = '회사'; // Can be '회사' or '학교'
+
   @override
   void initState() {
     super.initState();
     _loadRecentSearches();
+    _loadSavedPlaces();
+  }
+
+  Future<void> _loadSavedPlaces() async {
+    final user = AuthService.currentUser;
+    if (user == null) return;
+
+    final metadata = user.userMetadata;
+    final savedPlaces = metadata?['saved_places'] as List<dynamic>?;
+
+    if (savedPlaces != null) {
+      for (var place in savedPlaces) {
+        if (place['type'] == 'work') {
+          if (mounted) {
+            setState(() {
+              _workLabel = place['name'] ?? '회사';
+            });
+          }
+        }
+      }
+    }
   }
 
   Future<void> _loadRecentSearches() async {
@@ -487,9 +512,7 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
                     item['name'] == '집'
                         ? Icons.home_rounded
                         : (item['name'] == '회사' || item['name'] == '학교'
-                              ? (item['name'] == '회사'
-                                    ? Icons.work
-                                    : Icons.school)
+                              ? (_workLabel == '회사' ? Icons.work : Icons.school)
                               : (isSaved
                                     ? Icons.star
                                     : _getCategoryIcon(item['category']))),

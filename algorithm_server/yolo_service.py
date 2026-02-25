@@ -29,11 +29,12 @@ from PIL import Image, ImageDraw, ImageFont  # 한글 폰트용
 logger = logging.getLogger(__name__)
 
 # ───────────────────────────────────────────────
-# 모델 파일 경로 (이 파일과 같은 디렉터리 = algorithm_server/)
+# 모델 파일 경로 (상위 디렉터리의 yolo/ 디렉터리)
 # ───────────────────────────────────────────────
 _HERE = Path(__file__).parent
-OBSTACLE_MODEL_PATH = str(_HERE / "Obstacle.pt")
-PRIVACY_MODEL_PATH  = str(_HERE / "Personal-Info.pt")
+_YOLO_DIR = _HERE.parent / "yolo"
+OBSTACLE_MODEL_PATH = str(_YOLO_DIR / "Obstacle.pt")
+PRIVACY_MODEL_PATH  = str(_YOLO_DIR / "Personal-Info.pt")
 
 # ───────────────────────────────────────────────
 # 싱글톤 모델 (None이면 아직 로드 안 됨)

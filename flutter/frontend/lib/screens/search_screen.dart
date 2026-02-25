@@ -10,6 +10,7 @@ import 'package:gilbeot/screens/route_search_screen.dart';
 import 'package:geolocator/geolocator.dart';
 import '../services/recent_searches_service.dart';
 import 'package:gilbeot/widgets/common_toast.dart';
+import '../services/auth_service.dart';
 
 class SearchScreen extends StatefulWidget {
   final LatLng? searchLocation;
@@ -40,10 +41,38 @@ class _SearchScreenState extends State<SearchScreen> {
   void initState() {
     super.initState();
     _loadRecentSearches();
+    _loadSavedPlaces();
     // 화면이 열리면 바로 키보드 띄우기 (UX 편의성)
     WidgetsBinding.instance.addPostFrameCallback((_) {
       FocusScope.of(context).requestFocus(FocusNode());
     });
+  }
+
+  Future<void> _loadSavedPlaces() async {
+    final user = AuthService.currentUser;
+    if (user == null) return;
+
+    final metadata = user.userMetadata;
+    final savedPlaces = metadata?['saved_places'] as List<dynamic>?;
+
+    if (savedPlaces != null) {
+      for (var place in savedPlaces) {
+        if (place['type'] == 'home') {
+          setState(() {
+            _homeAddress = place['address'] ?? '';
+          });
+        } else if (place['type'] == 'work') {
+          setState(() {
+            _workLabel = place['name'] ?? '회사';
+            if (_workLabel == '회사') {
+              _workAddress = place['company_address'] ?? '';
+            } else {
+              _workAddress = place['school_address'] ?? '';
+            }
+          });
+        }
+      }
+    }
   }
 
   Future<void> _loadRecentSearches() async {
@@ -545,9 +574,7 @@ class _SearchScreenState extends State<SearchScreen> {
                     item['name'] == '집'
                         ? Icons.home_rounded
                         : (item['name'] == '회사' || item['name'] == '학교'
-                              ? (item['name'] == '회사'
-                                    ? Icons.work
-                                    : Icons.school)
+                              ? (_workLabel == '회사' ? Icons.work : Icons.school)
                               : (isSaved
                                     ? Icons.star
                                     : Icons.location_on_outlined)),

@@ -115,30 +115,6 @@ class _SavedPlacesScreenState extends State<SavedPlacesScreen> {
             fontWeight: FontWeight.w600,
           ),
         ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Center(
-              child: ElevatedButton(
-                onPressed: () => Navigator.pop(context),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF00C853),
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 0,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  minimumSize: const Size(64, 32),
-                ),
-                child: const Text('저장'),
-              ),
-            ),
-          ),
-        ],
       ),
       body: SafeArea(
         child: Column(
@@ -237,14 +213,8 @@ class _SavedPlacesScreenState extends State<SavedPlacesScreen> {
       if (index == -1) return;
 
       if (place['type'] == 'home') {
-        _allPlaces[index] = {
-          ...place,
-          'address': '',
-          'lat': null,
-          'lng': null,
-        };
-      }
-      else if (place['type'] == 'work') {
+        _allPlaces[index] = {...place, 'address': '', 'lat': null, 'lng': null};
+      } else if (place['type'] == 'work') {
         _allPlaces[index] = {
           ...place,
           'company_address': '',
@@ -254,8 +224,7 @@ class _SavedPlacesScreenState extends State<SavedPlacesScreen> {
           'school_lat': null,
           'school_lng': null,
         };
-      }
-      else {
+      } else {
         _allPlaces.remove(place);
       }
     });
@@ -371,11 +340,14 @@ class _SavedPlacesScreenState extends State<SavedPlacesScreen> {
                   if (isSaved && place['type'] == 'work')
                     GestureDetector(
                       onTap: () async {
+                        String newName = place['name'] == '회사' ? '학교' : '회사';
                         setState(() {
-                          place['name'] =
-                          place['name'] == '회사' ? '학교' : '회사';
+                          place['name'] = newName;
                         });
                         await _savePlacesToServer();
+                        if (mounted) {
+                          CommonToast.show(context, '$newName로 변경되었습니다.');
+                        }
                       },
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -437,7 +409,6 @@ class _SavedPlacesScreenState extends State<SavedPlacesScreen> {
                     setState(() {
                       final index = _allPlaces.indexOf(place);
                       if (index != -1) {
-
                         if (place['type'] == 'work') {
                           if (place['name'] == '회사') {
                             _allPlaces[index] = {
