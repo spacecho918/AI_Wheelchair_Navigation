@@ -370,11 +370,34 @@ class _RouteSearchScreenState extends State<RouteSearchScreen> {
     });
 
     try {
+      final user = await ApiService.getUserProfile();
+
+      String wheelchairType = user?.wheelchairType ?? 'Manual';
+
+      // 서버용 값으로 변환
+      switch (wheelchairType) {
+        case 'Electric':
+          wheelchairType = 'electric';
+          break;
+        case 'Manual':
+          wheelchairType = 'manual';
+          break;
+        case 'CaregiverManual':
+          wheelchairType = 'manual_with_helper';
+          break;
+        case 'None':
+          wheelchairType = 'none';
+          break;
+        default:
+          wheelchairType = 'manual';
+      }
+
       final result = await ApiService.compareRoutes(
         startLat: startLatLng.latitude,
         startLon: startLatLng.longitude,
         endLat: endLatLng.latitude,
         endLon: endLatLng.longitude,
+        wheelchairType: wheelchairType,
       );
 
       if (!mounted) return;
@@ -907,12 +930,36 @@ class _RouteSearchScreenState extends State<RouteSearchScreen> {
     );
 
     try {
+      final user = await ApiService.getUserProfile();
+
+      String wheelchairType = user?.wheelchairType ?? 'Manual';
+
+      // 서버용 값으로 변환
+      switch (wheelchairType) {
+        case 'Electric':
+          wheelchairType = 'electric';
+          break;
+        case 'Manual':
+          wheelchairType = 'manual';
+          break;
+        case 'CaregiverManual':
+          wheelchairType = 'manual_with_helper';
+          break;
+        case 'None':
+          wheelchairType = 'none';
+          break;
+        default:
+          wheelchairType = 'manual';
+      }
+
       final result = await ApiService.findRoute(
+
         startLat: startLat,
         startLon: startLon,
         endLat: endLat,
         endLon: endLon,
         mode: mode,
+        wheelchairType: wheelchairType,
       );
 
       if (context.mounted) Navigator.pop(context);

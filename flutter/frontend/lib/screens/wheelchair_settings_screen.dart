@@ -27,6 +27,7 @@ class _WheelchairSettingsScreenState extends State<WheelchairSettingsScreen> {
   Future<void> _loadWheelchairType() async {
     final user = await ApiService.getUserProfile();
     if (user != null) {
+
       setState(() {
         _selectedType = user.wheelchairType;
         _isLoading = false;

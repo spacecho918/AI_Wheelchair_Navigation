@@ -46,13 +46,13 @@ class _SideDrawerState extends State<SideDrawer> {
 
   String _getWheelchairDisplayText(String? type) {
     switch (type) {
-      case 'Electric':
+      case 'electric':
         return '전동 휠체어';
-      case 'Manual':
+      case 'manual':
         return '수동 휠체어';
-      case 'CaregiverManual':
+      case 'manual_with_helper':
         return '보호자 동반';
-      case 'None':
+      case 'none':
         return '사용 안함';
       default:
         return '휠체어 설정';
