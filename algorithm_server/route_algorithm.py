@@ -20,6 +20,13 @@ RouteMode = Literal["short", "safe", "optimal"]
 # 휠체어 유형 타입
 WheelchairType = Literal["electric", "manual", "manual_with_helper", "none"]
 
+# Flutter → 서버 내부 값 변환용 매핑
+WHEELCHAIR_TYPE_MAPPING = {
+    "Electric": "electric",
+    "Manual": "manual",
+    "CaregiverManual": "manual_with_helper",
+    "None": "none",
+}
 
 @dataclass
 class RouteResult:
@@ -132,6 +139,10 @@ class WeightCalculator:
             계산된 가중치 (float)
             장애물이 있으면 무한대 반환
         """
+        # Flutter 값 → 서버 내부 값으로 변환
+        wheelchair_type = WHEELCHAIR_TYPE_MAPPING.get(
+            wheelchair_type, wheelchair_type
+    )
         # 장애물 체크 - 모든 모드에서 무조건 차단
         obstacle_weight = edge_data.get('obstacle_weight', 1.0)
         if obstacle_weight == float('inf') or obstacle_weight > 1e10:
@@ -249,6 +260,11 @@ class RouteCalculator:
         Returns:
             RouteResult 객체
         """
+        # Flutter 값 → 서버 내부 값으로 변환
+        wheelchair_type = WHEELCHAIR_TYPE_MAPPING.get(
+            wheelchair_type, wheelchair_type
+        )
+        
         wheelchair_desc = WeightCalculator.WHEELCHAIR_CONFIG.get(wheelchair_type, {}).get("description", wheelchair_type)
         logger.info(f"경로 탐색 시작: {start_node} -> {end_node} (모드: {mode}, 휠체어: {wheelchair_desc})")
         
