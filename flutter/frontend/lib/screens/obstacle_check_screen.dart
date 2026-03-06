@@ -307,8 +307,10 @@ class _ObstacleCheckScreenState extends State<ObstacleCheckScreen> {
               maxChildSize: 0.95,
               builder: (context, scrollController) {
                 return Container(
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Theme.of(context).scaffoldBackgroundColor
+                        : Colors.white,
                     borderRadius: BorderRadius.only(
                       topLeft: Radius.circular(24),
                       topRight: Radius.circular(24),
@@ -339,12 +341,14 @@ class _ObstacleCheckScreenState extends State<ObstacleCheckScreen> {
                         ),
 
                         // 타이틀
-                        const Text(
+                        Text(
                           '해당하는 장애물을 선택해주세요',
                           style: TextStyle(
                             fontSize: 21,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFF101727),
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.white
+                                : const Color(0xFF101727),
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -355,9 +359,11 @@ class _ObstacleCheckScreenState extends State<ObstacleCheckScreen> {
                               ? "AI가 '${_serverDetectedTypes.map((t) => _getLocalizedLabel(t)).join(', ')}'(을)를 감지했습니다.\n맞는지 확인하거나 수정해주세요."
                               : 'AI가 감지한 결과입니다. 맞는지 확인하거나 선택해주세요.',
                           textAlign: TextAlign.center,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 14,
-                            color: Color(0xFF697282),
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? const Color(0xFF9CA3AF)
+                                : Color(0xFF697282),
                             height: 1.5,
                           ),
                         ),
@@ -403,7 +409,9 @@ class _ObstacleCheckScreenState extends State<ObstacleCheckScreen> {
                             width: double.infinity,
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
-                              color: Colors.white,
+                              color: Theme.of(context).brightness == Brightness.dark
+                                  ? Theme.of(context).cardColor
+                                  : Colors.white,
                               borderRadius: BorderRadius.circular(16),
                               border: Border.all(color: _mainColor),
                             ),
@@ -414,10 +422,12 @@ class _ObstacleCheckScreenState extends State<ObstacleCheckScreen> {
                                   mainAxisAlignment:
                                       MainAxisAlignment.spaceBetween,
                                   children: [
-                                    const Text(
+                                    Text(
                                       '장애물 설명',
                                       style: TextStyle(
-                                        color: Colors.black,
+                                        color: Theme.of(context).brightness == Brightness.dark
+                                            ? Colors.white
+                                            : Colors.black,
                                         fontWeight: FontWeight.bold,
                                         fontSize: 14,
                                       ),
@@ -471,13 +481,17 @@ class _ObstacleCheckScreenState extends State<ObstacleCheckScreen> {
                                             decoration: InputDecoration(
                                               hintText:
                                                   '예: 파손된 보도블록, 쓰러진 나무 등',
-                                              hintStyle: const TextStyle(
-                                                color: Color(0xFF9CA3AF),
+                                              hintStyle: TextStyle(
+                                                color: Theme.of(context).brightness == Brightness.dark
+                                                    ? const Color(0xFF697282)
+                                                    : const Color(0xFF9CA3AF),
                                                 fontSize: 14,
                                               ),
                                               filled: true,
                                               fillColor:
-                                                  const Color(0xFFF3F4F6),
+                                              Theme.of(context).brightness == Brightness.dark
+                                                  ? const Color(0xFF2A2A2A)
+                                                  : const Color(0xFFF3F4F6),
                                               border: OutlineInputBorder(
                                                 borderRadius:
                                                     BorderRadius.circular(8),
@@ -511,10 +525,12 @@ class _ObstacleCheckScreenState extends State<ObstacleCheckScreen> {
                                   );
                                 }),
                                 const SizedBox(height: 4),
-                                const Text(
+                                Text(
                                   '장애물의 종류를 입력해 주세요.',
                                   style: TextStyle(
-                                    color: Color(0xFF1F2937),
+                                    color: Theme.of(context).brightness == Brightness.dark
+                                        ? const Color(0xFF9CA3AF)
+                                        : const Color(0xFF1F2937),
                                     fontSize: 12,
                                   ),
                                 ),
@@ -536,9 +552,13 @@ class _ObstacleCheckScreenState extends State<ObstacleCheckScreen> {
                               backgroundColor: _mainColor,
                               foregroundColor: Colors.white,
                               disabledBackgroundColor:
-                                  const Color(0xFFF3F4F6),
+                              Theme.of(context).brightness == Brightness.dark
+                                  ? const Color(0xFF9CA3AF)
+                                  : const Color(0xFFF3F4F6),
                               disabledForegroundColor:
-                                  const Color(0xFF9CA3AF),
+                              Theme.of(context).brightness == Brightness.dark
+                                  ? const Color(0xFF2A2A2A)
+                                  : const Color(0xFF9CA3AF),
                               elevation: _isSubmitDisabled() ? 0 : 5,
                               shadowColor: const Color(0x3F00C853),
                               shape: RoundedRectangleBorder(
@@ -681,7 +701,9 @@ class _ObstacleCheckScreenState extends State<ObstacleCheckScreen> {
   Widget _buildOptionCard(Map<String, String> item, bool isSelected) {
     return Container(
       decoration: BoxDecoration(
-        color: isSelected ? const Color(0xFFE8FDF0) : Colors.white,
+        color: isSelected ? const Color(0xFFE8FDF0) : Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF2A2A2A)
+            : Colors.white,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: isSelected ? _mainColor : const Color(0xFFD0D5DB),
@@ -706,6 +728,8 @@ class _ObstacleCheckScreenState extends State<ObstacleCheckScreen> {
                   style: TextStyle(
                     color: isSelected
                         ? _mainColor
+                        : Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white
                         : const Color(0xFF354152),
                     fontSize: 14,
                     fontWeight: isSelected

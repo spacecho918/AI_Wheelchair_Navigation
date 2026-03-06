@@ -125,7 +125,9 @@ class _MyReportsScreenState extends State<MyReportsScreen>
     }
 
     return Scaffold(
-      backgroundColor: bgLight,
+      backgroundColor: Theme.of(context).brightness == Brightness.dark
+          ? Theme.of(context).cardColor
+          : bgLight,
       body: SafeArea(
         child: Column(
           children: [
@@ -143,7 +145,9 @@ class _MyReportsScreenState extends State<MyReportsScreen>
                   Text(
                     '나의 제보',
                     style: TextStyle(
-                      color: Color(0xFF354152),
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white
+                          : Color(0xFF354152),
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
@@ -180,8 +184,12 @@ class _MyReportsScreenState extends State<MyReportsScreen>
               ),
               child: TabBar(
                 controller: _tabController,
-                labelColor: textDark,
-                unselectedLabelColor: textGrey,
+                labelColor: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white
+                    : textDark,
+                unselectedLabelColor: Theme.of(context).brightness == Brightness.dark
+                    ? const Color(0xFF9EA6B8)
+                    : textGrey,
                 indicatorColor: primaryGreen,
                 indicatorWeight: 3,
                 labelStyle: const TextStyle(
@@ -220,7 +228,9 @@ class _MyReportsScreenState extends State<MyReportsScreen>
             // 3. Content List
             Expanded(
               child: Container(
-                color: bgLight,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Theme.of(context).scaffoldBackgroundColor
+                    : bgLight,
                 child: TabBarView(
                   controller: _tabController,
                   children: [
@@ -245,13 +255,17 @@ class _MyReportsScreenState extends State<MyReportsScreen>
           Text(
             count,
             style: TextStyle(
-              color: color ?? textDark,
+              color: color ?? (Theme.of(context).brightness == Brightness.dark
+                  ? Colors.white
+                  : textDark),
               fontSize: 24,
               fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(height: 4),
-          Text(label, style: TextStyle(color: textGrey, fontSize: 12)),
+          Text(label, style: TextStyle(color: Theme.of(context).brightness == Brightness.dark
+              ? const Color(0xFF9EA6B8)
+              : textGrey, fontSize: 12)),
         ],
       ),
     );
@@ -298,7 +312,9 @@ class _MyReportsScreenState extends State<MyReportsScreen>
                 margin: const EdgeInsets.only(bottom: 16),
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Theme.of(context).cardColor
+                      : Colors.white,
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
@@ -335,7 +351,9 @@ class _MyReportsScreenState extends State<MyReportsScreen>
                         ),
                         const Spacer(),
                         IconButton(
-                          icon: Icon(Icons.delete_outline, size: 22, color: textGrey),
+                          icon: Icon(Icons.delete_outline, size: 22, color: Theme.of(context).brightness == Brightness.dark
+                              ? Color(0xFF9CA3AF)
+                              : textGrey),
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(
                             minWidth: 40,
@@ -405,14 +423,18 @@ class _MyReportsScreenState extends State<MyReportsScreen>
                             Text(
                               _userProfile?.nickname ?? '나',
                               style: TextStyle(
-                                color: textDark,
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.white
+                                    : textDark,
                                 fontWeight: FontWeight.bold,
                                 fontSize: 14,
                               ),
                             ),
                             Text(
                               '${report.date.month}월 ${report.date.day}일',
-                              style: TextStyle(color: textGrey, fontSize: 10),
+                              style: TextStyle(color: Theme.of(context).brightness == Brightness.dark
+                                  ? Color(0xFF9CA3AF)
+                                  : textGrey, fontSize: 10),
                             ),
                           ],
                         ),
@@ -433,7 +455,9 @@ class _MyReportsScreenState extends State<MyReportsScreen>
                           child: Text(
                             report.location,
                             style: TextStyle(
-                              color: const Color(0xFF4A5565),
+                              color: Theme.of(context).brightness == Brightness.dark
+                                  ? Color(0xFF9CA3AF)
+                                  : const Color(0xFF4A5565),
                               fontSize: 12,
                             ),
                             overflow: TextOverflow.ellipsis,
@@ -447,7 +471,9 @@ class _MyReportsScreenState extends State<MyReportsScreen>
                     Text(
                       report.content,
                       style: TextStyle(
-                        color: textDark,
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white
+                            : textDark,
                         fontSize: 14,
                         height: 1.5,
                       ),
@@ -462,34 +488,46 @@ class _MyReportsScreenState extends State<MyReportsScreen>
                         Icon(
                           Icons.thumb_up_outlined,
                           size: 16,
-                          color: textGrey,
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Color(0xFF9CA3AF)
+                              : textGrey,
                         ),
                         const SizedBox(width: 4),
                         Text(
                           '${report.likeCount}',
-                          style: TextStyle(color: textGrey, fontSize: 12),
+                          style: TextStyle(color: Theme.of(context).brightness == Brightness.dark
+                              ? Color(0xFF9CA3AF)
+                              : textGrey, fontSize: 12),
                         ),
                         const SizedBox(width: 12),
                         Icon(
                           Icons.thumb_down_outlined,
                           size: 16,
-                          color: textGrey,
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Color(0xFF9CA3AF)
+                              : textGrey,
                         ),
                         const SizedBox(width: 4),
                         Text(
                           '${report.dislikeCount}',
-                          style: TextStyle(color: textGrey, fontSize: 12),
+                          style: TextStyle(color: Theme.of(context).brightness == Brightness.dark
+                              ? Color(0xFF9CA3AF)
+                              : textGrey, fontSize: 12),
                         ),
                         const Spacer(),
                         Icon(
                           Icons.chat_bubble_outline,
                           size: 16,
-                          color: textGrey,
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Color(0xFF9CA3AF)
+                              : textGrey,
                         ),
                         const SizedBox(width: 4),
                         Text(
                           '${report.commentCount}',
-                          style: TextStyle(color: textGrey, fontSize: 12),
+                          style: TextStyle(color: Theme.of(context).brightness == Brightness.dark
+                              ? Color(0xFF9CA3AF)
+                              : textGrey, fontSize: 12),
                         ),
                       ],
                     ),
@@ -538,7 +576,9 @@ class _MyReportsScreenState extends State<MyReportsScreen>
                 margin: const EdgeInsets.only(bottom: 12),
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Theme.of(context).cardColor
+                      : Colors.white,
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
@@ -581,7 +621,9 @@ class _MyReportsScreenState extends State<MyReportsScreen>
                               Text(
                                 comment.title,
                                 style: TextStyle(
-                                  color: textDark,
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? Colors.white
+                                      : textDark,
                                   fontSize: 14,
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -590,7 +632,9 @@ class _MyReportsScreenState extends State<MyReportsScreen>
                               Text(
                                 comment.location,
                                 style: TextStyle(
-                                  color: Color(0xFF9EA6B8),
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? Color(0xFF9CA3AF)
+                                      : Color(0xFF9EA6B8),
                                   fontSize: 12,
                                 ),
                               ),
@@ -603,7 +647,9 @@ class _MyReportsScreenState extends State<MyReportsScreen>
                     Text(
                       comment.content,
                       style: TextStyle(
-                        color: textDark,
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white
+                            : textDark,
                         fontSize: 14,
                         height: 1.5,
                       ),
@@ -614,20 +660,26 @@ class _MyReportsScreenState extends State<MyReportsScreen>
                       children: [
                         Text(
                           '${comment.date.month}월 ${comment.date.day}일',
-                          style: TextStyle(color: textGrey, fontSize: 12),
+                          style: TextStyle(color: Theme.of(context).brightness == Brightness.dark
+                              ? Color(0xFF9CA3AF)
+                              : textGrey, fontSize: 12),
                         ),
                         Row(
                           children: [
                             Icon(
                               Icons.thumb_up_outlined,
                               size: 14,
-                              color: textGrey,
+                              color: Theme.of(context).brightness == Brightness.dark
+                                  ? Color(0xFF9CA3AF)
+                                  : textGrey,
                             ),
                             const SizedBox(width: 4),
                             Text(
                               '${comment.likeCount}',
                               style: TextStyle(
-                                color: Color(0xFF9EA6B8),
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? Color(0xFF9CA3AF)
+                                    : Color(0xFF9EA6B8),
                                 fontSize: 12,
                               ),
                             ),

@@ -124,7 +124,9 @@ class _ReportEditScreenState extends State<ReportEditScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).brightness == Brightness.dark
+          ? Theme.of(context).scaffoldBackgroundColor
+          : Colors.white,
       body: SafeArea(
         child: Column(
           children: [
@@ -142,7 +144,9 @@ class _ReportEditScreenState extends State<ReportEditScreen> {
                   Text(
                     '제보 수정 요청',
                     style: TextStyle(
-                      color: textDark,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white
+                          : textDark,
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
@@ -166,7 +170,9 @@ class _ReportEditScreenState extends State<ReportEditScreen> {
                     Text(
                       '수정 사유',
                       style: TextStyle(
-                        color: textDark,
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white
+                            : textDark,
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
@@ -217,7 +223,9 @@ class _ReportEditScreenState extends State<ReportEditScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFF9FAFB),
+        color: Theme.of(context).brightness == Brightness.dark
+            ? Theme.of(context).cardColor
+            : const Color(0xFFF9FAFB),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.grey.shade200),
       ),
@@ -264,7 +272,9 @@ class _ReportEditScreenState extends State<ReportEditScreen> {
                       child: Text(
                         widget.report['content'] ?? '내용 없음',
                         style: TextStyle(
-                          color: textDark,
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.white
+                              : textDark,
                           fontSize: 14,
                           fontWeight: FontWeight.w500,
                         ),
@@ -277,7 +287,9 @@ class _ReportEditScreenState extends State<ReportEditScreen> {
                 const SizedBox(height: 4),
                 Text(
                   widget.report['address'] ?? '주소 없음',
-                  style: TextStyle(color: textGrey, fontSize: 12),
+                  style: TextStyle(color: Theme.of(context).brightness == Brightness.dark
+                      ? const Color(0xFF9CA3AF)
+                      : textGrey, fontSize: 12),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -309,6 +321,8 @@ class _ReportEditScreenState extends State<ReportEditScreen> {
             decoration: BoxDecoration(
               color: isSelected
                   ? primaryGreen.withValues(alpha: 0.05)
+                  : Theme.of(context).brightness == Brightness.dark
+                  ? Theme.of(context).cardColor
                   : Colors.white,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
@@ -329,7 +343,9 @@ class _ReportEditScreenState extends State<ReportEditScreen> {
                 Text(
                   reason,
                   style: TextStyle(
-                    color: isSelected ? textDark : const Color(0xFF4A5565),
+                    color: isSelected ? Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white
+                        : textDark : const Color(0xFF4A5565),
                     fontSize: 15,
                     fontWeight: isSelected
                         ? FontWeight.w600
@@ -355,7 +371,9 @@ class _ReportEditScreenState extends State<ReportEditScreen> {
               text: TextSpan(
                 text: '증빙 사진 ',
                 style: TextStyle(
-                  color: textDark,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white
+                      : textDark,
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                 ),
@@ -374,7 +392,9 @@ class _ReportEditScreenState extends State<ReportEditScreen> {
                 height: 150,
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF3F4F6),
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? const Color(0xFF2A2A2A)
+                      : const Color(0xFFF3F4F6),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: Colors.grey.shade300,
@@ -395,13 +415,17 @@ class _ReportEditScreenState extends State<ReportEditScreen> {
                         children: [
                           Icon(
                             Icons.camera_alt_outlined,
-                            color: textGrey,
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? const Color(0xFF9CA3AF)
+                                : textGrey,
                             size: 32,
                           ),
                           const SizedBox(height: 8),
                           Text(
                             '사진을 등록해주세요',
-                            style: TextStyle(color: textGrey, fontSize: 14),
+                            style: TextStyle(color: Theme.of(context).brightness == Brightness.dark
+                                ? const Color(0xFF9CA3AF)
+                                : textGrey, fontSize: 14),
                           ),
                         ],
                       ),
@@ -413,7 +437,9 @@ class _ReportEditScreenState extends State<ReportEditScreen> {
                 Text(
                   '상세 설명 ',
                   style: TextStyle(
-                    color: textDark,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white
+                        : textDark,
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                   ),
@@ -421,7 +447,9 @@ class _ReportEditScreenState extends State<ReportEditScreen> {
                 Text(
                   '(선택사항)',
                   style: TextStyle(
-                    color: textGrey,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? const Color(0xFF9CA3AF)
+                        : textGrey,
                     fontSize: 12,
                     fontWeight: FontWeight.normal,
                   ),
@@ -434,9 +462,13 @@ class _ReportEditScreenState extends State<ReportEditScreen> {
               maxLines: 4,
               decoration: InputDecoration(
                 hintText: '내용을 입력해주세요.',
-                hintStyle: TextStyle(color: textGrey),
+                hintStyle: TextStyle(color: Theme.of(context).brightness == Brightness.dark
+                    ? const Color(0xFF697282)
+                    : textGrey),
                 filled: true,
-                fillColor: const Color(0xFFF3F4F6),
+                fillColor: Theme.of(context).brightness == Brightness.dark
+                    ? const Color(0xFF2A2A2A)
+                    : const Color(0xFFF3F4F6),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide.none,
@@ -453,7 +485,9 @@ class _ReportEditScreenState extends State<ReportEditScreen> {
             Text(
               '현재 위치 정보',
               style: TextStyle(
-                color: textDark,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white
+                    : textDark,
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
               ),
@@ -462,21 +496,27 @@ class _ReportEditScreenState extends State<ReportEditScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFFF3F4F6),
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? const Color(0xFF2A2A2A)
+                    : const Color(0xFFF3F4F6),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.location_on_outlined,
                     size: 20,
-                    color: Colors.grey,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? const Color(0xFF9CA3AF)
+                        : Colors.grey,
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       widget.report['address'] ?? '주소 정보 없음',
-                      style: TextStyle(color: textDark, fontSize: 14),
+                      style: TextStyle(color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white
+                          : textDark, fontSize: 14),
                     ),
                   ),
                 ],
@@ -508,7 +548,9 @@ class _ReportEditScreenState extends State<ReportEditScreen> {
                       child: Text(
                         _newAddress!,
                         style: TextStyle(
-                          color: textDark,
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.white
+                              : textDark,
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
                         ),
@@ -524,8 +566,12 @@ class _ReportEditScreenState extends State<ReportEditScreen> {
               width: double.infinity,
               child: OutlinedButton.icon(
                 onPressed: _editLocation,
-                icon: Icon(Icons.map, color: textDark),
-                label: Text('위치 수정하기', style: TextStyle(color: textDark)),
+                icon: Icon(Icons.map, color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white
+                    : textDark),
+                label: Text('위치 수정하기', style: TextStyle(color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white
+                    : textDark)),
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
@@ -544,7 +590,9 @@ class _ReportEditScreenState extends State<ReportEditScreen> {
               text: TextSpan(
                 text: '설명 ',
                 style: TextStyle(
-                  color: textDark,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white
+                      : textDark,
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                 ),
@@ -562,9 +610,13 @@ class _ReportEditScreenState extends State<ReportEditScreen> {
               maxLines: 4,
               decoration: InputDecoration(
                 hintText: '내용을 입력해주세요.',
-                hintStyle: TextStyle(color: textGrey),
+                hintStyle: TextStyle(color: Theme.of(context).brightness == Brightness.dark
+                    ? const Color(0xFF697282)
+                    : textGrey),
                 filled: true,
-                fillColor: const Color(0xFFF3F4F6),
+                fillColor: Theme.of(context).brightness == Brightness.dark
+                    ? const Color(0xFF2A2A2A)
+                    : const Color(0xFFF3F4F6),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide.none,
@@ -579,7 +631,9 @@ class _ReportEditScreenState extends State<ReportEditScreen> {
                 Text(
                   '사진 ',
                   style: TextStyle(
-                    color: textDark,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white
+                        : textDark,
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                   ),
@@ -587,7 +641,9 @@ class _ReportEditScreenState extends State<ReportEditScreen> {
                 Text(
                   '(선택사항)',
                   style: TextStyle(
-                    color: textGrey,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? const Color(0xFF9CA3AF)
+                        : textGrey,
                     fontSize: 12,
                     fontWeight: FontWeight.normal,
                   ),
@@ -601,7 +657,9 @@ class _ReportEditScreenState extends State<ReportEditScreen> {
                 height: 150,
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF3F4F6),
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? const Color(0xFF2A2A2A)
+                      : const Color(0xFFF3F4F6),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: Colors.grey.shade300,
@@ -622,13 +680,17 @@ class _ReportEditScreenState extends State<ReportEditScreen> {
                         children: [
                           Icon(
                             Icons.camera_alt_outlined,
-                            color: textGrey,
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? const Color(0xFF9CA3AF)
+                                : textGrey,
                             size: 32,
                           ),
                           const SizedBox(height: 8),
                           Text(
                             '사진 추가',
-                            style: TextStyle(color: textGrey, fontSize: 14),
+                            style: TextStyle(color: Theme.of(context).brightness == Brightness.dark
+                                ? const Color(0xFF9CA3AF)
+                                : textGrey, fontSize: 14),
                           ),
                         ],
                       ),

@@ -80,7 +80,9 @@ class _NotificationScreenState extends State<NotificationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).brightness == Brightness.dark
+          ? Theme.of(context).scaffoldBackgroundColor
+          : Colors.white,
       body: SafeArea(
         child: Column(
           children: [
@@ -95,10 +97,12 @@ class _NotificationScreenState extends State<NotificationScreen> {
                     alignment: Alignment.centerLeft,
                     child: CustomBackButton(),
                   ),
-                  const Text(
+                  Text(
                     '알림',
                     style: TextStyle(
-                      color: Color(0xFF354152),
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white
+                          : const Color(0xFF354152),
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
@@ -147,7 +151,9 @@ class _NotificationScreenState extends State<NotificationScreen> {
   Widget _buildNotificationItem(Map<String, dynamic> item) {
     final bool isRead = item['isRead'];
     final Color bgColor = isRead
-        ? Colors.white
+        ? Theme.of(context).brightness == Brightness.dark
+        ? const Color(0xFF9CA3AF)
+        : Colors.white
         : const Color(0xFFF0FDF4); // Light Green if unread
 
     return Container(
@@ -166,7 +172,13 @@ class _NotificationScreenState extends State<NotificationScreen> {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: isRead ? const Color(0xFFF3F4F6) : Colors.white,
+              color: isRead
+                  ? Theme.of(context).brightness == Brightness.dark
+                  ? const Color(0xFF2A2A2A)
+                  : const Color(0xFFF3F4F6)
+                  : Theme.of(context).brightness == Brightness.dark
+                  ? Theme.of(context).cardColor
+                  : Colors.white,
               borderRadius: BorderRadius.circular(8),
               border: isRead
                   ? null
@@ -175,7 +187,9 @@ class _NotificationScreenState extends State<NotificationScreen> {
             child: Icon(
               _getIcon(item['type']),
               size: 20,
-              color: const Color(0xFF6B7280),
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? const Color(0xFFE5E7EB)
+                  : const Color(0xFF6B7280),
             ),
           ),
           const SizedBox(width: 16),
@@ -188,10 +202,12 @@ class _NotificationScreenState extends State<NotificationScreen> {
                   children: [
                     Text(
                       item['title'],
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF111827),
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? const Color(0xFF2A2A2A)
+                            : const Color(0xFF111827),
                       ),
                     ),
                     if (!isRead) ...[
@@ -218,9 +234,11 @@ class _NotificationScreenState extends State<NotificationScreen> {
                 const SizedBox(height: 4),
                 Text(
                   item['description'],
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
-                    color: Color(0xFF6B7280), // Grey 500
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? const Color(0xFF4B5563)
+                        : const Color(0xFF6B7280), // Grey 500
                     height: 1.4,
                   ),
                 ),

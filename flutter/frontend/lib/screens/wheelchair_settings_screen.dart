@@ -54,14 +54,16 @@ class _WheelchairSettingsScreenState extends State<WheelchairSettingsScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(
-        backgroundColor: Colors.white,
+      return Scaffold(
+        backgroundColor: Theme.of(context).brightness == Brightness.dark
+            ? Theme.of(context).scaffoldBackgroundColor
+            : Colors.white,
         body: Center(child: CircularProgressIndicator()),
       );
     }
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Column(
           children: [
@@ -77,10 +79,12 @@ class _WheelchairSettingsScreenState extends State<WheelchairSettingsScreen> {
                     alignment: Alignment.centerLeft,
                     child: CustomBackButton(),
                   ),
-                  const Text(
+                  Text(
                     '휠체어 설정',
                     style: TextStyle(
-                      color: Color(0xFF354152), // Community Screen Header Color
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white
+                          : const Color(0xFF354152), // Community Screen Header Color
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
@@ -121,18 +125,22 @@ class _WheelchairSettingsScreenState extends State<WheelchairSettingsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     const SizedBox(height: 10), // reduced top padding
-                    const Text(
+                    Text(
                       '사용하시는 휠체어 타입을 선택하세요',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF101727),
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white
+                            : const Color(0xFF101727),
                       ),
                     ),
                     const SizedBox(height: 8),
-                    const Text(
+                    Text(
                       '더 정확한 경로 추천을 위해 필요합니다',
-                      style: TextStyle(fontSize: 13, color: Color(0xFF4A5565)),
+                      style: TextStyle(fontSize: 13, color: Theme.of(context).brightness == Brightness.dark
+                          ? const Color(0xFF9CA3AF)
+                          : const Color(0xFF4A5565)),
                     ),
                     const SizedBox(height: 24),
 
@@ -176,7 +184,9 @@ class _WheelchairSettingsScreenState extends State<WheelchairSettingsScreen> {
                       width: double.infinity,
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: const Color(
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? const Color(0xFF9CA3AF)
+                            : const Color(
                           0xFFE3F2FD,
                         ).withOpacity(0.5), // Light blue
                         borderRadius: BorderRadius.circular(16),
@@ -261,7 +271,9 @@ class _WheelchairSettingsScreenState extends State<WheelchairSettingsScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFE8F5E9) : Colors.white,
+          color: isSelected ? const Color(0xFFE8F5E9) : Theme.of(context).brightness == Brightness.dark
+              ? const Color(0xFF1E1E1E)
+              : Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isSelected
@@ -338,6 +350,8 @@ class _WheelchairSettingsScreenState extends State<WheelchairSettingsScreen> {
                       fontWeight: FontWeight.bold,
                       color: isSelected
                           ? const Color(0xFF00C853)
+                          : Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white
                           : const Color(0xFF101727),
                     ),
                   ),
@@ -346,7 +360,9 @@ class _WheelchairSettingsScreenState extends State<WheelchairSettingsScreen> {
                     subtitle,
                     style: TextStyle(
                       fontSize: 12,
-                      color: const Color(0xFF4A5565),
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? const Color(0xFF9CA3AF)
+                          : const Color(0xFF4A5565),
                     ),
                   ),
                 ],

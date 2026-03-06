@@ -356,7 +356,9 @@ class _NavigationScreenState extends State<NavigationScreen> {
               child: Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Theme.of(context).cardColor
+                      : Colors.white,
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
@@ -394,10 +396,12 @@ class _NavigationScreenState extends State<NavigationScreen> {
                         children: [
                           Text(
                             currentDirection['instruction'] as String,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
-                              color: Color(0xFF101727),
+                              color: Theme.of(context).brightness == Brightness.dark
+                                  ? Colors.white
+                                  : Color(0xFF101727),
                             ),
                           ),
                           const SizedBox(height: 4),
@@ -405,7 +409,9 @@ class _NavigationScreenState extends State<NavigationScreen> {
                             currentDirection['detail'] as String,
                             style: TextStyle(
                               fontSize: 14,
-                              color: Color(0xFF4A5565),
+                              color: Theme.of(context).brightness == Brightness.dark
+                                  ? Color(0xFF9CA3AF)
+                                  : Color(0xFF4A5565),
                             ),
                           ),
                           if (currentDirection['tag'] != null) ...[
@@ -416,7 +422,9 @@ class _NavigationScreenState extends State<NavigationScreen> {
                                 vertical: 4,
                               ),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFE8FDF0),
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? Color(0xFF2A2A2A)
+                                    : const Color(0xFFE8FDF0),
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(
@@ -562,7 +570,9 @@ class _NavigationScreenState extends State<NavigationScreen> {
                     ),
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Theme.of(context).cardColor
+                          : Colors.white,
                       borderRadius: BorderRadius.circular(24),
                       boxShadow: [
                         BoxShadow(
@@ -581,10 +591,12 @@ class _NavigationScreenState extends State<NavigationScreen> {
                             // 남은 시간
                             Text(
                               widget.estimatedTime,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 28,
                                 fontWeight: FontWeight.bold,
-                                color: Color(0xFF101727),
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.white
+                                    : Color(0xFF101727),
                               ),
                             ),
                             const SizedBox(width: 16),
@@ -593,7 +605,9 @@ class _NavigationScreenState extends State<NavigationScreen> {
                               widget.totalDistance,
                               style: TextStyle(
                                 fontSize: 16,
-                                color: Color(0xFF4A5565),
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? Color(0xFF9CA3AF)
+                                    : Color(0xFF4A5565),
                               ),
                             ),
                             const Spacer(),

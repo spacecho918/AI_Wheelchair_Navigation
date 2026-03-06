@@ -463,7 +463,9 @@ class _RouteSearchScreenState extends State<RouteSearchScreen> {
                 // Top Fixed Inputs
                 PointerInterceptor(
                   child: Container(
-                    color: Colors.white,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Theme.of(context).scaffoldBackgroundColor
+                        : Colors.white,
                     padding: const EdgeInsets.only(bottom: 10),
                     child: Column(
                       children: [
@@ -590,8 +592,10 @@ class _RouteSearchScreenState extends State<RouteSearchScreen> {
                         builder: (context, scrollController) {
                           return PointerInterceptor(
                             child: Container(
-                              decoration: const ShapeDecoration(
-                                color: Colors.white,
+                              decoration: ShapeDecoration(
+                                color: Theme.of(context).brightness == Brightness.dark
+                                      ? Theme.of(context).cardColor
+                                      : Colors.white,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.only(
                                     topLeft: Radius.circular(28),
@@ -1049,10 +1053,14 @@ class _RouteSearchScreenState extends State<RouteSearchScreen> {
       } else {
         text = place['name'];
       }
-      textColor = Colors.black87;
+      textColor = Theme.of(context).brightness == Brightness.dark
+          ? Colors.white
+          : Colors.black87;
     } else {
       text = isStart ? '출발지를 입력하세요' : '도착지를 입력하세요';
-      textColor = const Color(0xFF9EA6B8);
+      textColor = Theme.of(context).brightness == Brightness.dark
+          ? Colors.white
+          : const Color(0xFF9EA6B8);
     }
 
     return GestureDetector(
@@ -1061,7 +1069,7 @@ class _RouteSearchScreenState extends State<RouteSearchScreen> {
         height: 50,
         padding: const EdgeInsets.symmetric(horizontal: 16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Color(0xFF2A2A2A), //Colors.white,
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
@@ -1123,11 +1131,22 @@ class _RouteSearchScreenState extends State<RouteSearchScreen> {
       padding: const EdgeInsets.all(12), // 패딩 줄임 (16 -> 12)
       decoration: BoxDecoration(
         color: isSelected
-            ? Color.lerp(Colors.white, themeColor, 0.05)!
+            ? Color.lerp(
+          Theme.of(context).brightness == Brightness.dark
+              ? const Color(0xFF1E1E1E)
+              : Colors.white,
+          themeColor,
+          0.05,
+        )!
+            : Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF1E1E1E)
             : Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isSelected ? themeColor : const Color(0xFFF3F4F6),
+          color: isSelected ? themeColor
+              : Theme.of(context).brightness == Brightness.dark
+              ? const Color(0xFF2C2C2C)
+              : const Color(0xFFF3F4F6),
           width: 1.5,
         ),
         boxShadow: [
@@ -1178,8 +1197,10 @@ class _RouteSearchScreenState extends State<RouteSearchScreen> {
               const SizedBox(width: 8),
               Text(
                 title,
-                style: const TextStyle(
-                  color: Color(0xFF101727),
+                style: TextStyle(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white
+                      : Color(0xFF101727),
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
                 ),
@@ -1200,27 +1221,35 @@ class _RouteSearchScreenState extends State<RouteSearchScreen> {
           // Info Info
           Row(
             children: [
-              const Icon(Icons.access_time, size: 14, color: Color(0xFF4A5565)),
+              Icon(Icons.access_time, size: 14, color: Theme.of(context).brightness == Brightness.dark
+                  ? Color(0xFF9CA3AF)
+                  : Color(0xFF4A5565)),
               const SizedBox(width: 4),
               Text(
                 time,
-                style: const TextStyle(
-                  color: Color(0xFF4A5565), // Unified textGrey
+                style: TextStyle(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Color(0xFF9CA3AF)
+                      : Color(0xFF4A5565), // Unified textGrey
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
                 ),
               ),
               const SizedBox(width: 10),
-              const Icon(
+              Icon(
                 Icons.route_outlined,
                 size: 14,
-                color: Color(0xFF4A5565),
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Color(0xFF9CA3AF)
+                    : Color(0xFF4A5565),
               ),
               const SizedBox(width: 4),
               Text(
                 distance,
-                style: const TextStyle(
-                  color: Color(0xFF4A5565), // Unified textGrey
+                style: TextStyle(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Color(0xFF9CA3AF)
+                      : Color(0xFF4A5565), // Unified textGrey
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
                 ),

@@ -260,7 +260,9 @@ class _LocationAdjustScreenState extends State<LocationAdjustScreen> {
             // Custom Header
             Container(
               height: 56,
-              color: Colors.white,
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Theme.of(context).cardColor
+                  : Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Stack(
                 alignment: Alignment.center,
@@ -274,10 +276,12 @@ class _LocationAdjustScreenState extends State<LocationAdjustScreen> {
                       constraints: const BoxConstraints(),
                     ),
                   ),
-                  const Text(
+                  Text(
                     '위치 수정',
                     style: TextStyle(
-                      color: Color(0xFF354152),
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white
+                          : Color(0xFF354152),
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
@@ -330,7 +334,9 @@ class _LocationAdjustScreenState extends State<LocationAdjustScreen> {
                                 width: 48,
                                 height: 48,
                                 decoration: BoxDecoration(
-                                  color: Colors.white,
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? const Color(0xFF2A2A2A)
+                                      : Colors.white,
                                   shape: BoxShape.circle,
                                   boxShadow: [
                                     BoxShadow(
@@ -352,8 +358,10 @@ class _LocationAdjustScreenState extends State<LocationAdjustScreen> {
                                         'assets/target_icon.svg',
                                         width: 18,
                                         height: 18,
-                                        colorFilter: const ColorFilter.mode(
-                                          Color(0xFF354152),
+                                        colorFilter: ColorFilter.mode(
+                                          Theme.of(context).brightness == Brightness.dark
+                                              ? Colors.white
+                                              : const Color(0xFF354152),
                                           BlendMode.srcIn,
                                         ),
                                       ),
@@ -367,7 +375,9 @@ class _LocationAdjustScreenState extends State<LocationAdjustScreen> {
                               child: Container(
                                 padding: const EdgeInsets.all(24),
                                 decoration: BoxDecoration(
-                                  color: Colors.white,
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? Theme.of(context).scaffoldBackgroundColor
+                                      : Colors.white,
                                   borderRadius: BorderRadius.circular(
                                     24,
                                   ), // Full rounded corners
@@ -386,38 +396,46 @@ class _LocationAdjustScreenState extends State<LocationAdjustScreen> {
                                       CrossAxisAlignment.stretch,
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    const Text(
+                                    Text(
                                       '이 위치가 맞나요?',
                                       textAlign: TextAlign.center,
                                       style: TextStyle(
                                         fontSize: 18,
                                         fontWeight: FontWeight.bold,
-                                        color: Color(0xFF101727),
+                                        color: Theme.of(context).brightness == Brightness.dark
+                                            ? Colors.white
+                                            : Color(0xFF101727),
                                       ),
                                     ),
                                     const SizedBox(height: 16),
                                     Container(
                                       padding: const EdgeInsets.all(16),
                                       decoration: BoxDecoration(
-                                        color: const Color(0xFFF3F4F6),
+                                        color: Theme.of(context).brightness == Brightness.dark
+                                            ? const Color(0xFF2A2A2A)
+                                            : const Color(0xFFF3F4F6),
                                         borderRadius: BorderRadius.circular(12),
                                       ),
                                       child: Row(
                                         mainAxisAlignment:
                                             MainAxisAlignment.center,
                                         children: [
-                                          const Icon(
+                                          Icon(
                                             Icons.location_on_outlined,
-                                            color: Color(0xFF9EA6B8),
+                                            color: Theme.of(context).brightness == Brightness.dark
+                                                ? const Color(0xFF9CA3AF)
+                                                : const Color(0xFF9EA6B8),
                                             size: 20,
                                           ),
                                           const SizedBox(width: 8),
                                           Flexible(
                                             child: Text(
                                               _currentAddress,
-                                              style: const TextStyle(
+                                              style: TextStyle(
                                                 fontSize: 14,
-                                                color: Color(0xFF4A5565),
+                                                color: Theme.of(context).brightness == Brightness.dark
+                                                    ? Colors.white
+                                                    : Color(0xFF4A5565),
                                               ),
                                               textAlign: TextAlign.center,
                                             ),

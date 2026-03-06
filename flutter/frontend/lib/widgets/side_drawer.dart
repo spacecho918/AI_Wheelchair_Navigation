@@ -88,7 +88,7 @@ class _SideDrawerState extends State<SideDrawer> {
     return PointerInterceptor(
       child: Drawer(
         backgroundColor: Theme.of(context).brightness == Brightness.dark
-            ? Theme.of(context).cardColor
+            ? Color(0xFF2A2A2A)
             : Colors.white,
         shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
         child: SafeArea(

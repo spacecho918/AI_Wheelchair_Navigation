@@ -147,7 +147,9 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).brightness == Brightness.dark
+          ? Theme.of(context).scaffoldBackgroundColor
+          : Colors.white,
       body: SafeArea(
         child: Column(
           children: [
@@ -164,7 +166,9 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
                     child: Container(
                       height: 48,
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Color(0xFF2A2A2A)
+                            : Colors.white,
                         borderRadius: BorderRadius.circular(24),
                         boxShadow: [
                           BoxShadow(
@@ -180,8 +184,10 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
                         onChanged: _onSearchChanged,
                         decoration: InputDecoration(
                           hintText: '장소, 주소 검색',
-                          hintStyle: const TextStyle(
-                            color: Color(0xFF9EA6B8),
+                          hintStyle: TextStyle(
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Color(0xFF697282)
+                                : Color(0xFF9EA6B8),
                             fontSize: 14,
                           ),
                           prefixIcon: const Icon(
@@ -295,7 +301,9 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
             // 3. Content (Recent Searches or Search Results)
             Expanded(
               child: Container(
-                color: Colors.white,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Theme.of(context).scaffoldBackgroundColor
+                    : Colors.white,
                 child: _searchController.text.isEmpty
                     ? _buildRecentSearches()
                     : _buildSearchResults(),
@@ -322,10 +330,12 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
           const SizedBox(width: 6),
           Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF101727),
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.white
+                  : Color(0xFF101727),
             ),
           ),
         ],
@@ -340,12 +350,14 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
+            Text(
               '최근 검색',
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF101727),
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white
+                    : Color(0xFF101727),
               ),
             ),
             TextButton(
@@ -389,7 +401,9 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
             border: Border(bottom: BorderSide(color: Color(0xFFE0E0E0))),
           ),
           child: Material(
-            color: Colors.white,
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Color(0xFF2A2A2A)
+                : Colors.white,
             child: InkWell(
               onTap: () async {
                 await RecentSearchesService.addSearch(place);
@@ -427,10 +441,12 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
                         children: [
                           Text(
                             name,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w400,
-                              color: Color(0xFF101727),
+                              color: Theme.of(context).brightness == Brightness.dark
+                                  ? Colors.white
+                                  : Color(0xFF101727),
                             ),
                           ),
                           const SizedBox(height: 2),
@@ -485,7 +501,9 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
         border: Border(bottom: BorderSide(color: Color(0xFFE0E0E0))),
       ),
       child: Material(
-        color: Colors.white,
+        color: Theme.of(context).brightness == Brightness.dark
+            ? Color(0xFF2A2A2A)
+            : Colors.white,
         child: InkWell(
           onTap: () {
             // Return result directly without showing detail sheet
@@ -526,10 +544,12 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
                 Expanded(
                   child: Text(
                     item['name'],
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.normal,
-                      color: Color(0xFF101727),
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white
+                          : Color(0xFF101727),
                     ),
                   ),
                 ),

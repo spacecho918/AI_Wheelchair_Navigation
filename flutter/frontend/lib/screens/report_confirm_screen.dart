@@ -131,14 +131,18 @@ class _ReportConfirmScreenState extends State<ReportConfirmScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
+      backgroundColor: Theme.of(context).brightness == Brightness.dark
+          ? Theme.of(context).scaffoldBackgroundColor
+          : const Color(0xFFF5F7FA),
       body: SafeArea(
         child: Column(
           children: [
             // Custom Header
             Container(
               height: 56,
-              color: Colors.white,
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Theme.of(context).cardColor
+                  : Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Stack(
                 alignment: Alignment.center,
@@ -155,10 +159,12 @@ class _ReportConfirmScreenState extends State<ReportConfirmScreen> {
                       constraints: const BoxConstraints(),
                     ),
                   ),
-                  const Text(
+                  Text(
                     '제보 확인',
                     style: TextStyle(
-                      color: Color(0xFF354152),
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white
+                          : const Color(0xFF354152),
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
@@ -248,7 +254,9 @@ class _ReportConfirmScreenState extends State<ReportConfirmScreen> {
                   vertical: 8,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Theme.of(context).cardColor
+                      : Colors.white,
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
@@ -259,11 +267,13 @@ class _ReportConfirmScreenState extends State<ReportConfirmScreen> {
                   ],
                 ),
                 child: Row(
-                  children: const [
+                  children: [
                     Icon(
                       Icons.camera_alt_outlined,
                       size: 16,
-                      color: Color(0xFF101727),
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white
+                          : Color(0xFF101727),
                     ),
                     SizedBox(width: 4),
                     Text(
@@ -271,7 +281,9 @@ class _ReportConfirmScreenState extends State<ReportConfirmScreen> {
                       style: TextStyle(
                         fontSize: 12,
                         // fontWeight: FontWeight.w600,
-                        color: Color(0xFF101727),
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white
+                            : const Color(0xFF101727),
                       ),
                     ),
                   ],
@@ -295,7 +307,9 @@ class _ReportConfirmScreenState extends State<ReportConfirmScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).brightness == Brightness.dark
+            ? Theme.of(context).cardColor
+            : Colors.white,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
@@ -329,14 +343,18 @@ class _ReportConfirmScreenState extends State<ReportConfirmScreen> {
               children: [
                 Text(
                   '장애물 종류',
-                  style: TextStyle(fontSize: 12, color: Color(0xFF9EA6B8)),
+                  style: TextStyle(fontSize: 12, color: Theme.of(context).brightness == Brightness.dark
+                      ? const Color(0xFF9CA3AF)
+                      : Color(0xFF9EA6B8)),
                 ),
                 Text(
                   _currentObstacleType ?? '알 수 없음',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF101727),
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white
+                        : const Color(0xFF101727),
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
@@ -349,7 +367,9 @@ class _ReportConfirmScreenState extends State<ReportConfirmScreen> {
             child: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Theme.of(context).cardColor
+                    : Colors.white,
                 shape: BoxShape.circle,
                 border: Border.all(color: const Color(0xFFE5E7EB)),
               ),
@@ -365,7 +385,9 @@ class _ReportConfirmScreenState extends State<ReportConfirmScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).brightness == Brightness.dark
+            ? Theme.of(context).cardColor
+            : Colors.white,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
@@ -393,7 +415,9 @@ class _ReportConfirmScreenState extends State<ReportConfirmScreen> {
                     '위치',
                     style: TextStyle(
                       fontSize: 12,
-                      color: Color(0xFF9EA6B8),
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? const Color(0xFF9CA3AF)
+                          : const Color(0xFF9EA6B8),
                       // fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -404,7 +428,9 @@ class _ReportConfirmScreenState extends State<ReportConfirmScreen> {
                 child: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Theme.of(context).cardColor
+                        : Colors.white,
                     shape: BoxShape.circle,
                     border: Border.all(color: const Color(0xFFE5E7EB)),
                   ),
@@ -420,10 +446,12 @@ class _ReportConfirmScreenState extends State<ReportConfirmScreen> {
           const SizedBox(height: 2),
           Text(
             _currentAddress,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF101727),
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.white
+                  : const Color(0xFF101727),
             ),
           ),
           const SizedBox(height: 16),
@@ -451,7 +479,9 @@ class _ReportConfirmScreenState extends State<ReportConfirmScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).brightness == Brightness.dark
+            ? Theme.of(context).cardColor
+            : Colors.white,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
@@ -466,18 +496,22 @@ class _ReportConfirmScreenState extends State<ReportConfirmScreen> {
         children: [
           Row(
             children: [
-              const Text(
+              Text(
                 '상세 설명',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
-                  color: Color(0xFF101727),
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white
+                      : Color(0xFF101727),
                 ),
               ),
               const SizedBox(width: 4),
               Text(
                 '(선택사항)',
-                style: TextStyle(fontSize: 12, color: Color(0xFF9EA6B8)),
+                style: TextStyle(fontSize: 12, color: Theme.of(context).brightness == Brightness.dark
+                    ? const Color(0xFF9CA3AF)
+                    : Color(0xFF9EA6B8)),
               ),
             ],
           ),
@@ -487,9 +521,13 @@ class _ReportConfirmScreenState extends State<ReportConfirmScreen> {
             maxLines: 3,
             decoration: InputDecoration(
               hintText: '장애물에 대한 추가 정보(높이, 너비, 우회로 등)를 입력해주세요.',
-              hintStyle: TextStyle(color: Color(0xFF9EA6B8), fontSize: 14),
+              hintStyle: TextStyle(color: Theme.of(context).brightness == Brightness.dark
+                  ? const Color(0xFF697282)
+                  : Color(0xFF9EA6B8), fontSize: 14),
               filled: true,
-              fillColor: const Color(0xFFF3F4F6),
+              fillColor: Theme.of(context).brightness == Brightness.dark
+                  ? const Color(0xFF2A2A2A)
+                  : const Color(0xFFF3F4F6),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide.none,

@@ -498,8 +498,10 @@ class _MapScreenState extends State<MapScreen> with RouteAware {
                     // (1) 흰색 대시보드
                     Container(
                       margin: const EdgeInsets.only(top: 65), // 버튼과 대시보드 간격
-                      decoration: const ShapeDecoration(
-                        color: Colors.white,
+                      decoration: ShapeDecoration(
+                        color: Theme.of(context).brightness == Brightness.dark
+                          ? Theme.of(context).cardColor
+                          : Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.only(
                             topLeft: Radius.circular(28),
@@ -577,7 +579,9 @@ class _MapScreenState extends State<MapScreen> with RouteAware {
                               width: double.infinity,
                               padding: const EdgeInsets.all(20),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFF9FAFB),
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? Theme.of(context).cardColor
+                                    : Colors.white,
                                 borderRadius: BorderRadius.circular(16),
                                 border: Border.all(
                                   color: const Color(0xFFF3F4F6),
@@ -639,7 +643,9 @@ class _MapScreenState extends State<MapScreen> with RouteAware {
                               width: double.infinity,
                               padding: const EdgeInsets.all(20),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFF9FAFB),
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? Theme.of(context).cardColor
+                                    : const Color(0xFFF9FAFB),
                                 borderRadius: BorderRadius.circular(16),
                                 border: Border.all(
                                   color: const Color(0xFFF3F4F6),
@@ -838,7 +844,9 @@ class _MapScreenState extends State<MapScreen> with RouteAware {
                         width: 50,
                         height: 50,
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Color(0xFF2A2A2A)
+                              : Colors.white,
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
@@ -858,8 +866,10 @@ class _MapScreenState extends State<MapScreen> with RouteAware {
                                 'assets/target_icon.svg',
                                 width: 18,
                                 height: 18,
-                                colorFilter: const ColorFilter.mode(
-                                  Color(0xFF354152),
+                                colorFilter: ColorFilter.mode(
+                                  Theme.of(context).brightness == Brightness.dark
+                                      ? Colors.white
+                                      : Color(0xFF354152),
                                   BlendMode.srcIn,
                                 ),
                               ),
@@ -889,7 +899,9 @@ class _MapScreenState extends State<MapScreen> with RouteAware {
                     width: 50,
                     height: 50,
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Color(0xFF2A2A2A)
+                          : Colors.white,
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
@@ -913,6 +925,12 @@ class _MapScreenState extends State<MapScreen> with RouteAware {
                             'assets/burger_icon.svg',
                             width: 20,
                             height: 20,
+                            colorFilter: ColorFilter.mode(
+                              Theme.of(context).brightness == Brightness.dark
+                                  ? Colors.white
+                                  : Colors.black,
+                              BlendMode.srcIn,
+                            ),
                           ),
                         ),
                       ),
@@ -958,7 +976,9 @@ class _MapScreenState extends State<MapScreen> with RouteAware {
                       child: Container(
                         height: 50,
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? const Color(0xFF2A2A2A)
+                              : Colors.white,
                           borderRadius: BorderRadius.circular(24),
                           boxShadow: [
                             BoxShadow(
@@ -974,17 +994,21 @@ class _MapScreenState extends State<MapScreen> with RouteAware {
                             SvgPicture.asset(
                               'assets/search_icon.svg',
                               width: 20,
-                              colorFilter: const ColorFilter.mode(
-                                Colors.grey,
+                              colorFilter: ColorFilter.mode(
+                                Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.white
+                                    : Colors.grey,
                                 BlendMode.srcIn,
                               ),
                             ),
                             const SizedBox(width: 10),
-                            const Expanded(
+                            Expanded(
                               child: Text(
                                 '주변 장소 검색...',
                                 style: TextStyle(
-                                  color: Color(0xFF717182),
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? Colors.white
+                                      : Color(0xFF717182),
                                   fontSize: 14,
                                 ),
                               ),
@@ -1002,7 +1026,9 @@ class _MapScreenState extends State<MapScreen> with RouteAware {
                     width: 50,
                     height: 50,
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Color(0xFF2A2A2A)
+                          : Colors.white,
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
@@ -1050,8 +1076,10 @@ class _MapScreenState extends State<MapScreen> with RouteAware {
       children: [
         Text(
           title,
-          style: const TextStyle(
-            color: Color(0xFF101727),
+          style: TextStyle(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white
+                : Color(0xFF101727),
             fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
@@ -1059,10 +1087,12 @@ class _MapScreenState extends State<MapScreen> with RouteAware {
         GestureDetector(
           onTap: onTap,
           child: Row(
-            children: const [
+            children: [
               Text(
                 '전체보기',
-                style: TextStyle(color: Color(0xFF6B7280), fontSize: 13),
+                style: TextStyle(color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white
+                    : Color(0xFF6B7280), fontSize: 13),
               ),
               Icon(Icons.chevron_right, color: Color(0xFF6B7280), size: 16),
             ],
@@ -1080,7 +1110,9 @@ class _MapScreenState extends State<MapScreen> with RouteAware {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).brightness == Brightness.dark
+          ? Color(0xFF2A2A2A)
+          : Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFF3F4F6)),
       ),
@@ -1102,8 +1134,10 @@ class _MapScreenState extends State<MapScreen> with RouteAware {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
-                    color: Color(0xFF101727),
+                  style: TextStyle(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white
+                        : Color(0xFF101727),
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                   ),
@@ -1111,8 +1145,10 @@ class _MapScreenState extends State<MapScreen> with RouteAware {
                 const SizedBox(height: 4),
                 Text(
                   address,
-                  style: const TextStyle(
-                    color: Color(0xFF4A5565),
+                  style: TextStyle(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? const Color(0xFF9CA3AF)
+                        : Color(0xFF4A5565),
                     fontSize: 13,
                   ),
                   maxLines: 1,
@@ -1146,7 +1182,9 @@ class _MapScreenState extends State<MapScreen> with RouteAware {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).brightness == Brightness.dark
+              ? const Color(0xFF2A2A2A)
+              : Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: const Color(0xFFF3F4F6)),
         ),
@@ -1162,13 +1200,13 @@ class _MapScreenState extends State<MapScreen> with RouteAware {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF3F4F6),
+                    color: const Color(0xFF00C853),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
                     tag,
-                    style: const TextStyle(
-                      color: Color(0xFF4A5565),
+                    style: TextStyle(
+                      color: Colors.white,
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
                     ),
@@ -1176,8 +1214,10 @@ class _MapScreenState extends State<MapScreen> with RouteAware {
                 ),
                 Text(
                   time,
-                  style: const TextStyle(
-                    color: Color(0xFF9CA3AF),
+                  style: TextStyle(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white
+                        : const Color(0xFF9CA3AF),
                     fontSize: 12,
                   ),
                 ),
@@ -1186,8 +1226,10 @@ class _MapScreenState extends State<MapScreen> with RouteAware {
             const SizedBox(height: 8),
             Text(
               title,
-              style: const TextStyle(
-                color: Color(0xFF101727),
+              style: TextStyle(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white
+                    : Color(0xFF101727),
                 fontSize: 15,
                 fontWeight: FontWeight.bold,
               ),
@@ -1195,16 +1237,20 @@ class _MapScreenState extends State<MapScreen> with RouteAware {
             const SizedBox(height: 4),
             Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.location_on_outlined,
                   size: 14,
-                  color: Color(0xFF6B7280),
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Color(0xFF9CA3AF)
+                      : Color(0xFF6B7280),
                 ),
                 const SizedBox(width: 2),
                 Text(
                   location,
-                  style: const TextStyle(
-                    color: Color(0xFF4A5565),
+                  style: TextStyle(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Color(0xFF9CA3AF)
+                        : Color(0xFF4A5565),
                     fontSize: 13,
                   ),
                 ),
@@ -1213,30 +1259,38 @@ class _MapScreenState extends State<MapScreen> with RouteAware {
             const SizedBox(height: 8),
             Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.thumb_up_outlined,
                   size: 14,
-                  color: Color(0xFF6B7280),
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Color(0xFF9CA3AF)
+                      : Color(0xFF6B7280),
                 ),
                 const SizedBox(width: 4),
                 Text(
                   '$likes',
-                  style: const TextStyle(
-                    color: Color(0xFF6B7280),
+                  style: TextStyle(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Color(0xFF9CA3AF)
+                        : Color(0xFF6B7280),
                     fontSize: 13,
                   ),
                 ),
                 const SizedBox(width: 12),
-                const Icon(
+                Icon(
                   Icons.comment_outlined,
                   size: 14,
-                  color: Color(0xFF6B7280),
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Color(0xFF9CA3AF)
+                      : Color(0xFF6B7280),
                 ),
                 const SizedBox(width: 4),
                 Text(
                   '$comments',
-                  style: const TextStyle(
-                    color: Color(0xFF6B7280),
+                  style: TextStyle(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Color(0xFF9CA3AF)
+                        : Color(0xFF6B7280),
                     fontSize: 13,
                   ),
                 ),

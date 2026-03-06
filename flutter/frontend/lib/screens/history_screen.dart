@@ -147,14 +147,18 @@ class _HistoryScreenState extends State<HistoryScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(
-        backgroundColor: Colors.white,
+      return Scaffold(
+        backgroundColor: Theme.of(context).brightness == Brightness.dark
+            ? Theme.of(context).scaffoldBackgroundColor
+            : Colors.white,
         body: Center(child: CircularProgressIndicator()),
       );
     }
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).brightness == Brightness.dark
+          ? Theme.of(context).scaffoldBackgroundColor
+          : Colors.white,
       body: SafeArea(
         child: Column(
           children: [
@@ -172,7 +176,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   Text(
                     '주행 기록',
                     style: TextStyle(
-                      color: Color(0xFF354152),
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white
+                          : Color(0xFF354152),
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
@@ -202,11 +208,15 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         ),
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         decoration: BoxDecoration(
-                          color: isSelected ? primaryGreen : Colors.white,
+                          color: isSelected ? primaryGreen  : Theme.of(context).brightness == Brightness.dark
+                              ? const Color(0xFF2A2A2A)
+                              : Colors.white,
                           borderRadius: BorderRadius.circular(25),
                           border: Border.all(
                             color: isSelected
                                 ? primaryGreen
+                                : Theme.of(context).brightness == Brightness.dark
+                                ? const Color(0xFF9CA3AF)
                                 : const Color(0xFFE5E7EB),
                           ),
                         ),
@@ -214,7 +224,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         child: Text(
                           _filters[index],
                           style: TextStyle(
-                            color: isSelected ? Colors.white : textGrey,
+                            color: isSelected ? Colors.white : Theme.of(context).brightness == Brightness.dark
+                                ? const Color(0xFF9CA3AF)
+                                : textGrey,
                             fontSize: 14,
                             fontWeight: isSelected
                                 ? FontWeight.w600
@@ -267,7 +279,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       child: Text(
                         '최근 주행',
                         style: TextStyle(
-                          color: textDark,
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.white
+                              : textDark,
                           fontSize: 16,
                           fontWeight: FontWeight.w400,
                         ),
@@ -306,7 +320,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Theme.of(context).cardColor
+              : Colors.white,
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             // Shadow 1
@@ -335,7 +351,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 Text(
                   label,
                   style: TextStyle(
-                    color: textGrey,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? const Color(0xFF9CA3AF)
+                        : textGrey,
                     fontSize: 14,
                     fontWeight: FontWeight.w400,
                   ),
@@ -351,7 +369,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
             Text(
               value,
               style: TextStyle(
-                color: textDark,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white
+                    : textDark,
                 fontSize: 24,
                 fontWeight: FontWeight.w500,
               ),
@@ -360,7 +380,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
             Text(
               subLabel,
               style: TextStyle(
-                color: textGrey,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? const Color(0xFF9CA3AF)
+                    : textGrey,
                 fontSize: 12,
                 fontWeight: FontWeight.w400,
               ),
@@ -382,7 +404,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white, // Same as summary cards
+        color: Theme.of(context).brightness == Brightness.dark
+            ? Theme.of(context).cardColor
+            : Colors.white, // Same as summary cards
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           // Shadow 1
@@ -407,12 +431,16 @@ class _HistoryScreenState extends State<HistoryScreen> {
           // Header: Date & Time
           Row(
             children: [
-              Icon(Icons.calendar_today_outlined, size: 14, color: textGrey),
+              Icon(Icons.calendar_today_outlined, size: 14, color:  Theme.of(context).brightness == Brightness.dark
+                  ? const Color(0xFF9CA3AF)
+                  : textGrey),
               const SizedBox(width: 6),
               Text(
                 '$dateStr • $timeStr',
                 style: TextStyle(
-                  color: textGrey,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? const Color(0xFF9CA3AF)
+                      : textGrey,
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
                 ),
@@ -456,7 +484,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         child: Text(
                           item.startLocation,
                           style: TextStyle(
-                            color: textDark,
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.white
+                                : textDark,
                             fontSize: 15,
                             fontWeight: FontWeight.w500,
                           ),
@@ -484,7 +514,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         child: Text(
                           item.endLocation,
                           style: TextStyle(
-                            color: textDark,
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.white
+                                : textDark,
                             fontSize: 15,
                             fontWeight: FontWeight.w500,
                           ),
@@ -503,23 +535,31 @@ class _HistoryScreenState extends State<HistoryScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              Icon(Icons.route, size: 14, color: textGrey),
+              Icon(Icons.route, size: 14, color: Theme.of(context).brightness == Brightness.dark
+                  ? const Color(0xFF9CA3AF)
+                  : textGrey),
               const SizedBox(width: 4),
               Text(
                 '${item.distance}km',
                 style: TextStyle(
-                  color: textGrey,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? const Color(0xFF9CA3AF)
+                      : textGrey,
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
                 ),
               ),
               const SizedBox(width: 12),
-              Icon(Icons.access_time, size: 14, color: textGrey),
+              Icon(Icons.access_time, size: 14, color: Theme.of(context).brightness == Brightness.dark
+                  ? const Color(0xFF9CA3AF)
+                  : textGrey),
               const SizedBox(width: 4),
               Text(
                 '${item.duration}분',
                 style: TextStyle(
-                  color: textGrey,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? const Color(0xFF9CA3AF)
+                      : textGrey,
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
                 ),

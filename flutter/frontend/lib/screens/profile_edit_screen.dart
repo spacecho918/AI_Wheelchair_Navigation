@@ -266,25 +266,31 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       return const SizedBox();
     }
     if (_isLoading) {
-      return const Scaffold(
-        backgroundColor: Colors.white,
+      return Scaffold(
+        backgroundColor: Theme.of(context).brightness == Brightness.dark
+            ? Theme.of(context).scaffoldBackgroundColor
+            : Colors.white,
         body: Center(child: CircularProgressIndicator()),
       );
     }
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).brightness == Brightness.dark
+          ? Theme.of(context).scaffoldBackgroundColor
+          : Colors.white,
       body: SafeArea(
         child: Column(
           children: [
             // Header
             Container(
-              color: Colors.white,
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Theme.of(context).cardColor
+                  : Colors.white,
               height: 56,
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Stack(
                 alignment: Alignment.center,
-                children: const [
+                children: [
                   Align(
                     alignment: Alignment.centerLeft,
                     child: CustomBackButton(),
@@ -292,7 +298,9 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                   Text(
                     '개인정보 수정',
                     style: TextStyle(
-                      color: Color(0xFF354152),
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white
+                          : const Color(0xFF354152),
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
@@ -457,10 +465,12 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
                                       children: [
-                                        const Text(
+                                        Text(
                                           '닉네임',
                                           style: TextStyle(
-                                            color: Color(0xFF6B7280),
+                                            color: Theme.of(context).brightness == Brightness.dark
+                                                ? const Color(0xFF9CA3AF)
+                                                : const Color(0xFF6B7280),
                                             fontSize: 12,
                                             fontWeight: FontWeight.w500,
                                           ),
@@ -471,8 +481,10 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                                             Expanded(
                                               child: TextField(
                                                 controller: _nicknameController,
-                                                style: const TextStyle(
-                                                  color: Color(0xFF1F2937),
+                                                style: TextStyle(
+                                                  color: Theme.of(context).brightness == Brightness.dark
+                                                      ? Colors.white
+                                                      : Color(0xFF1F2937),
                                                   fontSize: 15,
                                                   fontWeight: FontWeight.w500,
                                                 ),
@@ -654,8 +666,10 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                                           const SizedBox(height: 4),
                                           Text(
                                             _nicknameController.text,
-                                            style: const TextStyle(
-                                              color: Color(0xFF1F2937),
+                                            style: TextStyle(
+                                              color: Theme.of(context).brightness == Brightness.dark
+                                                  ? const Color(0xFF9CA3AF)
+                                                  : Color(0xFF1F2937),
                                               fontSize: 15,
                                               fontWeight: FontWeight.w500,
                                             ),
@@ -850,7 +864,9 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                               width: double.infinity,
                               padding: const EdgeInsets.all(20),
                               decoration: BoxDecoration(
-                                color: Colors.white,
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? const Color(0xFF2A2A2A)
+                                    : Colors.white,
                                 borderRadius: BorderRadius.circular(16),
                                 boxShadow: [
                                   BoxShadow(
@@ -896,7 +912,9 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                           Container(
                             width: double.infinity,
                             decoration: BoxDecoration(
-                              color: Colors.white,
+                              color: Theme.of(context).brightness == Brightness.dark
+                                  ? Theme.of(context).cardColor
+                                  : Colors.white,
                               borderRadius: BorderRadius.circular(16),
                               border: Border.all(
                                 color: const Color(0xFFFEE2E2),
@@ -996,7 +1014,9 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   Widget _buildInputCard(List<Widget> children) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF2A2A2A)
+            : Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -1042,7 +1062,9 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
             textAlignVertical: TextAlignVertical.center,
             style: TextStyle(
               color: enabled
-                  ? const Color(0xFF1F2937)
+                  ? (Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white
+                      : const Color(0xFF1F2937))
                   : const Color(0xFF9CA3AF),
               fontSize: 15,
               fontWeight: FontWeight.w500,

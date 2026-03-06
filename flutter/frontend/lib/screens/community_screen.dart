@@ -119,7 +119,9 @@ class _CommunityScreenState extends State<CommunityScreen> {
             // Custom Header
             Container(
               height: 56,
-              color: Colors.white,
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Theme.of(context).cardColor
+                  : Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Stack(
                 alignment: Alignment.center,
@@ -134,7 +136,9 @@ class _CommunityScreenState extends State<CommunityScreen> {
                       Text(
                         '제보 커뮤니티',
                         style: TextStyle(
-                          color: textDark,
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.white
+                              : textDark,
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
                         ),
@@ -142,7 +146,9 @@ class _CommunityScreenState extends State<CommunityScreen> {
                       Text(
                         '지역 내 장애물 정보 공유',
                         style: TextStyle(
-                          color: Color(0xFF4A5565),
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? const Color(0xFF9CA3AF)
+                              : Color(0xFF4A5565),
                           fontSize: 12,
                           fontWeight: FontWeight.normal,
                         ),
@@ -156,7 +162,9 @@ class _CommunityScreenState extends State<CommunityScreen> {
                         isFilterVisible
                             ? Icons.filter_alt_off
                             : Icons.filter_alt_outlined,
-                        color: textDark,
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white
+                            : textDark,
                       ),
                       onPressed: () {
                         setState(() {
@@ -170,8 +178,10 @@ class _CommunityScreenState extends State<CommunityScreen> {
             ),
             Container(
               width: double.infinity,
-              decoration: const BoxDecoration(
-                color: Colors.white,
+              decoration: BoxDecoration(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Theme.of(context).cardColor
+                    : Colors.white,
                 border: Border(bottom: BorderSide(color: Color(0xFFF5F7FA))),
               ),
               child: Column(
@@ -197,14 +207,18 @@ class _CommunityScreenState extends State<CommunityScreen> {
                                 filter,
                                 style: TextStyle(
                                   color: isSelected
-                                      ? Colors.white
+                                      ?Colors.white
+                                      : Theme.of(context).brightness == Brightness.dark
+                                      ? const Color(0xFF9CA3AF) // 다크모드
                                       : const Color(0xFF4A5565),
                                   fontSize: 14,
                                 ),
                               ),
                               selected: isSelected,
                               selectedColor: primaryGreen,
-                              backgroundColor: Colors.white,
+                              backgroundColor: Theme.of(context).brightness == Brightness.dark
+                                  ? Theme.of(context).cardColor
+                                  : Colors.white,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(20),
                                 side: BorderSide(
@@ -247,7 +261,9 @@ class _CommunityScreenState extends State<CommunityScreen> {
                       vertical: 10,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? const Color(0xFF2A2A2A)
+                          : Colors.white,
                       borderRadius: BorderRadius.circular(12),
                       boxShadow: [
                         BoxShadow(
@@ -355,7 +371,9 @@ class _CommunityScreenState extends State<CommunityScreen> {
             // 3. Report List
             Expanded(
               child: Container(
-                color: const Color(0xFFF5F7FA), // Changed background color
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Theme.of(context).scaffoldBackgroundColor
+                    : const Color(0xFFF5F7FA), // Changed background color
                 child: _isLoading
                     ? Center(
                         child: CircularProgressIndicator(color: primaryGreen),
@@ -364,7 +382,9 @@ class _CommunityScreenState extends State<CommunityScreen> {
                     ? Center(
                         child: Text(
                           '해당하는 제보가 없습니다.',
-                          style: TextStyle(color: textGrey),
+                          style: TextStyle(color: Theme.of(context).brightness == Brightness.dark
+                              ? const Color(0xFF9CA3AF)
+                              : textGrey),
                         ),
                       )
                     : ListView.builder(
@@ -389,7 +409,9 @@ class _CommunityScreenState extends State<CommunityScreen> {
                                   margin: const EdgeInsets.only(bottom: 16),
                                   padding: const EdgeInsets.all(16),
                                   decoration: BoxDecoration(
-                                    color: Colors.white,
+                                    color: Theme.of(context).brightness == Brightness.dark
+                                        ? Theme.of(context).cardColor
+                                        : Colors.white,
                                     borderRadius: BorderRadius.circular(16),
                                     boxShadow: [
                                       BoxShadow(
@@ -518,7 +540,9 @@ class _CommunityScreenState extends State<CommunityScreen> {
                                               Text(
                                                 report['user'],
                                                 style: TextStyle(
-                                                  color: textDark,
+                                                  color: Theme.of(context).brightness == Brightness.dark
+                                                      ? Colors.white
+                                                      : textDark,
                                                   fontWeight: FontWeight.bold,
                                                   fontSize: 14,
                                                 ),
@@ -526,7 +550,9 @@ class _CommunityScreenState extends State<CommunityScreen> {
                                               Text(
                                                 _formatTimeAgo(report['time']),
                                                 style: TextStyle(
-                                                  color: textGrey,
+                                                  color: Theme.of(context).brightness == Brightness.dark
+                                                      ? const Color(0xFF9CA3AF)
+                                                      : textGrey,
                                                   fontSize: 10,
                                                 ),
                                               ),
@@ -548,7 +574,9 @@ class _CommunityScreenState extends State<CommunityScreen> {
                                           Text(
                                             report['address'],
                                             style: TextStyle(
-                                              color: Color(0xFF4A5565),
+                                              color: Theme.of(context).brightness == Brightness.dark
+                                                  ? const Color(0xFF9CA3AF)
+                                                  : Color(0xFF4A5565),
                                               fontSize: 12,
                                             ),
                                           ),
@@ -560,7 +588,9 @@ class _CommunityScreenState extends State<CommunityScreen> {
                                       Text(
                                         report['content'],
                                         style: TextStyle(
-                                          color: textDark,
+                                          color: Theme.of(context).brightness == Brightness.dark
+                                              ? Colors.white
+                                              : textDark,
                                           fontSize: 14,
                                           height: 1.5,
                                         ),
@@ -575,13 +605,17 @@ class _CommunityScreenState extends State<CommunityScreen> {
                                           Icon(
                                             Icons.thumb_up_outlined,
                                             size: 16,
-                                            color: textGrey,
+                                            color: Theme.of(context).brightness == Brightness.dark
+                                                ? const Color(0xFF9CA3AF)
+                                                : textGrey,
                                           ),
                                           const SizedBox(width: 4),
                                           Text(
                                             '${report['likes']}',
                                             style: TextStyle(
-                                              color: textGrey,
+                                              color: Theme.of(context).brightness == Brightness.dark
+                                                  ? const Color(0xFF9CA3AF)
+                                                  : textGrey,
                                               fontSize: 12,
                                             ),
                                           ),
@@ -589,13 +623,17 @@ class _CommunityScreenState extends State<CommunityScreen> {
                                           Icon(
                                             Icons.thumb_down_outlined,
                                             size: 16,
-                                            color: textGrey,
+                                            color: Theme.of(context).brightness == Brightness.dark
+                                                ? const Color(0xFF9CA3AF)
+                                                : textGrey,
                                           ),
                                           const SizedBox(width: 4),
                                           Text(
                                             '${report['dislikes']}',
                                             style: TextStyle(
-                                              color: textGrey,
+                                              color: Theme.of(context).brightness == Brightness.dark
+                                                  ? const Color(0xFF9CA3AF)
+                                                  : textGrey,
                                               fontSize: 12,
                                             ),
                                           ),
@@ -603,13 +641,17 @@ class _CommunityScreenState extends State<CommunityScreen> {
                                           Icon(
                                             Icons.chat_bubble_outline,
                                             size: 16,
-                                            color: textGrey,
+                                            color: Theme.of(context).brightness == Brightness.dark
+                                                ? const Color(0xFF9CA3AF)
+                                                : textGrey,
                                           ),
                                           const SizedBox(width: 4),
                                           Text(
                                             '${report['comments']}',
                                             style: TextStyle(
-                                              color: textGrey,
+                                              color: Theme.of(context).brightness == Brightness.dark
+                                                  ? const Color(0xFF9CA3AF)
+                                                  : textGrey,
                                               fontSize: 12,
                                             ),
                                           ),

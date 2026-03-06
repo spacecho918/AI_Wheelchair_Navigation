@@ -14,14 +14,18 @@ class ReportSuccessScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA), // Light gray background
+      backgroundColor: Theme.of(context).brightness == Brightness.dark
+          ? Theme.of(context).scaffoldBackgroundColor
+          : const Color(0xFFF5F7FA), // Light gray background
       body: SafeArea(
         child: Center(
           child: Container(
             width: 320,
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Theme.of(context).cardColor
+                  : Colors.white,
               borderRadius: BorderRadius.circular(24),
               boxShadow: [
                 BoxShadow(
@@ -57,9 +61,11 @@ class ReportSuccessScreen extends StatelessWidget {
                         nav.popUntil((route) => route.isFirst);
                       }
                     },
-                    child: const Icon(
+                    child: Icon(
                       Icons.close,
-                      color: Color(0xFF354152),
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? const Color(0xFF9CA3AF)
+                          : Color(0xFF354152),
                       size: 20,
                     ),
                   ),
@@ -83,22 +89,26 @@ class ReportSuccessScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 24),
                 // Title
-                const Text(
+                Text(
                   '제출 완료!',
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF101727),
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white
+                        : Color(0xFF101727),
                   ),
                 ),
                 const SizedBox(height: 12),
                 // Subtitle
-                const Text(
+                Text(
                   '안전한 길을 만드는 데 도움 주셔서 감사합니다.\n제보 내용이 성공적으로 등록되었습니다.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 14,
-                    color: Color(0xFF697282),
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? const Color(0xFF9CA3AF)
+                        : const Color(0xFF697282),
                     height: 1.5,
                   ),
                 ),
@@ -189,7 +199,9 @@ class ReportSuccessScreen extends StatelessWidget {
                         }
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
+                        backgroundColor: Theme.of(context).brightness == Brightness.dark
+                            ? Theme.of(context).cardColor
+                            : Colors.white,
                         elevation: 0,
                         shadowColor: Colors.black.withValues(alpha: 0.1),
                         shape: RoundedRectangleBorder(
@@ -199,8 +211,10 @@ class ReportSuccessScreen extends StatelessWidget {
                       ),
                       child: Text(
                         fromNavigation ? '경로 안내로 돌아가기' : '지도로 돌아가기',
-                        style: const TextStyle(
-                          color: Color(0xFF4A5565),
+                        style: TextStyle(
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? const Color(0xFF9CA3AF)
+                              : const Color(0xFF4A5565),
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                         ),

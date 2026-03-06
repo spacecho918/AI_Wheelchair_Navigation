@@ -91,26 +91,34 @@ class _SavedPlacesScreenState extends State<SavedPlacesScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(
-        backgroundColor: Colors.white,
+      return Scaffold(
+        backgroundColor: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF121212)
+            : Colors.white,
         body: Center(child: CircularProgressIndicator()),
       );
     }
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).brightness == Brightness.dark
+          ? Theme.of(context).scaffoldBackgroundColor
+          : Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).brightness == Brightness.dark
+            ? Theme.of(context).cardColor
+            : Colors.white,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Color(0xFF354152)),
           onPressed: () => Navigator.pop(context),
         ),
         centerTitle: true,
-        title: const Text(
+        title: Text(
           '저장된 장소',
           style: TextStyle(
-            color: Color(0xFF101727),
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white
+                : Color(0xFF101727),
             fontSize: 18,
             fontWeight: FontWeight.w600,
           ),
@@ -248,6 +256,8 @@ class _SavedPlacesScreenState extends State<SavedPlacesScreen> {
           decoration: BoxDecoration(
             color: isSelected
                 ? const Color(0xFF00C853)
+                : Theme.of(context).brightness == Brightness.dark
+                ? Theme.of(context).cardColor
                 : const Color(0xFFF3F4F6),
             borderRadius: BorderRadius.circular(12),
           ),
@@ -305,7 +315,9 @@ class _SavedPlacesScreenState extends State<SavedPlacesScreen> {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Theme.of(context).cardColor
+              : Colors.white,
           borderRadius: BorderRadius.circular(16),
         ),
         child: Row(
@@ -354,17 +366,21 @@ class _SavedPlacesScreenState extends State<SavedPlacesScreen> {
                         children: [
                           Text(
                             place['name'],
-                            style: const TextStyle(
-                              color: Color(0xFF101727),
+                            style: TextStyle(
+                              color: Theme.of(context).brightness == Brightness.dark
+                                  ? Colors.white
+                                  : const Color(0xFF101727),
                               fontSize: 15,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                           const SizedBox(width: 4),
-                          const Icon(
+                          Icon(
                             Icons.swap_horiz,
                             size: 14,
-                            color: Colors.grey,
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? const Color(0xFF9CA3AF)
+                                : Colors.grey,
                           ),
                         ],
                       ),
@@ -372,8 +388,10 @@ class _SavedPlacesScreenState extends State<SavedPlacesScreen> {
                   else
                     Text(
                       place['name'],
-                      style: const TextStyle(
-                        color: Color(0xFF101727),
+                      style: TextStyle(
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white
+                            : Color(0xFF101727),
                         fontSize: 15,
                         fontWeight: FontWeight.bold,
                       ),
@@ -384,8 +402,10 @@ class _SavedPlacesScreenState extends State<SavedPlacesScreen> {
                   if (address.isNotEmpty)
                     Text(
                       address,
-                      style: const TextStyle(
-                        color: Color(0xFF4A5565),
+                      style: TextStyle(
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? const Color(0xFF9CA3AF)
+                            : const Color(0xFF4A5565),
                         fontSize: 12,
                       ),
                       maxLines: 1,

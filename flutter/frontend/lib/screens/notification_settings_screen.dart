@@ -85,25 +85,31 @@ class _NotificationSettingsScreenState
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(
-        backgroundColor: Colors.white,
+      return Scaffold(
+        backgroundColor: Theme.of(context).brightness == Brightness.dark
+            ? Theme.of(context).scaffoldBackgroundColor
+            : Colors.white,
         body: Center(child: CircularProgressIndicator()),
       );
     }
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).brightness == Brightness.dark
+          ? Theme.of(context).scaffoldBackgroundColor
+          : Colors.white,
       body: SafeArea(
         child: Column(
           children: [
             // Header
             Container(
-              color: Colors.white,
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Theme.of(context).cardColor
+                  : Colors.white,
               height: 56,
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Stack(
                 alignment: Alignment.center,
-                children: const [
+                children: [
                   Align(
                     alignment: Alignment.centerLeft,
                     child: CustomBackButton(),
@@ -111,7 +117,9 @@ class _NotificationSettingsScreenState
                   Text(
                     '알림 수신 설정',
                     style: TextStyle(
-                      color: Color(0xFF354152),
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white
+                          : Color(0xFF354152),
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
@@ -251,7 +259,9 @@ class _NotificationSettingsScreenState
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFF0F9FF),
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? const Color(0xFF9CA3AF)
+                                : const Color(0xFFF0F9FF),
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(color: const Color(0xFFBAE6FD)),
                           ),
@@ -311,7 +321,9 @@ class _NotificationSettingsScreenState
       child: Text(
         title,
         style: TextStyle(
-          color: textGrey,
+          color: Theme.of(context).brightness == Brightness.dark
+              ? const Color(0xFF9CA3AF)
+              : textGrey,
           fontSize: 13,
           fontWeight: FontWeight.w600,
         ),
@@ -322,7 +334,9 @@ class _NotificationSettingsScreenState
   Widget _buildSettingsCard(List<Widget> children) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).brightness == Brightness.dark
+            ? Theme.of(context).cardColor
+            : Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -353,12 +367,16 @@ class _NotificationSettingsScreenState
             decoration: BoxDecoration(
               color: value
                   ? primaryGreen.withValues(alpha: 0.1)
-                  : const Color(0xFFF3F4F6),
+                  :Theme.of(context).brightness == Brightness.dark
+                  ? Theme.of(context).scaffoldBackgroundColor
+                  :  const Color(0xFFF3F4F6),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(
               icon,
-              color: value ? primaryGreen : const Color(0xFF9CA3AF),
+              color: value ? primaryGreen : Theme.of(context).brightness == Brightness.dark
+                  ? const Color(0xFF9CA3AF)
+                  : const Color(0xFF9CA3AF),
               size: 22,
             ),
           ),
@@ -370,7 +388,9 @@ class _NotificationSettingsScreenState
                 Text(
                   title,
                   style: TextStyle(
-                    color: textDark,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white
+                        : textDark,
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
                   ),
@@ -378,8 +398,10 @@ class _NotificationSettingsScreenState
                 const SizedBox(height: 2),
                 Text(
                   subtitle,
-                  style: const TextStyle(
-                    color: Color(0xFF9CA3AF),
+                  style: TextStyle(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? const Color(0xFF9CA3AF)
+                        : const Color(0xFF9CA3AF),
                     fontSize: 13,
                   ),
                 ),
@@ -391,8 +413,12 @@ class _NotificationSettingsScreenState
             onChanged: onChanged,
             activeThumbColor: primaryGreen,
             activeTrackColor: const Color(0xFFB9F6CA),
-            inactiveThumbColor: Colors.white,
-            inactiveTrackColor: const Color(0xFFE5E7EB),
+            inactiveThumbColor: Theme.of(context).brightness == Brightness.dark
+                ? const Color(0xFF9CA3AF)
+                : Colors.white,
+            inactiveTrackColor: Theme.of(context).brightness == Brightness.dark
+                ? Theme.of(context).scaffoldBackgroundColor
+                : const Color(0xFFE5E7EB),
             trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
           ),
         ],

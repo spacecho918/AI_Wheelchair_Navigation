@@ -134,7 +134,9 @@ class _SearchScreenState extends State<SearchScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white, // 전체 배경 흰색
+      backgroundColor: Theme.of(context).brightness == Brightness.dark
+          ? Theme.of(context).scaffoldBackgroundColor
+          : Colors.white, // 전체 배경 흰색
       body: SafeArea(
         child: Column(
           children: [
@@ -159,7 +161,9 @@ class _SearchScreenState extends State<SearchScreen> {
   Widget _buildSearchBar() {
     return Container(
       padding: const EdgeInsets.only(top: 20, left: 20, right: 20, bottom: 5),
-      color: Colors.white, // 배경색 유지
+      color: Theme.of(context).brightness == Brightness.dark
+          ? Theme.of(context).scaffoldBackgroundColor
+          : Colors.white, // 배경색 유지
       child: Row(
         children: [
           // 뒤로가기 버튼 (맵 화면의 햄버거 버튼 스타일과 통일)
@@ -167,7 +171,9 @@ class _SearchScreenState extends State<SearchScreen> {
             width: 50,
             height: 50,
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? const Color(0xFF2A2A2A)
+                  : Colors.white,
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
@@ -182,9 +188,11 @@ class _SearchScreenState extends State<SearchScreen> {
               child: InkWell(
                 customBorder: const CircleBorder(),
                 onTap: () => Navigator.pop(context),
-                child: const Icon(
+                child: Icon(
                   Icons.arrow_back,
-                  color: Color(0xFF354152),
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? const Color(0xFF9CA3AF)
+                      : Color(0xFF354152),
                   size: 24, // 맵 화면 햄버거는 SVG 20, 아이콘은 보통 24가 적절
                 ),
               ),
@@ -196,7 +204,9 @@ class _SearchScreenState extends State<SearchScreen> {
             child: Container(
               height: 50,
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? const Color(0xFF2A2A2A)
+                    : Colors.white,
                 borderRadius: BorderRadius.circular(24),
                 boxShadow: [
                   BoxShadow(
@@ -225,8 +235,10 @@ class _SearchScreenState extends State<SearchScreen> {
                       autofocus: true,
                       decoration: InputDecoration(
                         hintText: '장소 검색...',
-                        hintStyle: const TextStyle(
-                          color: Color(0xFF9EA6B8),
+                        hintStyle: TextStyle(
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.white
+                              : const Color(0xFF9EA6B8),
                           fontSize: 14,
                         ),
                         border: InputBorder.none,
@@ -248,7 +260,9 @@ class _SearchScreenState extends State<SearchScreen> {
                         ),
                         isDense: true,
                       ),
-                      style: const TextStyle(fontSize: 14, color: Colors.black),
+                      style: TextStyle(fontSize: 14, color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white
+                          : Colors.black),
                     ),
                   ),
                   const SizedBox(width: 5),
@@ -344,12 +358,14 @@ class _SearchScreenState extends State<SearchScreen> {
           children: [
             Padding(
               padding: const EdgeInsets.only(left: 4.0),
-              child: const Text(
+              child: Text(
                 '최근 검색',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
-                  color: Color(0xFF101727),
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white
+                      : const Color(0xFF101727),
                 ),
               ),
             ),
@@ -397,14 +413,16 @@ class _SearchScreenState extends State<SearchScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
       children: [
         // 검색 결과 헤더
-        const Padding(
+        Padding(
           padding: EdgeInsets.only(bottom: 10),
           child: Text(
             '검색 결과',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF101727),
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.white
+                  : Color(0xFF101727),
             ),
           ),
         ),
@@ -419,7 +437,9 @@ class _SearchScreenState extends State<SearchScreen> {
               border: Border(bottom: BorderSide(color: Color(0xFFE0E0E0))),
             ),
             child: Material(
-              color: Colors.white,
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Theme.of(context).cardColor
+                  : Colors.white,
               child: InkWell(
                 onTap: () async {
                   await RecentSearchesService.addSearch(place);
@@ -452,10 +472,12 @@ class _SearchScreenState extends State<SearchScreen> {
                           children: [
                             Text(
                               name,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w400,
-                                color: Color(0xFF101727),
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.white
+                                    : Color(0xFF101727),
                               ),
                             ),
                             const SizedBox(height: 2),
@@ -463,9 +485,11 @@ class _SearchScreenState extends State<SearchScreen> {
                               fullAddress,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 12,
-                                color: Colors.grey,
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? const Color(0xFF9CA3AF)
+                                    : Colors.grey,
                               ),
                             ),
                           ],
@@ -550,7 +574,9 @@ class _SearchScreenState extends State<SearchScreen> {
         border: Border(bottom: BorderSide(color: Color(0xFFE0E0E0))),
       ),
       child: Material(
-        color: Colors.white,
+        color: Theme.of(context).brightness == Brightness.dark
+            ? Theme.of(context).cardColor
+            : Colors.white,
         child: InkWell(
           onTap: () => _showPlaceDetailSheet(context, item),
           child: Padding(
@@ -589,10 +615,12 @@ class _SearchScreenState extends State<SearchScreen> {
                 Expanded(
                   child: Text(
                     item['name'],
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.normal,
-                      color: Color(0xFF101727),
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white
+                          : Color(0xFF101727),
                     ),
                   ),
                 ),
@@ -605,10 +633,12 @@ class _SearchScreenState extends State<SearchScreen> {
                   borderRadius: BorderRadius.circular(20),
                   child: Padding(
                     padding: const EdgeInsets.all(8.0),
-                    child: const Icon(
+                    child: Icon(
                       Icons.close,
                       size: 16,
-                      color: Color(0xFF9EA6B8),
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white
+                          : const Color(0xFF9EA6B8),
                     ),
                   ),
                 ),
@@ -719,7 +749,9 @@ class _SearchScreenState extends State<SearchScreen> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Theme.of(context).cardColor
+                        : Colors.white,
                     borderRadius: BorderRadius.circular(24),
                   ),
                   child: Column(
@@ -751,10 +783,12 @@ class _SearchScreenState extends State<SearchScreen> {
                               children: [
                                 Text(
                                   place['name'],
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 20,
                                     fontWeight: FontWeight.bold,
-                                    color: Color(0xFF101727),
+                                    color: Theme.of(context).brightness == Brightness.dark
+                                        ? Colors.white
+                                        : const Color(0xFF101727),
                                   ),
                                 ),
                                 const SizedBox(height: 2),
@@ -762,7 +796,9 @@ class _SearchScreenState extends State<SearchScreen> {
                                   _getCategoryName(place['category']),
                                   style: TextStyle(
                                     fontSize: 13,
-                                    color: Colors.grey[600],
+                                    color: Theme.of(context).brightness == Brightness.dark
+                                        ? const Color(0xFF9CA3AF)
+                                        : Colors.grey[600],
                                   ),
                                 ),
                               ],
@@ -771,9 +807,11 @@ class _SearchScreenState extends State<SearchScreen> {
                           // Close Button
                           GestureDetector(
                             onTap: () => Navigator.pop(context),
-                            child: const Icon(
+                            child: Icon(
                               Icons.close,
-                              color: Color(0xFF9CA3AF),
+                              color: Theme.of(context).brightness == Brightness.dark
+                                  ? const Color(0xFF9CA3AF)
+                                  : Color(0xFF9CA3AF),
                               size: 24,
                             ),
                           ),
@@ -900,6 +938,8 @@ class _SearchScreenState extends State<SearchScreen> {
                 fontSize: 15,
                 color: isLink
                     ? const Color(0xFF2979FF)
+                    : Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white
                     : const Color(0xFF4A5565),
                 decoration: isLink ? TextDecoration.underline : null,
                 height: 1.4,

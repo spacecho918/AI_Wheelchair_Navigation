@@ -147,7 +147,9 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).brightness == Brightness.dark
+          ? Theme.of(context).scaffoldBackgroundColor
+          : Colors.white,
       resizeToAvoidBottomInset: true,
       body: SafeArea(
         child: Column(
@@ -170,7 +172,9 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                       Text(
                         '제보 커뮤니티',
                         style: TextStyle(
-                          color: textDark,
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.white
+                              : textDark,
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
                         ),
@@ -178,7 +182,9 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                       Text(
                         '상세 정보',
                         style: TextStyle(
-                          color: const Color(0xFF4A5565),
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? const Color(0xFF9CA3AF)
+                              : const Color(0xFF4A5565),
                           fontSize: 12,
                           fontWeight: FontWeight.normal,
                         ),
@@ -354,14 +360,18 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                               Text(
                                 widget.report['user'],
                                 style: TextStyle(
-                                  color: textDark,
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? Colors.white
+                                      : textDark,
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
                               Text(
                                 widget.report['time'],
-                                style: TextStyle(color: textGrey, fontSize: 12),
+                                style: TextStyle(color: Theme.of(context).brightness == Brightness.dark
+                                    ? const Color(0xFF9CA3AF)
+                                    : textGrey, fontSize: 12),
                               ),
                             ],
                           ),
@@ -381,7 +391,9 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                           Text(
                             widget.report['address'],
                             style: TextStyle(
-                              color: const Color(0xFF4A5565),
+                              color: Theme.of(context).brightness == Brightness.dark
+                                  ? const Color(0xFF2A2A2A)
+                                  : const Color(0xFF4A5565),
                               fontSize: 14,
                               fontWeight: FontWeight.w500,
                             ),
@@ -392,7 +404,9 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                         padding: const EdgeInsets.only(left: 28),
                         child: Text(
                           '37.566500, 126.978000',
-                          style: TextStyle(color: textGrey, fontSize: 12),
+                          style: TextStyle(color: Theme.of(context).brightness == Brightness.dark
+                              ? const Color(0xFF9CA3AF)
+                              : textGrey, fontSize: 12),
                         ),
                       ),
                       const SizedBox(height: 20),
@@ -402,13 +416,17 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                         width: double.infinity,
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF9FAFB),
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Theme.of(context).cardColor
+                              : const Color(0xFFF9FAFB),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
                           widget.report['content'],
                           style: TextStyle(
-                            color: textDark,
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.white
+                                : textDark,
                             fontSize: 14,
                             height: 1.6,
                           ),
@@ -430,6 +448,8 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                                 decoration: BoxDecoration(
                                   color: isLiked
                                       ? primaryGreen.withValues(alpha: 0.1)
+                                      : Theme.of(context).brightness == Brightness.dark
+                                      ? const Color(0xFF9CA3AF)
                                       : Colors.white,
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
@@ -484,6 +504,8 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                                 decoration: BoxDecoration(
                                   color: isDisliked
                                       ? Colors.red.withValues(alpha: 0.1)
+                                      :Theme.of(context).brightness == Brightness.dark
+                                      ? const Color(0xFF9CA3AF)
                                       : Colors.white,
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
@@ -546,11 +568,15 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                           icon: Icon(
                             Icons.edit_outlined,
                             size: 16,
-                            color: textDark,
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.white
+                                : textDark,
                           ),
                           label: Text(
                             '수정 요청',
-                            style: TextStyle(color: textDark),
+                            style: TextStyle(color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.white
+                                : textDark),
                           ),
                           style: OutlinedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 14),
@@ -570,7 +596,9 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                           Text(
                             '댓글 (${comments.length})',
                             style: TextStyle(
-                              color: textDark,
+                              color: Theme.of(context).brightness == Brightness.dark
+                                  ? Colors.white
+                                  : textDark,
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                             ),
@@ -588,16 +616,20 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                                 horizontal: 16,
                               ),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFF3F4F6),
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? const Color(0xFF2A2A2A)
+                                    : const Color(0xFFF3F4F6),
                                 borderRadius: BorderRadius.circular(24),
                               ),
                               child: TextField(
                                 controller: _commentController,
-                                decoration: const InputDecoration(
+                                decoration: InputDecoration(
                                   hintText: '댓글을 입력하세요...',
                                   border: InputBorder.none,
                                   hintStyle: TextStyle(
-                                    color: Color(0xFF9CA3AF),
+                                    color: Theme.of(context).brightness == Brightness.dark
+                                        ? const Color(0xFF697282)
+                                        : const Color(0xFF9CA3AF),
                                     fontSize: 14,
                                   ),
                                 ),
@@ -647,7 +679,9 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                             return Container(
                               padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFF9FAFB),
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? Theme.of(context).cardColor
+                                    : const Color(0xFFF9FAFB),
                                 borderRadius: BorderRadius.circular(16),
                               ),
                               child: Row(
@@ -678,7 +712,9 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                                         Text(
                                           comment['nickname'] ?? '탈퇴한 사용자',
                                           style: TextStyle(
-                                            color: textDark,
+                                            color: Theme.of(context).brightness == Brightness.dark
+                                                ? Colors.white
+                                                : textDark,
                                             fontWeight: FontWeight.bold,
                                             fontSize: 14,
                                           ),
@@ -687,7 +723,9 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                                         Text(
                                           comment['content'] ?? '',
                                           style: TextStyle(
-                                            color: textDark,
+                                            color: Theme.of(context).brightness == Brightness.dark
+                                                ? Colors.white
+                                                : textDark,
                                             fontSize: 13,
                                           ),
                                         ),
