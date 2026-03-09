@@ -1,11 +1,13 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:html' as html;
 
 typedef MapEventCallback = void Function(String type, double lat, double lng);
+typedef MapEventCallbackEx = void Function(String type, Map<String, dynamic> data);
 
 /// Listens for postMessage events from the Kakao Map iframe.
-void listenForMapEvents(MapEventCallback callback) {
-  html.window.onMessage.listen((event) {
+StreamSubscription? listenForMapEvents(MapEventCallback callback, {MapEventCallbackEx? onExtended}) {
+  return html.window.onMessage.listen((event) {
     try {
       if (event.data is String) {
         final data = jsonDecode(event.data);
@@ -15,6 +17,10 @@ void listenForMapEvents(MapEventCallback callback) {
             (data['lat'] as num).toDouble(),
             (data['lng'] as num).toDouble(),
           );
+        } else if (data['type'] == 'obstacleSelected' || data['type'] == 'obstacleDeselected') {
+          if (onExtended != null) {
+            onExtended(data['type'], Map<String, dynamic>.from(data));
+          }
         }
       }
     } catch (e) {

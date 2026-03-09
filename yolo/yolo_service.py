@@ -185,7 +185,7 @@ def blur_privacy(
     iou: float         = 0.45,
     imgsz: int         = 1280,
     shrink_ratio: float = 0.15,
-    blur_ksize: int    = 51,
+    blur_ksize: int    = 99,
 ) -> bytes:
     """
     얼굴·번호판을 감지하여 GaussianBlur 처리한 이미지를 반환합니다.

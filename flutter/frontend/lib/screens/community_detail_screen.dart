@@ -138,6 +138,15 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
     }
   }
 
+  void _popWithResult() {
+    Navigator.pop(context, {
+      'likeCount': likeCount,
+      'dislikeCount': dislikeCount,
+      'isLiked': isLiked,
+      'isDisliked': isDisliked,
+    });
+  }
+
   @override
   void dispose() {
     _commentController.dispose();
@@ -146,12 +155,19 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Theme.of(context).brightness == Brightness.dark
-          ? Theme.of(context).scaffoldBackgroundColor
-          : Colors.white,
-      resizeToAvoidBottomInset: true,
-      body: SafeArea(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) {
+          _popWithResult();
+        }
+      },
+      child: Scaffold(
+        backgroundColor: Theme.of(context).brightness == Brightness.dark
+            ? Theme.of(context).scaffoldBackgroundColor
+            : Colors.white,
+        resizeToAvoidBottomInset: true,
+        body: SafeArea(
         child: Column(
           children: [
             // Custom Header
@@ -161,9 +177,11 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  const Align(
+                  Align(
                     alignment: Alignment.centerLeft,
-                    child: CustomBackButton(),
+                    child: CustomBackButton(
+                      onPressed: _popWithResult,
+                    ),
                   ),
                   Column(
                     mainAxisSize: MainAxisSize.min,
@@ -196,7 +214,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                     child: IconButton(
                       icon: const Icon(Icons.close),
                       color: textDark,
-                      onPressed: () => Navigator.pop(context),
+                      onPressed: _popWithResult,
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),
                     ),
@@ -744,6 +762,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
             ),
           ],
         ),
+      ),
       ),
     );
   }

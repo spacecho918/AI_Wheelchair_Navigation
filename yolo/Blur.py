@@ -41,7 +41,7 @@ def blur_detected_bboxes(image_path, shrink_ratio=0.15):
             if roi.size == 0:
                 continue
 
-            blurred_roi = cv2.GaussianBlur(roi, (31, 31), 0)
+            blurred_roi = cv2.GaussianBlur(roi, (99, 99), 0)
             image[y1_new:y2_new, x1_new:x2_new] = blurred_roi
 
     # ------ 입력 위치에 저장 -------

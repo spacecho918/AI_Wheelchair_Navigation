@@ -429,9 +429,125 @@
                     if (data.routes) {
                         drawAllRoutes(data.routes, data.selectedIndex || 0);
                     }
+                } else if (data.action === 'setObstacleMarkers') {
+                    console.log('Action: setObstacleMarkers, count:', data.obstacles ? data.obstacles.length : 0);
+                    if (data.obstacles) {
+                        setObstacleMarkers(data.obstacles);
+                    }
                 }
             } catch (e) {
                 console.error('Error handling postMessage:', e);
+            }
+        });
+
+        // ── 장애물 마커 시스템 ──────────────────────────────────────────────
+        var obstacleOverlays = [];
+        var selectedObstacleEl = null;
+
+        function getObstacleIconSvg(type) {
+            // 장애물 유형별 아이콘 (SVG inline)
+            var icons = {
+                '계단': '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter"><path d="M2 22 V16 H9 V10 H16 V4 H22 V22 Z"/></svg>',
+                '볼라드': '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="5" rx="1"/><line x1="8" y1="7" x2="16" y2="7"/><rect x="8" y="7" width="8" height="14"/><line x1="5" y1="21" x2="19" y2="21"/></svg>',
+                '라바콘': '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L6 22h12L12 2z"/><line x1="9" y1="12" x2="15" y2="12"/></svg>',
+                '높은 턱': '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 18h8V8h12"/><line x1="10" y1="8" x2="10" y2="18"/></svg>',
+                '턱': '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 18h8v-6h12"/><line x1="10" y1="12" x2="10" y2="18"/></svg>',
+                '좁은 통로': '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="4" x2="7" y2="20"/><line x1="17" y1="4" x2="17" y2="20"/><path d="M10 12h4"/><path d="M9 9l3 3-3 3"/><path d="M15 9l-3 3 3 3"/></svg>',
+                '경사로': '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20L22 4"/><path d="M2 20h20"/><path d="M22 4v16"/></svg>'
+            };
+            // 기타(default): 경고 삼각형 아이콘 (유저 요청 디자인)
+            return icons[type] || '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+        }
+
+        function getObstacleColor(type) {
+            var colors = {
+                '계단': '#DC2626',
+                '볼라드': '#EA580C',
+                '라바콘': '#EA580C',
+                '높은 턱': '#CA8A04',
+                '턱': '#CA8A04',
+                '좁은 통로': '#7C3AED',
+                '경사로': '#2563EB'
+            };
+            return colors[type] || '#DC2626'; // 기타: 빨간색
+        }
+
+        function setObstacleMarkers(obstacles) {
+            // 기존 마커 제거
+            for (var i = 0; i < obstacleOverlays.length; i++) {
+                obstacleOverlays[i].setMap(null);
+            }
+            obstacleOverlays = [];
+
+            if (!obstacles || obstacles.length === 0) return;
+
+            for (var i = 0; i < obstacles.length; i++) {
+                (function (obs) {
+                    if (obs.lat == null || obs.lng == null) return;
+
+                    var position = new kakao.maps.LatLng(obs.lat, obs.lng);
+                    var bgColor = getObstacleColor(obs.type || '기타');
+                    var iconSvg = getObstacleIconSvg(obs.type || '기타');
+                    var obsId = obs.id || '';
+
+                    var el = document.createElement('div');
+                    el.style.cssText = 'width:36px;height:36px;background-color:' + bgColor +
+                        ';border:2.5px solid white;border-radius:50%;display:flex;align-items:center;' +
+                        'justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.35);cursor:pointer;' +
+                        'transition:transform 0.15s ease;outline:none;-webkit-tap-highlight-color:transparent;user-select:none;';
+                    el.innerHTML = iconSvg;
+
+                    // 클릭 시 Flutter로 장애물 정보 전달
+                    el.addEventListener('click', function (e) {
+                        e.stopPropagation();
+                        // 이전 선택 마커 크기 복원
+                        if (selectedObstacleEl && selectedObstacleEl !== el) {
+                            selectedObstacleEl.style.transform = 'scale(1)';
+                        }
+                        selectedObstacleEl = el;
+                        el.style.transform = 'scale(1.2)';
+                        var message = JSON.stringify({
+                            type: 'obstacleSelected',
+                            id: obsId,
+                            obstacleType: obs.type || '기타',
+                            lat: obs.lat,
+                            lng: obs.lng
+                        });
+                        if (window.MapChannel) {
+                            MapChannel.postMessage(message);
+                        }
+                        if (window.parent && window.parent !== window) {
+                            window.parent.postMessage(message, '*');
+                        }
+                    });
+
+                    var overlay = new kakao.maps.CustomOverlay({
+                        position: position,
+                        content: el,
+                        yAnchor: 0.5,
+                        xAnchor: 0.5,
+                        zIndex: 2
+                    });
+                    overlay.setMap(map);
+                    obstacleOverlays.push(overlay);
+                })(obstacles[i]);
+            }
+            console.log('Obstacle markers set:', obstacleOverlays.length);
+        }
+
+        // 지도 클릭 시 장애물 선택 해제 알림
+        kakao.maps.event.addListener(map, 'click', function () {
+            // 선택된 마커 크기 복원
+            if (selectedObstacleEl) {
+                selectedObstacleEl.style.transform = 'scale(1)';
+                selectedObstacleEl = null;
+            }
+            var message = JSON.stringify({ type: 'obstacleDeselected' });
+            if (window.MapChannel) {
+                MapChannel.postMessage(message);
+            }
+            if (window.parent && window.parent !== window) {
+                window.parent.postMessage(message, '*');
             }
         });
     </script>

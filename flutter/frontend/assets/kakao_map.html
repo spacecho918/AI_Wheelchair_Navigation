@@ -62,6 +62,16 @@
         var currentMarker = null;
         var currentPolyline = null;
 
+        // Relayout after a short delay to handle iframe resize
+        // This is critical for Flutter Web where the iframe may start at 0x0
+        setTimeout(function () {
+            map.relayout();
+            map.setCenter(new kakao.maps.LatLng(initialLat, initialLng));
+        }, 300);
+        setTimeout(function () {
+            map.relayout();
+        }, 1000);
+
         // If 'marker=true' is present, add a marker at the center
         var markerParam = getParameterByName('marker');
         if (markerParam === 'true') {
@@ -72,34 +82,140 @@
             currentMarker.setMap(map);
         }
 
-        function drawRoute(pathCoordinates) {
+        // Array to track all route polylines for multi-route display
+        var allRoutePolylines = [];
+
+        function drawRoute(pathCoordinates, color, shouldFit) {
+            if (shouldFit === undefined) shouldFit = true;
+            // Ensure map knows its correct container size
+            map.relayout();
+
+            // Clear all existing polylines
             if (currentPolyline) {
                 currentPolyline.setMap(null);
             }
+            clearAllRoutes();
 
             var linePath = [];
             for (var i = 0; i < pathCoordinates.length; i++) {
                 linePath.push(new kakao.maps.LatLng(pathCoordinates[i][0], pathCoordinates[i][1]));
             }
 
+            var strokeColor = color || '#00C853';
+
             currentPolyline = new kakao.maps.Polyline({
                 path: linePath,
                 strokeWeight: 5,
-                strokeColor: '#00C853',
+                strokeColor: strokeColor,
                 strokeOpacity: 0.8,
                 strokeStyle: 'solid'
             });
 
             currentPolyline.setMap(map);
 
-            // Adjust bounds to show the whole route
-            if (linePath.length > 0) {
-                var bounds = new kakao.maps.LatLngBounds();
+            if (shouldFit) {
+                fitBoundsForPath(linePath);
+            }
+        }
+
+        function clearAllRoutes() {
+            for (var i = 0; i < allRoutePolylines.length; i++) {
+                allRoutePolylines[i].setMap(null);
+            }
+            allRoutePolylines = [];
+        }
+
+        // Draw all 3 routes simultaneously, highlighting the selected one
+        // routes = [ { path: [[lat,lng],...], color: '#hex' }, ... ]
+        // selectedIndex = which route to highlight (0, 1, 2)
+        function drawAllRoutes(routes, selectedIndex) {
+            map.relayout();
+
+            // Clear previous
+            if (currentPolyline) {
+                currentPolyline.setMap(null);
+                currentPolyline = null;
+            }
+            clearAllRoutes();
+
+            var allBounds = new kakao.maps.LatLngBounds();
+            var hasAnyPath = false;
+
+            // Ensure selectedIndex is a number
+            var selIdx = parseInt(selectedIndex, 10) || 0;
+
+            // First pass: draw UN-selected routes (thin, faded, behind)
+            for (var i = 0; i < routes.length; i++) {
+                if (i == selIdx) continue;
+                var route = routes[i];
+                if (!route.path || route.path.length < 2) continue;
+
+                var linePath = [];
+                for (var j = 0; j < route.path.length; j++) {
+                    var pt = new kakao.maps.LatLng(route.path[j][0], route.path[j][1]);
+                    linePath.push(pt);
+                    allBounds.extend(pt);
+                    hasAnyPath = true;
+                }
+
+                var polyline = new kakao.maps.Polyline({
+                    path: linePath,
+                    strokeWeight: 3,
+                    strokeColor: route.color || '#AAAAAA',
+                    strokeOpacity: 0.4,
+                    strokeStyle: 'solid',
+                    zIndex: 1 // Lower zIndex for unselected
+                });
+                polyline.setMap(map);
+                allRoutePolylines.push(polyline);
+            }
+
+            // Second pass: draw the SELECTED route (thick, bold, on top)
+            if (selIdx >= 0 && selIdx < routes.length) {
+                var selRoute = routes[selIdx];
+                if (selRoute.path && selRoute.path.length >= 2) {
+                    var selLinePath = [];
+                    for (var j = 0; j < selRoute.path.length; j++) {
+                        var pt = new kakao.maps.LatLng(selRoute.path[j][0], selRoute.path[j][1]);
+                        selLinePath.push(pt);
+                        allBounds.extend(pt);
+                        hasAnyPath = true;
+                    }
+
+                    var selPolyline = new kakao.maps.Polyline({
+                        path: selLinePath,
+                        strokeWeight: 6,
+                        strokeColor: selRoute.color || '#00C853',
+                        strokeOpacity: 1.0,
+                        strokeStyle: 'solid',
+                        zIndex: 2 // Higher zIndex for selected so it's fully visible
+                    });
+                    selPolyline.setMap(map);
+                    allRoutePolylines.push(selPolyline);
+                }
+            }
+
+            if (hasAnyPath) {
+                fitBoundsForPath(null, allBounds);
+            }
+        }
+
+        function fitBoundsForPath(linePath, existingBounds) {
+            var bounds = existingBounds || new kakao.maps.LatLngBounds();
+            if (linePath) {
                 for (var i = 0; i < linePath.length; i++) {
                     bounds.extend(linePath[i]);
                 }
-                map.setBounds(bounds);
             }
+            // (bounds, paddingTop, paddingRight, paddingBottom, paddingLeft)
+            var mapHeight = container.offsetHeight || window.innerHeight;
+            var padTop = 180;
+            var padBottom = 290;
+            if (mapHeight > 0 && (padTop + padBottom) >= mapHeight - 100) {
+                padBottom = Math.max(0, mapHeight * 0.35);
+                padTop = Math.max(0, mapHeight * 0.2);
+            }
+            map.setBounds(bounds, padTop, 50, padBottom, 50);
         }
 
         // Load route from URL param: route=[[lat,lng],[lat,lng],...]
@@ -117,6 +233,20 @@
             }
         }
 
+        // Sets the map bounds to explicitly fit a specific path array
+        function setBounds(pathData) {
+            try {
+                var coords = (typeof pathData === 'string') ? JSON.parse(pathData) : pathData;
+                var linePath = [];
+                for (var i = 0; i < coords.length; i++) {
+                    linePath.push(new kakao.maps.LatLng(coords[i][0], coords[i][1]));
+                }
+                fitBoundsForPath(linePath);
+            } catch (e) {
+                console.error('Error parsing path for bounds:', e);
+            }
+        }
+
         function setCenter(lat, lng) {
             var moveLatLon = new kakao.maps.LatLng(lat, lng);
             map.relayout(); // Ensure map gets correct size
@@ -128,6 +258,10 @@
             map.panTo(moveLatLon);
         }
 
+        function setLevel(level) {
+            map.setLevel(level);
+        }
+
         function setMarker(lat, lng) {
             if (currentMarker) {
                 currentMarker.setMap(null);
@@ -137,6 +271,79 @@
                 position: markerPosition
             });
             currentMarker.setMap(map);
+        }
+
+        var currentLocOverlay = null;
+
+        function setCurrentLocation(lat, lng) {
+            var position = new kakao.maps.LatLng(lat, lng);
+            if (currentLocOverlay) {
+                currentLocOverlay.setPosition(position);
+            } else {
+                var content = '<div style="width: 16px; height: 16px; background-color: #2196F3; border: 3px solid white; border-radius: 50%; box-shadow: 0 0 5px rgba(0,0,0,0.5);"></div>';
+                currentLocOverlay = new kakao.maps.CustomOverlay({
+                    position: position,
+                    content: content,
+                    zIndex: 3
+                });
+                currentLocOverlay.setMap(map);
+            }
+        }
+
+        var startMarker = null;
+        var endMarker = null;
+
+        function setStartEndMarkers(startLat, startLng, endLat, endLng) {
+            if (startMarker) {
+                startMarker.setMap(null);
+            }
+            if (endMarker) {
+                endMarker.setMap(null);
+            }
+
+            // Start Marker (Red)
+            if (startLat !== null && startLng !== null) {
+                var startSrc = 'https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/red_b.png';
+                var startSize = new kakao.maps.Size(50, 45);
+                var startOption = { offset: new kakao.maps.Point(15, 43) };
+                var startImage = new kakao.maps.MarkerImage(startSrc, startSize, startOption);
+
+                startMarker = new kakao.maps.Marker({
+                    position: new kakao.maps.LatLng(startLat, startLng),
+                    image: startImage
+                });
+                startMarker.setMap(map);
+            }
+
+            // End Marker (Blue)
+            if (endLat !== null && endLng !== null) {
+                var arriveSrc = 'https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/blue_b.png';
+                var arriveSize = new kakao.maps.Size(50, 45);
+                var arriveOption = { offset: new kakao.maps.Point(15, 43) };
+                var arriveImage = new kakao.maps.MarkerImage(arriveSrc, arriveSize, arriveOption);
+
+                endMarker = new kakao.maps.Marker({
+                    position: new kakao.maps.LatLng(endLat, endLng),
+                    image: arriveImage
+                });
+                endMarker.setMap(map);
+
+                // Adjust bounds if route is not drawn
+                if (!currentPolyline) {
+                    var bounds = new kakao.maps.LatLngBounds();
+                    bounds.extend(new kakao.maps.LatLng(startLat, startLng));
+                    bounds.extend(new kakao.maps.LatLng(endLat, endLng));
+                    // (bounds, paddingTop, paddingRight, paddingBottom, paddingLeft)
+                    var mapHeight = container.offsetHeight || window.innerHeight;
+                    var padTop = 180; // Account for top search fields
+                    var padBottom = 290; // Decreased from 320 for bottom dashboard
+                    if (mapHeight > 0 && (padTop + padBottom) >= mapHeight - 100) {
+                        padBottom = Math.max(0, mapHeight * 0.35); // Slightly decreased ratio
+                        padTop = Math.max(0, mapHeight * 0.2);
+                    }
+                    map.setBounds(bounds, padTop, 50, padBottom, 50);
+                }
+            }
         }
 
         function setStaticMode(isStatic) {
@@ -171,17 +378,20 @@
                 if (typeof data === 'string') {
                     data = JSON.parse(data);
                 }
+                console.log('KakaoMap Message Received:', data);
 
                 // mapId filtering to prevent interference between multiple maps
                 var myMapId = getParameterByName('mapId');
                 if (myMapId) {
                     // If this map has an ID, ONLY accept messages with matching ID
                     if (data.mapId !== myMapId) {
+                        console.log('Ignored message due to mapId mismatch:', data.mapId, 'vs', myMapId);
                         return;
                     }
                 } else {
                     // If this map has NO ID (e.g. main map), ignore messages targeted at specific ID
                     if (data.mapId) {
+                        console.log('Ignored message targeted at specific mapId:', data.mapId);
                         return;
                     }
                 }
@@ -192,13 +402,152 @@
                     panTo(data.lat, data.lng);
                 } else if (data.action === 'setMarker' && data.lat && data.lng) {
                     setMarker(data.lat, data.lng);
+                } else if (data.action === 'setCurrentLocation' && data.lat && data.lng) {
+                    setCurrentLocation(data.lat, data.lng);
+                } else if (data.action === 'setStartEndMarkers') {
+                    setStartEndMarkers(data.startLat, data.startLng, data.endLat, data.endLng);
                 } else if (data.action === 'setStaticMode') {
                     setStaticMode(data.isStatic);
-                } else if (data.action === 'drawRoute' && data.path) {
-                    drawRoute(data.path);
+                } else if (data.action === 'setLevel') {
+                    if (data.level !== undefined) {
+                        setLevel(data.level);
+                    }
+                } else if (data.action === 'setBounds') {
+                    console.log('Action: setBounds', data.path);
+                    if (data.path) {
+                        setBounds(data.path);
+                    }
+                } else if (data.action === 'drawRoute') {
+                    console.log('Action: drawRoute', data.path, data.color, data.shouldFit);
+                    if (data.path) {
+                        drawRoute(data.path, data.color, data.shouldFit);
+                    } else {
+                        console.error('drawRoute called without path!');
+                    }
+                } else if (data.action === 'drawAllRoutes') {
+                    console.log('Action: drawAllRoutes, routes:', data.routes ? data.routes.length : 0, 'selected:', data.selectedIndex);
+                    if (data.routes) {
+                        drawAllRoutes(data.routes, data.selectedIndex || 0);
+                    }
+                } else if (data.action === 'setObstacleMarkers') {
+                    console.log('Action: setObstacleMarkers, count:', data.obstacles ? data.obstacles.length : 0);
+                    if (data.obstacles) {
+                        setObstacleMarkers(data.obstacles);
+                    }
                 }
             } catch (e) {
                 console.error('Error handling postMessage:', e);
+            }
+        });
+
+        // ── 장애물 마커 시스템 ──────────────────────────────────────────────
+        var obstacleOverlays = [];
+        var selectedObstacleEl = null;
+
+        function getObstacleIconSvg(type) {
+            // 장애물 유형별 아이콘 (SVG inline)
+            var icons = {
+                '계단': '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter"><path d="M2 22 V16 H9 V10 H16 V4 H22 V22 Z"/></svg>',
+                '볼라드': '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="5" rx="1"/><line x1="8" y1="7" x2="16" y2="7"/><rect x="8" y="7" width="8" height="14"/><line x1="5" y1="21" x2="19" y2="21"/></svg>',
+                '라바콘': '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L6 22h12L12 2z"/><line x1="9" y1="12" x2="15" y2="12"/></svg>',
+                '높은 턱': '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 18h8V8h12"/><line x1="10" y1="8" x2="10" y2="18"/></svg>',
+                '턱': '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 18h8v-6h12"/><line x1="10" y1="12" x2="10" y2="18"/></svg>',
+                '좁은 통로': '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="4" x2="7" y2="20"/><line x1="17" y1="4" x2="17" y2="20"/><path d="M10 12h4"/><path d="M9 9l3 3-3 3"/><path d="M15 9l-3 3 3 3"/></svg>',
+                '경사로': '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20L22 4"/><path d="M2 20h20"/><path d="M22 4v16"/></svg>'
+            };
+            // 기타(default): 경고 삼각형 아이콘 (유저 요청 디자인)
+            return icons[type] || '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+        }
+
+        function getObstacleColor(type) {
+            var colors = {
+                '계단': '#DC2626',
+                '볼라드': '#EA580C',
+                '라바콘': '#EA580C',
+                '높은 턱': '#CA8A04',
+                '턱': '#CA8A04',
+                '좁은 통로': '#7C3AED',
+                '경사로': '#2563EB'
+            };
+            return colors[type] || '#DC2626'; // 기타: 빨간색
+        }
+
+        function setObstacleMarkers(obstacles) {
+            // 기존 마커 제거
+            for (var i = 0; i < obstacleOverlays.length; i++) {
+                obstacleOverlays[i].setMap(null);
+            }
+            obstacleOverlays = [];
+
+            if (!obstacles || obstacles.length === 0) return;
+
+            for (var i = 0; i < obstacles.length; i++) {
+                (function (obs) {
+                    if (obs.lat == null || obs.lng == null) return;
+
+                    var position = new kakao.maps.LatLng(obs.lat, obs.lng);
+                    var bgColor = getObstacleColor(obs.type || '기타');
+                    var iconSvg = getObstacleIconSvg(obs.type || '기타');
+                    var obsId = obs.id || '';
+
+                    var el = document.createElement('div');
+                    el.style.cssText = 'width:36px;height:36px;background-color:' + bgColor +
+                        ';border:2.5px solid white;border-radius:50%;display:flex;align-items:center;' +
+                        'justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.35);cursor:pointer;' +
+                        'transition:transform 0.15s ease;outline:none;-webkit-tap-highlight-color:transparent;user-select:none;';
+                    el.innerHTML = iconSvg;
+
+                    // 클릭 시 Flutter로 장애물 정보 전달
+                    el.addEventListener('click', function (e) {
+                        e.stopPropagation();
+                        // 이전 선택 마커 크기 복원
+                        if (selectedObstacleEl && selectedObstacleEl !== el) {
+                            selectedObstacleEl.style.transform = 'scale(1)';
+                        }
+                        selectedObstacleEl = el;
+                        el.style.transform = 'scale(1.2)';
+                        var message = JSON.stringify({
+                            type: 'obstacleSelected',
+                            id: obsId,
+                            obstacleType: obs.type || '기타',
+                            lat: obs.lat,
+                            lng: obs.lng
+                        });
+                        if (window.MapChannel) {
+                            MapChannel.postMessage(message);
+                        }
+                        if (window.parent && window.parent !== window) {
+                            window.parent.postMessage(message, '*');
+                        }
+                    });
+
+                    var overlay = new kakao.maps.CustomOverlay({
+                        position: position,
+                        content: el,
+                        yAnchor: 0.5,
+                        xAnchor: 0.5,
+                        zIndex: 2
+                    });
+                    overlay.setMap(map);
+                    obstacleOverlays.push(overlay);
+                })(obstacles[i]);
+            }
+            console.log('Obstacle markers set:', obstacleOverlays.length);
+        }
+
+        // 지도 클릭 시 장애물 선택 해제 알림
+        kakao.maps.event.addListener(map, 'click', function () {
+            // 선택된 마커 크기 복원
+            if (selectedObstacleEl) {
+                selectedObstacleEl.style.transform = 'scale(1)';
+                selectedObstacleEl = null;
+            }
+            var message = JSON.stringify({ type: 'obstacleDeselected' });
+            if (window.MapChannel) {
+                MapChannel.postMessage(message);
+            }
+            if (window.parent && window.parent !== window) {
+                window.parent.postMessage(message, '*');
             }
         });
     </script>

@@ -206,6 +206,30 @@ class ApiService {
     }
   }
 
+  /// 지도 위 장애물 마커 표시용 — 활성 장애물 좌표 조회
+  static Future<List<Map<String, dynamic>>> getActiveObstacles() async {
+    try {
+      final data = await _supabase
+          .from('obstacles')
+          .select('id, latitude, longitude, obstacle_type')
+          .eq('is_active', true)
+          .limit(200);
+
+      final items = data as List;
+      return items.map((item) {
+        return {
+          'id': item['id']?.toString() ?? '',
+          'lat': (item['latitude'] as num?)?.toDouble(),
+          'lng': (item['longitude'] as num?)?.toDouble(),
+          'type': item['obstacle_type'] ?? '기타',
+        };
+      }).where((o) => o['lat'] != null && o['lng'] != null).toList();
+    } catch (e) {
+      debugPrint('Active Obstacles Fetch Error: $e');
+      return [];
+    }
+  }
+
   /// 5. 커뮤니티 목록 (Direct Select) — 댓글 수 포함
   static Future<List<Map<String, dynamic>>> getCommunityReports() async {
     try {

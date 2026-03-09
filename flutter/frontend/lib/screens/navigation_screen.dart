@@ -9,6 +9,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'dart:convert';
 import 'package:gilbeot/helpers/kakao_map_helper.dart';
+import 'package:gilbeot/services/api_service.dart';
 import 'camera_screen.dart';
 import 'navigation_end_screen.dart';
 
@@ -227,7 +228,26 @@ class _NavigationScreenState extends State<NavigationScreen> {
           );
         });
       }
+
+      // 5. 장애물 마커 표시
+      _loadObstacleMarkers();
     });
+  }
+
+  /// 활성 장애물을 Supabase에서 가져와 네비게이션 지도에 표시
+  Future<void> _loadObstacleMarkers() async {
+    try {
+      final obstacles = await ApiService.getActiveObstacles();
+      if (!mounted || _mapController == null) return;
+
+      KakaoMapHelper.setObstacleMarkers(
+        _mapController,
+        obstacles,
+        mapId: 'navigation',
+      );
+    } catch (e) {
+      debugPrint('Error loading obstacle markers: $e');
+    }
   }
 
   Future<void> _loadMap() async {

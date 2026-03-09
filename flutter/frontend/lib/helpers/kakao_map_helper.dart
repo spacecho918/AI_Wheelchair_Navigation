@@ -207,14 +207,39 @@ class KakaoMapHelper {
     }
   }
 
-  /// Listen for map events (like dragend) on Web.
+  /// Listen for map events (like dragend, obstacleSelected, obstacleDeselected) on Web.
   /// On Mobile, use JavaScript channel instead.
-  static void listenForMapEvents(
-    void Function(String type, double lat, double lng) callback,
-  ) {
+  /// Returns a StreamSubscription that should be cancelled in dispose().
+  static dynamic listenForMapEvents(
+    void Function(String type, double lat, double lng) callback, {
+    void Function(String type, Map<String, dynamic> data)? onExtended,
+  }) {
     if (kIsWeb) {
-      platform.listenForMapEvents(callback);
+      return platform.listenForMapEvents(callback, onExtended: onExtended);
     }
     // On mobile, JavaScript channel handles this
+    return null;
+  }
+
+  /// Display obstacle markers on the map.
+  /// [obstacles] is a list of maps: { 'lat': double, 'lng': double, 'type': String }
+  static void setObstacleMarkers(
+    WebViewController? controller,
+    List<Map<String, dynamic>> obstacles, {
+    String? mapId,
+  }) {
+    if (kIsWeb) {
+      platform.sendMapCommand({
+        'action': 'setObstacleMarkers',
+        'obstacles': obstacles,
+        if (mapId != null) 'mapId': mapId,
+      });
+    } else {
+      // Mobile: JSON 인코딩하여 JS 함수 호출
+      final jsonStr = obstacles
+          .map((o) => '{"lat":${o['lat']},"lng":${o['lng']},"type":"${o['type']}"}')
+          .join(',');
+      controller?.runJavaScript('setObstacleMarkers([$jsonStr])');
+    }
   }
 }

@@ -42,11 +42,41 @@ class _MapScreenState extends State<MapScreen> with RouteAware {
   List<Map<String, dynamic>> _latestPosts = [];
   bool _isDashboardLoading = true;
 
+  // 장애물 마커 데이터
+  List<Map<String, dynamic>> _obstacleMarkers = [];
+
+  // 선택된 장애물 (미리보기용)
+  Map<String, dynamic>? _selectedObstacle;
+  Map<String, dynamic>? _selectedObstacleReport;
+
+  // 웹 이벤트 구독 (해제용)
+  dynamic _mapEventSubscription;
+
   @override
   void initState() {
     super.initState();
     _initMapController();
     _loadDashboardData();
+
+    // Web: 장애물 클릭/해제 이벤트 리스너
+    if (kIsWeb) {
+      _mapEventSubscription = KakaoMapHelper.listenForMapEvents(
+        (type, lat, lng) {
+          if (type == 'dragend' && mounted) {
+            setState(() {
+              _mapCenter = latlong.LatLng(lat, lng);
+            });
+          }
+        },
+        onExtended: (type, data) {
+          if (type == 'obstacleSelected') {
+            _onObstacleSelected(data);
+          } else if (type == 'obstacleDeselected') {
+            _onObstacleDeselected();
+          }
+        },
+      );
+    }
 
     // Show wheelchair setting popup after frame load, only if not already set
     WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -77,6 +107,9 @@ class _MapScreenState extends State<MapScreen> with RouteAware {
 
   @override
   void dispose() {
+    // 웹 이벤트 구독 해제
+    _mapEventSubscription?.cancel();
+    _mapEventSubscription = null;
     if (_routeObserverSubscribed) {
       routeObserver.unsubscribe(this);
     }
@@ -86,6 +119,7 @@ class _MapScreenState extends State<MapScreen> with RouteAware {
   @override
   void didPopNext() {
     _loadDashboardData();
+    _loadObstacleMarkers();
   }
 
   Future<void> _loadDashboardData() async {
@@ -306,6 +340,10 @@ class _MapScreenState extends State<MapScreen> with RouteAware {
                   });
                 }
                 debugPrint("Map Center Updated: $_mapCenter");
+              } else if (data['type'] == 'obstacleSelected') {
+                _onObstacleSelected(Map<String, dynamic>.from(data));
+              } else if (data['type'] == 'obstacleDeselected') {
+                _onObstacleDeselected();
               }
             } catch (e) {
               debugPrint("Error parsing map message: $e");
@@ -316,12 +354,36 @@ class _MapScreenState extends State<MapScreen> with RouteAware {
 
       _mapController = controller;
 
-      // Start loading map immediately
+      // 지도 로드와 위치 가져오기를 동시에 실행
       if (mounted) setState(() {});
-      await _loadMap();
+      await Future.wait([
+        _loadMap(),
+        _prepareLocation(),
+      ]);
 
-      // Get location in background
-      _initCurrentLocation();
+      // 지도 로드 완료 후 위치 적용 + 장애물 로드 (병렬)
+      if (!mounted) return;
+
+      if (kIsWeb) {
+        await Future.delayed(const Duration(milliseconds: 200));
+      }
+
+      if (_currentLocation != null) {
+        KakaoMapHelper.setCenter(
+          _mapController,
+          _currentLocation!.latitude,
+          _currentLocation!.longitude,
+        );
+        KakaoMapHelper.setCurrentLocation(
+          _mapController,
+          _currentLocation!.latitude,
+          _currentLocation!.longitude,
+        );
+      }
+
+      // 장애물 마커와 정밀 위치 동시 로드
+      _loadObstacleMarkers();
+      _refineCurrentLocation();
     } catch (e) {
       debugPrint("Error initializing map: $e");
       if (mounted) {
@@ -332,7 +394,8 @@ class _MapScreenState extends State<MapScreen> with RouteAware {
     }
   }
 
-  Future<void> _initCurrentLocation() async {
+  /// GPS 권한 확인 및 마지막 알려진 위치를 빠르게 가져오기
+  Future<void> _prepareLocation() async {
     try {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) return;
@@ -344,23 +407,37 @@ class _MapScreenState extends State<MapScreen> with RouteAware {
       }
       if (permission == LocationPermission.deniedForever) return;
 
-      final position = await Geolocator.getCurrentPosition();
+      // 마지막 알려진 위치로 즉시 설정 (매우 빠름)
+      final lastKnown = await Geolocator.getLastKnownPosition();
+      if (lastKnown != null && mounted) {
+        setState(() {
+          _currentLocation = latlong.LatLng(
+            lastKnown.latitude,
+            lastKnown.longitude,
+          );
+          _mapCenter = _currentLocation;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error preparing location: $e');
+    }
+  }
+
+  /// 정밀 GPS 위치를 백그라운드에서 가져와 업데이트
+  Future<void> _refineCurrentLocation() async {
+    try {
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+        timeLimit: const Duration(seconds: 5),
+      );
       if (!mounted) return;
       setState(() {
         _currentLocation = latlong.LatLng(
           position.latitude,
           position.longitude,
         );
-        _mapCenter = _currentLocation; // Initial map center is current location
+        _mapCenter = _currentLocation;
       });
-
-      // On Web, passing via URL param in _loadMap won't work if map already loaded.
-      // So we must use setCenter here.
-      if (kIsWeb) {
-        // Wait a bit for iframe to be ready if it just loaded
-        await Future.delayed(const Duration(milliseconds: 1000));
-      }
-
       KakaoMapHelper.setCenter(
         _mapController,
         position.latitude,
@@ -372,8 +449,89 @@ class _MapScreenState extends State<MapScreen> with RouteAware {
         position.longitude,
       );
     } catch (e) {
-      debugPrint('Error getting initial location: $e');
+      debugPrint('Error refining location: $e');
     }
+  }
+
+  /// 활성 장애물을 Supabase에서 가져와 지도에 표시
+  Future<void> _loadObstacleMarkers() async {
+    try {
+      final obstacles = await ApiService.getActiveObstacles();
+      if (!mounted) return;
+      _obstacleMarkers = obstacles;
+
+      if (kIsWeb) {
+        // 웹에서는 iframe 로드 완료 대기
+        await Future.delayed(const Duration(milliseconds: 300));
+      }
+
+      KakaoMapHelper.setObstacleMarkers(_mapController, _obstacleMarkers);
+    } catch (e) {
+      debugPrint('Error loading obstacle markers: $e');
+    }
+  }
+
+  /// 장애물 마커 클릭 시 호출 — 해당 게시글 데이터를 로드하여 하단 미리보기로 표시
+  void _onObstacleSelected(Map<String, dynamic> data) async {
+    if (!mounted) return;
+    final obstacleId = data['id']?.toString() ?? '';
+    if (obstacleId.isEmpty) return;
+
+    setState(() {
+      _selectedObstacle = data;
+      _selectedObstacleReport = null; // 로딩 중
+    });
+
+    // 하단 시트를 적절한 크기로 조절
+    try {
+      _sheetController.animateTo(
+        0.45,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    } catch (_) {}
+
+    // 커뮤니티 보고서에서 해당 장애물 데이터 가져오기
+    try {
+      final reports = await ApiService.getCommunityReports();
+      if (!mounted) return;
+      final report = reports.firstWhere(
+        (r) => r['id']?.toString() == obstacleId,
+        orElse: () => <String, dynamic>{},
+      );
+      if (report.isNotEmpty) {
+        setState(() {
+          _selectedObstacleReport = report;
+        });
+      } else {
+        // 보고서를 찾을 수 없으면 기본 정보로 표시
+        setState(() {
+          _selectedObstacleReport = {
+            'id': obstacleId,
+            'tag': data['obstacleType'] ?? '기타',
+            'address': '위치 정보 없음',
+            'content': '${data['obstacleType'] ?? '기타'} 장애물이 신고되었습니다.',
+            'likes': 0,
+            'dislikes': 0,
+            'comments': 0,
+            'user': '알 수 없음',
+            'time': '',
+          };
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching obstacle report: $e');
+    }
+  }
+
+  /// 지도 배경 클릭 시 장애물 선택 해제
+  void _onObstacleDeselected() {
+    if (!mounted) return;
+    if (_selectedObstacle == null) return;
+    setState(() {
+      _selectedObstacle = null;
+      _selectedObstacleReport = null;
+    });
   }
 
   Future<void> _loadMap() async {
@@ -554,6 +712,10 @@ class _MapScreenState extends State<MapScreen> with RouteAware {
                           ),
                           const SizedBox(height: 12),
 
+                          // 장애물 선택 시 미리보기 카드 표시
+                          if (_selectedObstacle != null) ...[
+                            _buildObstaclePreview(),
+                          ] else ...[
                           // 1. Recent Destinations
                           _buildSectionHeader('최근 목적지', () {
                             Navigator.push(
@@ -770,6 +932,7 @@ class _MapScreenState extends State<MapScreen> with RouteAware {
                               ),
                             ),
                           ),
+                          ], // else (normal dashboard) 끝
                         ],
                       ),
                     ),
@@ -1067,6 +1230,180 @@ class _MapScreenState extends State<MapScreen> with RouteAware {
           ),
         ],
       ),
+    );
+  }
+
+  /// 장애물 클릭 시 하단에 표시되는 미리보기 카드
+  Widget _buildObstaclePreview() {
+    final report = _selectedObstacleReport;
+    final obstacleType = _selectedObstacle?['obstacleType'] ?? '기타';
+    final primaryGreen = const Color(0xFF00C853);
+
+    if (report == null) {
+      // 로딩 중
+      return Container(
+        padding: const EdgeInsets.all(20),
+        child: const Center(
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: Color(0xFF00C853),
+          ),
+        ),
+      );
+    }
+
+    final tag = report['tag'] ?? obstacleType;
+    final address = report['address'] ?? '위치 정보 없음';
+    final content = report['content'] ?? '$tag 장애물이 신고되었습니다.';
+    final likes = report['likes'] ?? 0;
+    final comments = report['comments'] ?? 0;
+    final imageUrl = report['imageUrl']?.toString();
+    final user = report['user'] ?? '알 수 없음';
+    final time = report['time'] != null ? _formatTimeAgo(report['time']) : '';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // 헤더: 장애물 유형 뱃지 + 닫기 버튼
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: primaryGreen,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                tag,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            GestureDetector(
+              onTap: _onObstacleDeselected,
+              child: Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF3F4F6),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Icon(Icons.close, size: 16, color: Color(0xFF6B7280)),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+
+        // 이미지 (있는 경우)
+        if (imageUrl != null && imageUrl.isNotEmpty)
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Image.network(
+              imageUrl.startsWith('http')
+                  ? imageUrl
+                  : '${ApiService.baseUrl}$imageUrl',
+              height: 160,
+              width: double.infinity,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
+            ),
+          ),
+        if (imageUrl != null && imageUrl.isNotEmpty)
+          const SizedBox(height: 12),
+
+        // 주소
+        Row(
+          children: [
+            Icon(Icons.location_on_outlined, size: 16, color: primaryGreen),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                address,
+                style: TextStyle(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? const Color(0xFF9CA3AF)
+                      : const Color(0xFF4A5565),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+
+        // 내용
+        Text(
+          content,
+          style: TextStyle(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white
+                : const Color(0xFF101727),
+            fontSize: 14,
+            height: 1.5,
+          ),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+        const SizedBox(height: 12),
+
+        // 하단 정보: 작성자 · 시간 · 좋아요 · 댓글
+        Row(
+          children: [
+            Text(
+              '$user${time.isNotEmpty ? ' · $time' : ''}',
+              style: const TextStyle(
+                color: Color(0xFF9CA3AF),
+                fontSize: 12,
+              ),
+            ),
+            const Spacer(),
+            Icon(Icons.thumb_up_outlined, size: 14, color: const Color(0xFF9CA3AF)),
+            const SizedBox(width: 4),
+            Text('$likes', style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 12)),
+            const SizedBox(width: 12),
+            Icon(Icons.chat_bubble_outline, size: 14, color: const Color(0xFF9CA3AF)),
+            const SizedBox(width: 4),
+            Text('$comments', style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 12)),
+          ],
+        ),
+        const SizedBox(height: 16),
+
+        // 상세 보기 버튼
+        SizedBox(
+          width: double.infinity,
+          height: 48,
+          child: ElevatedButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => CommunityDetailScreen(report: report),
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: primaryGreen,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              elevation: 0,
+            ),
+            child: const Text(
+              '상세 보기',
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ),
+      ],
     );
   }
 

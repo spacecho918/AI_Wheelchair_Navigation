@@ -396,14 +396,21 @@ class _CommunityScreenState extends State<CommunityScreen> {
                             child: ConstrainedBox(
                               constraints: const BoxConstraints(maxWidth: 600),
                               child: GestureDetector(
-                                onTap: () {
-                                  Navigator.push(
+                                onTap: () async {
+                                  final result = await Navigator.push(
                                     context,
                                     MaterialPageRoute(
                                       builder: (context) =>
                                           CommunityDetailScreen(report: report),
                                     ),
                                   );
+                                  // 상세 화면에서 좋아요/싫어요 변경 후 돌아오면 즉시 반영
+                                  if (result != null && result is Map && mounted) {
+                                    setState(() {
+                                      report['likes'] = result['likeCount'];
+                                      report['dislikes'] = result['dislikeCount'];
+                                    });
+                                  }
                                 },
                                 child: Container(
                                   margin: const EdgeInsets.only(bottom: 16),
