@@ -30,8 +30,3 @@
 </table>
 
 ---
-
-## Git 사용법
-
-- 강의 링크: [오픈튜토리얼스 - 깃 입문](https://opentutorials.org/course/2708)
-- GUI 툴 추천: **SourceTree**
