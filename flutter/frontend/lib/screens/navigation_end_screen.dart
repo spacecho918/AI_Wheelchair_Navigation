@@ -64,7 +64,9 @@ class _NavigationEndScreenState extends State<NavigationEndScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: Theme.of(context).brightness == Brightness.dark
+          ? Theme.of(context).scaffoldBackgroundColor
+          : const Color(0xFFF0FDF4),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
