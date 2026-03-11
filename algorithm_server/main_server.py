@@ -225,6 +225,44 @@ def initialize_system():
 
 # ===== API 엔드포인트 =====
 
+def _get_local_ip() -> str:
+    """현재 기기의 로컬 WiFi IP 주소를 자동 감지"""
+    import socket
+    try:
+        # UDP 소켓을 열어 라우팅 테이블 기반으로 로컬 IP 추출
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except Exception:
+        return "127.0.0.1"
+
+
+def _register_server_ip():
+    """서버의 로컬 IP를 Supabase server_config 테이블에 등록"""
+    if not HAS_SUPABASE:
+        return
+    supabase_url = os.getenv("SUPABASE_URL", "")
+    supabase_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "") or os.getenv("SUPABASE_KEY", "")
+    if not supabase_url or not supabase_key:
+        return
+
+    local_ip = _get_local_ip()
+    server_url = f"http://{local_ip}:8000"
+    logger.info(f"서버 로컬 IP 감지: {local_ip} -> {server_url}")
+
+    try:
+        client = _create_supabase_client(supabase_url, supabase_key)
+        client.table("server_config").upsert({
+            "key": "server_url",
+            "value": server_url,
+        }, on_conflict="key").execute()
+        logger.info(f"서버 IP를 Supabase에 등록 완료: {server_url}")
+    except Exception as e:
+        logger.warning(f"서버 IP Supabase 등록 실패: {e}")
+
+
 @app.on_event("startup")
 async def startup_event():
     """서버 시작 시 초기화"""
@@ -234,6 +272,9 @@ async def startup_event():
         logger.error("시스템 초기화 실패")
     else:
         logger.info("시스템 초기화 완료")
+
+    # 서버 IP를 Supabase에 등록 (Flutter 앱이 자동으로 서버 IP를 찾을 수 있도록)
+    _register_server_ip()
         
     # YOLO 모델 미리 로드 (콜드 스타트 방지)
     try:

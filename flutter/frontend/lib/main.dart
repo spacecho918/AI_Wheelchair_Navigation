@@ -11,6 +11,7 @@ import 'package:gilbeot/services/auth_service.dart';
 import 'package:gilbeot/services/recent_searches_service.dart';
 import 'package:gilbeot/services/session_storage_local_storage.dart';
 import 'package:gilbeot/services/theme_service.dart';
+import 'package:gilbeot/services/api_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 bool _isOurAuthScheme(Uri uri) =>
@@ -71,6 +72,9 @@ void main() async {
       debugPrint('>>> [OAuth] getSessionFromUrl(초기) 실패: $e\n$st');
     }
   }
+
+  // 서버 URL 자동 감지 (Supabase에서 읽어옴)
+  await ApiService.loadServerUrl();
 
   runApp(const MyApp());
 }

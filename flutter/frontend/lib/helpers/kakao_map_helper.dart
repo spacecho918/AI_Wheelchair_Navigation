@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
@@ -168,7 +169,7 @@ class KakaoMapHelper {
         if (mapId != null) 'mapId': mapId,
       });
     } else {
-      final routesJson = routes.toString();
+      final routesJson = jsonEncode(routes);
       controller?.runJavaScript("drawAllRoutes($routesJson, $selectedIndex)");
     }
   }
@@ -237,7 +238,7 @@ class KakaoMapHelper {
     } else {
       // Mobile: JSON 인코딩하여 JS 함수 호출
       final jsonStr = obstacles
-          .map((o) => '{"lat":${o['lat']},"lng":${o['lng']},"type":"${o['type']}"}')
+          .map((o) => '{"id":"${o['id'] ?? ''}","lat":${o['lat']},"lng":${o['lng']},"type":"${o['type']}"}')
           .join(',');
       controller?.runJavaScript('setObstacleMarkers([$jsonStr])');
     }
