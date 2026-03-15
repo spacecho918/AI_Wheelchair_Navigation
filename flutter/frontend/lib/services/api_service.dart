@@ -52,7 +52,7 @@ class ApiService {
     if (!kIsWeb) {
       request.files.add(await http.MultipartFile.fromPath('image', imagePath));
     } else {
-      // Web logic (bytes) needed if web supported
+      // 웹: bytes 변환 로직 필요 (웹 지원 시)
       return null;
     }
 
@@ -171,7 +171,7 @@ class ApiService {
     return {"success": false, "message": "경로 비교 실패"};
   }
 
-  // === Direct Supabase Actions ===
+  // === Supabase 직접 호출 ===
 
   /// 4. 제보하기 (Python 서버 /report/submit - 이미지 업로드 + DB 저장 + 그래프 즉시 반영)
   static Future<Map<String, dynamic>> submitReport({
@@ -512,7 +512,7 @@ class ApiService {
     final user = AuthService.currentUser;
     if (user == null) return [];
     try {
-      // Join obstacles to show what we commented on
+      // 댓글 작성한 장애물 정보 조인
       final data = await _supabase
           .from('comments')
           .select('*, obstacles(*)')
@@ -548,7 +548,7 @@ class ApiService {
     final user = AuthService.currentUser;
     if (user == null) return false;
     try {
-      // Check existing
+      // 기존 반응 확인
       final existing = await _supabase
           .from('likes')
           .select()
@@ -558,17 +558,17 @@ class ApiService {
 
       if (existing != null) {
         if (existing['is_like'] == isLike) {
-          // Delete (Toggle off)
+          // 삭제 (토글 해제)
           await _supabase.from('likes').delete().eq('id', existing['id']);
         } else {
-          // Update
+          // 업데이트
           await _supabase
               .from('likes')
               .update({'is_like': isLike})
               .eq('id', existing['id']);
         }
       } else {
-        // Insert
+        // 삽입
         await _supabase.from('likes').insert({
           'user_id': user.id,
           'obstacle_id': reportId,
@@ -782,7 +782,7 @@ class ApiService {
     }
   }
 
-  // Helper for existing synchronous profile extraction
+  // 동기 프로필 추출 헬퍼
   static User? getUserProfileSync() {
     final user = AuthService.currentUser;
     if (user == null) return null;
@@ -816,7 +816,7 @@ class ApiService {
 
     if (profileImageUrl != null) {
       updates['profile_image_url'] = profileImageUrl;
-      // Also update metadata if needed, though profile_image_url in refined user model usually comes from DB
+      // 메타데이터도 업데이트 (DB 우선)
       userAttributes['profile_image_url'] = profileImageUrl;
     }
 

@@ -48,6 +48,7 @@ dependencies:
   shared_preferences: ^2.2.0
   supabase_flutter: ^2.8.0
   flutter_compass: ^0.8.1
+  flutter_dotenv: ^5.2.1
 
 dev_dependencies:
   flutter_test:
@@ -102,6 +103,7 @@ flutter:
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
   assets:
+    - .env
     - assets/
     - assets/fonts/
 

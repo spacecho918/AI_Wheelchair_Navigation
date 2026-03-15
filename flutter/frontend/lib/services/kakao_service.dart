@@ -1,13 +1,14 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:geolocator/geolocator.dart';
 
 class KakaoService {
-  static const String _apiKey = '***REMOVED***';
+  static String get _apiKey => dotenv.env['KAKAO_REST_API_KEY'] ?? '';
   static const String _baseUrl = 'https://dapi.kakao.com/v2/local';
 
-  // Keyword Search
+  // 키워드 검색
   static Future<List<Map<String, dynamic>>> searchKeyword(
     String query, {
     double? lat,
@@ -48,7 +49,7 @@ class KakaoService {
                 'lat': double.parse(doc['y']),
                 'lng': double.parse(doc['x']),
                 'place_id': doc['id']?.toString() ?? '',
-                'category': doc['category_group_code'], // Add category code
+                'category': doc['category_group_code'],
                 'phone': doc['phone'] ?? '',
                 'url': doc['place_url'] ?? '',
               };
@@ -56,7 +57,7 @@ class KakaoService {
             .toList()
             .cast<Map<String, dynamic>>();
 
-        // Calculate distance client-side if user location is provided
+        // 사용자 위치 기반 거리 계산 (클라이언트 측)
         if (lat != null && lng != null) {
           for (var item in results) {
             double itemLat = item['lat'];
@@ -172,7 +173,7 @@ class KakaoService {
     }
   }
 
-  // Reverse Geocoding (Coord -> Address)
+  // 역지오코딩 (좌표 → 주소)
   static Future<String> coord2Address(double lat, double lng) async {
     final url = Uri.parse('$_baseUrl/geo/coord2address.json?x=$lng&y=$lat');
     try {

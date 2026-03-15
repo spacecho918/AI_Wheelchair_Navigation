@@ -13,7 +13,7 @@ class WheelchairSettingsScreen extends StatefulWidget {
 }
 
 class _WheelchairSettingsScreenState extends State<WheelchairSettingsScreen> {
-  // Default selection
+  // 기본 선택값
   String _selectedType =
       'Electric'; // 'Electric', 'Manual', 'CaregiverManual', 'None'
   bool _isLoading = true;
@@ -44,7 +44,7 @@ class _WheelchairSettingsScreenState extends State<WheelchairSettingsScreen> {
     if (success) {
       if (mounted) Navigator.pop(context);
     } else {
-      // Show error snackbar?
+
       if (mounted) {
         CommonToast.show(context, '설정에 실패했습니다');
       }
@@ -67,8 +67,7 @@ class _WheelchairSettingsScreenState extends State<WheelchairSettingsScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // Custom Header
-            // Custom Header
+            // 커스텀 헤더
             Container(
               height: 56,
               padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -84,7 +83,7 @@ class _WheelchairSettingsScreenState extends State<WheelchairSettingsScreen> {
                     style: TextStyle(
                       color: Theme.of(context).brightness == Brightness.dark
                           ? Colors.white
-                          : const Color(0xFF354152), // Community Screen Header Color
+                          : const Color(0xFF354152),
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
@@ -114,7 +113,7 @@ class _WheelchairSettingsScreenState extends State<WheelchairSettingsScreen> {
             ),
             Container(color: const Color(0xFFF0F2F5), height: 1.0),
 
-            // Content
+            // 본문
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(
@@ -124,7 +123,7 @@ class _WheelchairSettingsScreenState extends State<WheelchairSettingsScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    const SizedBox(height: 10), // reduced top padding
+                    const SizedBox(height: 10),
                     Text(
                       '사용하시는 휠체어 타입을 선택하세요',
                       style: TextStyle(
@@ -144,7 +143,7 @@ class _WheelchairSettingsScreenState extends State<WheelchairSettingsScreen> {
                     ),
                     const SizedBox(height: 24),
 
-                    // Options
+                    // 옵션 카드
                     _buildOptionCard(
                       type: 'Electric',
                       title: '전동 휠체어',
@@ -179,7 +178,7 @@ class _WheelchairSettingsScreenState extends State<WheelchairSettingsScreen> {
 
                     const SizedBox(height: 32),
 
-                    // Info Box
+                    // 안내 박스
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(20),
@@ -238,12 +237,12 @@ class _WheelchairSettingsScreenState extends State<WheelchairSettingsScreen> {
 
   Widget _buildInfoItem(String text) {
     return Padding(
-      padding: const EdgeInsets.only(left: 4), // slightly indent
+      padding: const EdgeInsets.only(left: 4),
       child: Text(
-        '• $text', // Bullet point manually or use Row with circle
+        '• $text',
         style: const TextStyle(
           color: Color(0xFF1565C0),
-          fontSize: 12, // Small text
+          fontSize: 12,
           height: 1.4,
         ),
       ),
@@ -278,11 +277,11 @@ class _WheelchairSettingsScreenState extends State<WheelchairSettingsScreen> {
           border: Border.all(
             color: isSelected
                 ? const Color(0xFF00C853)
-                : const Color(0xFFE5E7EB), // Green if selected, else light grey
+                : const Color(0xFFE5E7EB),
             width: isSelected ? 1.5 : 1,
           ),
           boxShadow: [
-            if (!isSelected) // Slight shadow for unselected to look like card
+            if (!isSelected)
               BoxShadow(
                 color: Colors.black.withOpacity(0.05),
                 blurRadius: 10,
@@ -292,9 +291,9 @@ class _WheelchairSettingsScreenState extends State<WheelchairSettingsScreen> {
         ),
         child: Row(
           children: [
-            // Icon
+
             Container(
-              width: 40, // Adjust size
+              width: 40,
               height: 40,
               alignment: iconAlignment ?? Alignment.center,
               child: iconData != null
@@ -322,21 +321,15 @@ class _WheelchairSettingsScreenState extends State<WheelchairSettingsScreen> {
                           iconWidth ??
                           (isXIcon
                               ? 22
-                              : 28), // X icon might need size adjustment
+                              : 28),
                       color: isSelected
-                          ? const Color(0xFF00C853)
-                          : const Color(0xFF4A5565), // Green or Dark Grey
+                           ? const Color(0xFF00C853)
+                          : const Color(0xFF4A5565),
                     ),
             ),
             const SizedBox(
               width: 16,
-            ), // Or specific coloring per icon? Image shows Flash is Yellow/Orange when active?
-            // Actually image shows:
-            // Electric: Flash icon is Yellow/Orange.
-            // Manual: Wheelchair icon is Grey.
-            // None: X icon is Dark Grey.
-            // And checkmark is Green.
-            // Let's try to match that better.
+            ), 
             const SizedBox(width: 16),
 
             Expanded(

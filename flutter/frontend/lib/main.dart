@@ -4,6 +4,7 @@ import 'package:app_links/app_links.dart';
 import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:gilbeot/app_route_observer.dart';
 import 'package:gilbeot/screens/login_screen.dart';
 import 'package:gilbeot/screens/map_screen.dart';
@@ -30,14 +31,17 @@ final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  const supabaseUrl = '***REMOVED***';
+  // .env 파일에서 환경변수 로드
+  await dotenv.load(fileName: '.env');
+
+  final supabaseUrl = dotenv.env['SUPABASE_URL'] ?? '';
+  final supabaseAnonKey = dotenv.env['SUPABASE_ANON_KEY'] ?? '';
   final persistKey =
       'sb-${Uri.parse(supabaseUrl).host.split('.').first}-auth-token';
 
   await Supabase.initialize(
     url: supabaseUrl,
-    anonKey:
-        '***REMOVED***',
+    anonKey: supabaseAnonKey,
     authOptions: FlutterAuthClientOptions(
       localStorage: SessionStorageLocalStorage(persistSessionKey: persistKey),
       detectSessionInUri: false,
@@ -84,7 +88,7 @@ class MyApp extends StatefulWidget {
 
   static _MyAppState? of(BuildContext context) =>
       context.findAncestorStateOfType<_MyAppState>();
-  // This widget is the root of your application.
+
   @override
   State<MyApp> createState() => _MyAppState();
 }
@@ -158,21 +162,6 @@ class _MyAppState extends State<MyApp> {
       themeMode: _themeMode,
 
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a green toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.blue
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
         brightness: Brightness.light,
         scaffoldBackgroundColor: Colors.white,
         cardColor: Colors.white,

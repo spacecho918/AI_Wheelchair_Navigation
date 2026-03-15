@@ -152,14 +152,14 @@ class _MapScreenState extends State<MapScreen> with RouteAware {
     }
   }
 
-  // Wheelchair Setting Popup
+  // 휠체어 설정 팝업
   void _showWheelchairSettingDialog() {
     showDialog(
       context: context,
       barrierDismissible: false,
       barrierColor: Colors.black.withValues(
         alpha: 0.5,
-      ), // Semi-transparent black background
+      ), // 반투명 배경
       builder: (context) {
         return PointerInterceptor(
           child: Dialog(
@@ -174,7 +174,7 @@ class _MapScreenState extends State<MapScreen> with RouteAware {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Close button
+
                     Align(
                       alignment: Alignment.topRight,
                       child: IconButton(
@@ -190,7 +190,7 @@ class _MapScreenState extends State<MapScreen> with RouteAware {
                       ),
                     ),
 
-                    // Icon
+
                     Container(
                       width: 64,
                       height: 64,
@@ -209,30 +209,30 @@ class _MapScreenState extends State<MapScreen> with RouteAware {
                     ),
                     const SizedBox(height: 20),
 
-                    // Title
+
                     const Text(
                       '휠체어 종류를 설정해주세요',
                       style: TextStyle(
-                        fontSize: 18, // 20 might be too big, trying 18-20 range
+                        fontSize: 18,
                         fontWeight: FontWeight.bold,
                         color: Color(0xFF101727),
                       ),
                     ),
                     const SizedBox(height: 8),
 
-                    // Subtitle
+
                     const Text(
                       '정확한 경로 안내를 위해\n사용 중인 휠체어 종류가 필요합니다',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 14,
-                        color: Color(0xFF6B7280), // Grey text
+                        color: Color(0xFF6B7280),
                         height: 1.5,
                       ),
                     ),
                     const SizedBox(height: 24),
 
-                    // Buttons
+
                     SizedBox(
                       width: double.infinity,
                       height: 48,
@@ -306,7 +306,7 @@ class _MapScreenState extends State<MapScreen> with RouteAware {
         controller.setJavaScriptMode(JavaScriptMode.unrestricted);
         controller.setBackgroundColor(const Color(0x00000000));
 
-        // Add navigation delegate for debugging
+        // 디버깅용 NavigationDelegate
         controller.setNavigationDelegate(
           NavigationDelegate(
             onPageStarted: (String url) {
@@ -544,10 +544,10 @@ class _MapScreenState extends State<MapScreen> with RouteAware {
         ),
       );
     } else {
-      // Load HTML content with a base URL registered in Kakao Developer Console
+      // 카카오 개발자 콘솔에 등록된 baseURL로 HTML 로드
       String htmlContent = await rootBundle.loadString('assets/kakao_map.html');
 
-      // Use https://gilbeot.app as base URL (registered in Kakao console)
+      // gilbeot.app을 baseURL로 사용 (카카오 콘솔 등록)
       await (_mapController as WebViewController).loadHtmlString(
         htmlContent,
         baseUrl: 'https://gilbeot.app',
@@ -680,7 +680,7 @@ class _MapScreenState extends State<MapScreen> with RouteAware {
                             const ClampingScrollPhysics(), // [수정 2] 탭을 잡아도 창이 딸려오게 하는 물리 효과
                         padding: const EdgeInsets.fromLTRB(21, 10, 21, 30),
                         children: [
-                          // Handle Bar - Draggable
+                          // 드래그 핸들바
                           GestureDetector(
                             behavior: HitTestBehavior.opaque,
                             onVerticalDragUpdate: (details) {
@@ -716,7 +716,7 @@ class _MapScreenState extends State<MapScreen> with RouteAware {
                           if (_selectedObstacle != null) ...[
                             _buildObstaclePreview(),
                           ] else ...[
-                          // 1. Recent Destinations
+                          // 1. 최근 목적지
                           _buildSectionHeader('최근 목적지', () {
                             Navigator.push(
                               context,
@@ -780,7 +780,7 @@ class _MapScreenState extends State<MapScreen> with RouteAware {
 
                           const SizedBox(height: 32),
 
-                          // 2. Community Latest Posts
+                          // 2. 커뮤니티 최신글
                           _buildSectionHeader('커뮤니티 최신글', () {
                             Navigator.push(
                               context,
@@ -860,7 +860,7 @@ class _MapScreenState extends State<MapScreen> with RouteAware {
 
                           const SizedBox(height: 32),
 
-                          // Search Button
+
                           Container(
                             width: double.infinity,
                             height: 52,

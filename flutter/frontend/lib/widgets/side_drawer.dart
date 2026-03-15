@@ -149,7 +149,7 @@ class _SideDrawerState extends State<SideDrawer> {
                     ),
                     const SizedBox(height: 7),
                     _buildMenuItem(
-                      iconPath: 'assets/community_icon.svg', // New Icon
+                      iconPath: 'assets/community_icon.svg',
                       text: '제보 커뮤니티',
                       onTap: () {
                         Navigator.pop(context); // Close drawer first
@@ -234,7 +234,7 @@ class _SideDrawerState extends State<SideDrawer> {
                   if (Navigator.canPop(context)) {
                     Navigator.pop(context);
                   } else {
-                    // Fallback
+
                   }
                 },
                 padding: EdgeInsets.zero,
@@ -338,7 +338,7 @@ class _SideDrawerState extends State<SideDrawer> {
                 ),
               ),
               const SizedBox(width: 5),
-              // Level logic can be added later, static for now or based on driveCount?
+              // 레벨 로직 추후 추가
               const Text(
                 '레벨 1',
                 style: TextStyle(color: Colors.white, fontSize: 13),

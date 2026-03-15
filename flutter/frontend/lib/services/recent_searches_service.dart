@@ -5,8 +5,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'auth_service.dart';
 
-/// Service to manage recent searches.
-/// Logged-in: syncs with Supabase (recent_searches table). Logged-out: local only (SharedPreferences).
+/// 최근 검색 관리 서비스.
+/// 로그인: Supabase 동기화 (recent_searches 테이블). 비로그인: 로컬(SharedPreferences)만 사용.
 class RecentSearchesService {
   static const String _storageKey = 'recent_searches';
   static List<Map<String, dynamic>> _recentSearches = [];
@@ -14,11 +14,11 @@ class RecentSearchesService {
 
   static SupabaseClient get _supabase => Supabase.instance.client;
 
-  /// Get the current list of recent searches
+  /// 현재 최근 검색 목록 반환
   static List<Map<String, dynamic>> get recentSearches =>
       List.unmodifiable(_recentSearches);
 
-  /// Load recent searches: from Supabase if logged in, else from local storage.
+  /// 최근 검색 로드: 로그인 상태면 Supabase, 아니면 로컬 저장소에서 읽음.
   static Future<void> load() async {
     try {
       final user = AuthService.currentUser;
@@ -59,8 +59,8 @@ class RecentSearchesService {
     _isLoaded = true;
   }
 
-  /// Add a search to recent searches (at the top, max 20 items).
-  /// Syncs to Supabase when logged in.
+  /// 최근 검색에 추가 (상단 삽입, 최대 20개).
+  /// 로그인 시 Supabase 동기화.
   static Future<void> addSearch(Map<String, dynamic> search) async {
     final name = search['name'] as String? ?? '';
     final address = search['address'] as String? ?? '';
@@ -104,7 +104,7 @@ class RecentSearchesService {
     await _saveToLocal();
   }
 
-  /// Remove a search from recent searches. Syncs to Supabase when logged in.
+  /// 최근 검색에서 제거. 로그인 시 Supabase 동기화.
   static Future<void> removeSearch(Map<String, dynamic> search) async {
     final name = search['name'] as String? ?? '';
     final address = search['address'] as String? ?? '';
@@ -140,7 +140,7 @@ class RecentSearchesService {
     await _saveToLocal();
   }
 
-  /// Clear all recent searches. Syncs to Supabase when logged in.
+  /// 최근 검색 전체 삭제. 로그인 시 Supabase 동기화.
   static Future<void> clearAll() async {
     _recentSearches.clear();
     final user = AuthService.currentUser;
@@ -157,7 +157,7 @@ class RecentSearchesService {
     await _saveToLocal();
   }
 
-  /// Save current list to local storage (cache / offline).
+  /// 현재 목록을 로컬 저장소에 캐시.
   static Future<void> _saveToLocal() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -168,10 +168,10 @@ class RecentSearchesService {
     }
   }
 
-  /// Check if loaded
+  /// 로드 여부 확인
   static bool get isLoaded => _isLoaded;
 
-  /// Force reload from server (if logged in) or local.
+  /// 서버(로그인 시) 또는 로컬에서 강제 리로드.
   static Future<void> reload() async {
     _isLoaded = false;
     await load();
