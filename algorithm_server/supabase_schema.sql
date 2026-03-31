@@ -114,3 +114,279 @@ CREATE POLICY "likes_delete_own" ON likes FOR DELETE USING (auth.uid() = user_id
 
 CREATE TRIGGER update_likes_updated_at BEFORE UPDATE ON likes
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ================================================================
+-- 4. notifications 테이블 RLS + Realtime
+-- ================================================================
+
+-- 인덱스
+CREATE INDEX IF NOT EXISTS idx_notifications_user_id    ON notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_notifications_is_read    ON notifications(user_id, is_read);
+
+-- RLS: 본인 알림만 조회/수정 허용
+ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "notifications_read_own"      ON notifications;
+DROP POLICY IF EXISTS "notifications_update_own"    ON notifications;
+DROP POLICY IF EXISTS "notifications_insert_service" ON notifications;
+
+CREATE POLICY "notifications_read_own" ON notifications
+    FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "notifications_update_own" ON notifications
+    FOR UPDATE USING (auth.uid() = user_id);
+
+-- 트리거 함수(SECURITY DEFINER)가 다른 유저 알림 삽입할 수 있도록 허용
+CREATE POLICY "notifications_insert_service" ON notifications
+    FOR INSERT WITH CHECK (true);
+
+-- Realtime 구독 활성화 (Flutter RealtimeChannel 사용)
+ALTER PUBLICATION supabase_realtime ADD TABLE notifications;
+
+-- ================================================================
+-- 5. 좋아요 발생 시 → 제보 작성자에게 'like' 알림 자동 생성
+--    자기 자신의 글에 좋아요는 알림 제외
+-- ================================================================
+CREATE OR REPLACE FUNCTION notify_on_like()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_obstacle_owner UUID;
+    v_liker_nickname TEXT;
+    v_obstacle_type  TEXT;
+BEGIN
+    -- 제보 작성자 조회
+    SELECT reported_by::UUID, obstacle_type
+    INTO v_obstacle_owner, v_obstacle_type
+    FROM obstacles
+    WHERE id = NEW.obstacle_id;
+
+    -- 작성자가 없거나 자신의 글에 좋아요 → SKIP
+    IF v_obstacle_owner IS NULL THEN RETURN NEW; END IF;
+    IF v_obstacle_owner = NEW.user_id THEN RETURN NEW; END IF;
+
+    -- 좋아요 누른 사람 닉네임 조회
+    SELECT COALESCE(nickname, '누군가')
+    INTO v_liker_nickname
+    FROM user_profiles
+    WHERE user_id = NEW.user_id;
+
+    -- is_like = TRUE 일 때만 알림 삽입
+    IF NEW.is_like = TRUE THEN
+        INSERT INTO notifications (user_id, title, content, type, deeplink_url)
+        VALUES (
+            v_obstacle_owner,
+            '내 제보에 좋아요가 달렸어요 👍',
+            v_liker_nickname || '님이 ''' || COALESCE(v_obstacle_type, '제보') || ''' 글을 좋아합니다.',
+            'like',
+            '/community/' || NEW.obstacle_id::TEXT
+        );
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_notify_on_like ON likes;
+CREATE TRIGGER trg_notify_on_like
+    AFTER INSERT OR UPDATE ON likes
+    FOR EACH ROW
+    EXECUTE FUNCTION notify_on_like();
+
+-- ================================================================
+-- 6. 댓글 작성 시 → 제보 작성자에게 'comment' 알림 자동 생성
+--    자기 자신의 글에 댓글은 알림 제외
+-- ================================================================
+CREATE OR REPLACE FUNCTION notify_on_comment()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_obstacle_owner UUID;
+    v_commenter_nick TEXT;
+    v_obstacle_type  TEXT;
+    v_preview        TEXT;
+BEGIN
+    -- 제보 작성자 조회
+    SELECT reported_by::UUID, obstacle_type
+    INTO v_obstacle_owner, v_obstacle_type
+    FROM obstacles
+    WHERE id = NEW.obstacle_id;
+
+    IF v_obstacle_owner IS NULL THEN RETURN NEW; END IF;
+    IF v_obstacle_owner = NEW.user_id THEN RETURN NEW; END IF;
+
+    -- 댓글 작성자 닉네임 조회
+    SELECT COALESCE(nickname, '누군가')
+    INTO v_commenter_nick
+    FROM user_profiles
+    WHERE user_id = NEW.user_id;
+
+    -- 댓글 미리보기 (30자 제한)
+    v_preview := LEFT(COALESCE(NEW.content, ''), 30);
+    IF LENGTH(COALESCE(NEW.content, '')) > 30 THEN
+        v_preview := v_preview || '...';
+    END IF;
+
+    INSERT INTO notifications (user_id, title, content, type, deeplink_url)
+    VALUES (
+        v_obstacle_owner,
+        '내 제보에 댓글이 달렸어요 💬',
+        v_commenter_nick || '님: "' || v_preview || '"',
+        'comment',
+        '/community/' || NEW.obstacle_id::TEXT
+    );
+
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_notify_on_comment ON comments;
+CREATE TRIGGER trg_notify_on_comment
+    AFTER INSERT ON comments
+    FOR EACH ROW
+    EXECUTE FUNCTION notify_on_comment();
+-- ================================================================
+-- [7] user_profiles 테이블 컬럼 추가 (점수)
+-- ================================================================
+ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS score INTEGER DEFAULT 0;
+
+-- ================================================================
+-- [8] score_logs 테이블 생성 (점수 획득 이력 저장)
+-- ================================================================
+CREATE TABLE IF NOT EXISTS score_logs (
+    log_id BIGSERIAL PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    obstacle_id UUID REFERENCES obstacles(id) ON DELETE CASCADE,
+    action_type TEXT NOT NULL, -- 'report_created', 'report_liked'
+    score_change INTEGER NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_score_logs_user_id ON score_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_score_logs_action ON score_logs(obstacle_id, action_type);
+
+-- ================================================================
+-- [9] 함수: 점수에 따른 레벨 갱신
+-- ================================================================
+CREATE OR REPLACE FUNCTION update_user_level_and_score(p_user_id UUID, p_score_change INTEGER)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_new_score INTEGER;
+    v_new_level INTEGER;
+BEGIN
+    -- 현재 점수에 추가
+    UPDATE user_profiles
+    SET score = COALESCE(score, 0) + p_score_change
+    WHERE user_id = p_user_id
+    RETURNING score INTO v_new_score;
+
+    -- 점수에 따른 레벨 계산
+    -- Lv.0: 0~9, Lv.1: 10~49, Lv.2: 50~149, Lv.3: 150~299, Lv.4: 300~499, Lv.5: 500~
+    IF v_new_score >= 500 THEN
+        v_new_level := 5;
+    ELSIF v_new_score >= 300 THEN
+        v_new_level := 4;
+    ELSIF v_new_score >= 150 THEN
+        v_new_level := 3;
+    ELSIF v_new_score >= 50 THEN
+        v_new_level := 2;
+    ELSIF v_new_score >= 10 THEN
+        v_new_level := 1;
+    ELSE
+        v_new_level := 0;
+    END IF;
+
+    -- 레벨 갱신
+    UPDATE user_profiles
+    SET report_level = v_new_level
+    WHERE user_id = p_user_id;
+END;
+$$;
+
+-- ================================================================
+-- [10] 트리거: 제보 등록 시 점수 부여 (+10점)
+-- ================================================================
+CREATE OR REPLACE FUNCTION award_score_on_report()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+    IF NEW.reported_by IS NOT NULL THEN
+        -- 1. 로그 기록
+        INSERT INTO score_logs(user_id, obstacle_id, action_type, score_change)
+        VALUES (NEW.reported_by::UUID, NEW.id, 'report_created', 10);
+        
+        -- 2. 점수 및 레벨 갱신
+        PERFORM update_user_level_and_score(NEW.reported_by::UUID, 10);
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_score_on_report ON obstacles;
+CREATE TRIGGER trg_score_on_report
+    AFTER INSERT ON obstacles
+    FOR EACH ROW
+    EXECUTE FUNCTION award_score_on_report();
+
+-- ================================================================
+-- [11] 트리거: 좋아요 10개 달성 시 점수 부여 (+20점, 1회 한정)
+-- ================================================================
+CREATE OR REPLACE FUNCTION award_score_on_likes()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_obstacle_owner UUID;
+    v_like_count INTEGER;
+    v_already_awarded BOOLEAN;
+BEGIN
+    -- 삭제/취소가 아닌 '좋아요 추가' 상태인지 확인
+    IF NEW.is_like = false THEN
+        RETURN NEW;
+    END IF;
+
+    -- 제보 작성자 조회
+    SELECT reported_by::UUID
+    INTO v_obstacle_owner
+    FROM obstacles
+    WHERE id = NEW.obstacle_id;
+
+    IF v_obstacle_owner IS NULL THEN RETURN NEW; END IF;
+
+    -- 제보의 총 좋아요 개수 계산
+    SELECT COUNT(*) INTO v_like_count
+    FROM likes
+    WHERE obstacle_id = NEW.obstacle_id AND is_like = true;
+
+    -- 10개 단위 달성 여부가 아니라, "최초 10개 달성 시 1회 보너스"인지 확인
+    IF v_like_count >= 10 THEN
+        -- 이미 해당 제보로 좋아요 점수를 받았는지 확인
+        SELECT EXISTS (
+            SELECT 1 FROM score_logs
+            WHERE obstacle_id = NEW.obstacle_id
+              AND action_type = 'report_liked_bonus'
+        ) INTO v_already_awarded;
+
+        -- 보상을 받은 적이 없으면 점수 지급
+        IF v_already_awarded = false THEN
+            INSERT INTO score_logs(user_id, obstacle_id, action_type, score_change)
+            VALUES (v_obstacle_owner, NEW.obstacle_id, 'report_liked_bonus', 20);
+
+            PERFORM update_user_level_and_score(v_obstacle_owner, 20);
+        END IF;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;

@@ -689,7 +689,8 @@ class ApiService {
             wt = _toDbWheelchairType(metaWt);
           } catch (_) {}
         }
-        final reportLevel = res['report_level'];
+        final reportLevel = res['report_level'] ?? 0;
+        final score = res['score'] ?? 0;
         final profileImageUrl = res['profile_image_url'] as String?;
         return User(
           nickname: nick?.isNotEmpty == true
@@ -706,6 +707,8 @@ class ApiService {
           reportCount: realReportCount,
           likeCount: metadata?['like_count'] ?? 0,
           commentCount: metadata?['comment_count'] ?? 0,
+          level: reportLevel,
+          score: score,
         );
       }
     } catch (e) {
@@ -795,6 +798,8 @@ class ApiService {
       reportCount: metadata?['report_count'] ?? 0,
       likeCount: metadata?['like_count'] ?? 0,
       commentCount: metadata?['comment_count'] ?? 0,
+      level: metadata?['report_level'] ?? 0,
+      score: metadata?['score'] ?? 0,
     );
   }
 
@@ -1004,6 +1009,70 @@ class ApiService {
     } catch (e) {
       debugPrint('updateWheelchairType error: $e');
       return false;
+    }
+  }
+
+  // ─── Notifications ───────────────────────────────────────────
+
+  /// 내 알림 목록 조회 (notifications 테이블)
+  static Future<List<Map<String, dynamic>>> getNotifications() async {
+    final user = AuthService.currentUser;
+    if (user == null) return [];
+    try {
+      final data = await _supabase
+          .from('notifications')
+          .select()
+          .eq('user_id', user.id)
+          .order('created_at', ascending: false)
+          .limit(50);
+      return List<Map<String, dynamic>>.from(data as List);
+    } catch (e) {
+      debugPrint('getNotifications error: $e');
+      return [];
+    }
+  }
+
+  /// 특정 알림 읽음 처리
+  static Future<void> markNotificationRead(int notificationId) async {
+    try {
+      await _supabase
+          .from('notifications')
+          .update({'is_read': true})
+          .eq('notification_id', notificationId);
+    } catch (e) {
+      debugPrint('markNotificationRead error: $e');
+    }
+  }
+
+  /// 내 모든 알림 읽음 처리
+  static Future<void> markAllNotificationsRead() async {
+    final user = AuthService.currentUser;
+    if (user == null) return;
+    try {
+      await _supabase
+          .from('notifications')
+          .update({'is_read': true})
+          .eq('user_id', user.id)
+          .eq('is_read', false);
+    } catch (e) {
+      debugPrint('markAllNotificationsRead error: $e');
+    }
+  }
+
+  /// 미읽음 알림 수
+  static Future<int> getUnreadNotificationCount() async {
+    final user = AuthService.currentUser;
+    if (user == null) return 0;
+    try {
+      final data = await _supabase
+          .from('notifications')
+          .select('notification_id')
+          .eq('user_id', user.id)
+          .eq('is_read', false);
+      return (data as List).length;
+    } catch (e) {
+      debugPrint('getUnreadNotificationCount error: $e');
+      return 0;
     }
   }
 

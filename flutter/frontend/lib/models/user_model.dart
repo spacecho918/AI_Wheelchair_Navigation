@@ -2,13 +2,14 @@ class User {
   final String nickname;
   final String email;
   final String? profileImage;
-  final String
-  wheelchairType; // 'Electric', 'Manual', 'CaregiverManual', 'None'
+  final String wheelchairType; // 'Electric', 'Manual', 'CaregiverManual', 'None'
   final double totalDistance;
   final int driveCount;
   final int reportCount;
   final int commentCount;
   final int likeCount;
+  final int level;
+  final int score;
 
   User({
     required this.nickname,
@@ -20,6 +21,8 @@ class User {
     this.reportCount = 0,
     this.commentCount = 0,
     this.likeCount = 0,
+    this.level = 0,
+    this.score = 0,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -33,6 +36,8 @@ class User {
       reportCount: json['report_count'] ?? 0,
       commentCount: json['comment_count'] ?? 0,
       likeCount: json['like_count'] ?? 0,
+      level: json['report_level'] ?? 0,
+      score: json['score'] ?? 0,
     );
   }
 
