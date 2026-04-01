@@ -31,12 +31,13 @@ StreamSubscription? listenForMapEvents(MapEventCallback callback, {MapEventCallb
 
 /// Sends a command to the Kakao Map iframe via postMessage.
 void sendMapCommand(Map<String, dynamic> command) {
+  _sendMapCommandInternal(command, retryCount: 0);
+}
+
+void _sendMapCommandInternal(Map<String, dynamic> command, {int retryCount = 0}) {
   try {
     // Find the iframe containing the kakao map
     final iframes = html.document.querySelectorAll('iframe');
-    print('Found ${iframes.length} iframes');
-
-    bool sent = false;
     final targetMapId = command['mapId'] as String?;
 
     for (var iframe in iframes) {
@@ -46,27 +47,25 @@ void sendMapCommand(Map<String, dynamic> command) {
         // If mapId is specified, only send to matching iframe
         if (targetMapId != null) {
           if (src.contains('mapId=$targetMapId')) {
-            print(
-              'Sending to kakao_map iframe (id=$targetMapId): ${jsonEncode(command)}',
-            );
             iframe.contentWindow?.postMessage(jsonEncode(command), '*');
-            sent = true;
             return;
           }
         }
         // Default behavior: find first kakao_map iframe (if no mapId specified)
         else if (src.contains('kakao_map.html')) {
-          print('Sending to kakao_map iframe: ${jsonEncode(command)}');
           iframe.contentWindow?.postMessage(jsonEncode(command), '*');
-          sent = true;
           return;
         }
       }
     }
 
-    // Fallback: Try all iframes (webview might not have explicit src)
-    if (!sent && iframes.isNotEmpty) {
-      print('Fallback: sending to all iframes');
+    // mapId가 지정되었지만 매칭되는 iframe을 찾지 못한 경우 → 재시도 (iframe 로드 대기)
+    if (targetMapId != null && retryCount < 5) {
+      Future.delayed(Duration(milliseconds: 200 * (retryCount + 1)), () {
+        _sendMapCommandInternal(command, retryCount: retryCount + 1);
+      });
+    } else if (iframes.isNotEmpty && targetMapId == null) {
+      // mapId 없이 호출했는데 kakao_map iframe을 못 찾은 경우 → fallback
       for (var iframe in iframes) {
         if (iframe is html.IFrameElement) {
           iframe.contentWindow?.postMessage(jsonEncode(command), '*');

@@ -11,6 +11,33 @@ import '../models/report_summary.dart';
 
 import 'auth_service.dart';
 
+/// 마지막으로 제보된 장애물 정보를 임시 저장하는 클래스.
+/// NavigationScreen이 제보 완료 후 이 값을 확인해 경로 재탐색 여부를 판단합니다.
+class LastReportedObstacle {
+  static double? latitude;
+  static double? longitude;
+  static double radius = 15.0;
+  static DateTime? reportedAt;
+
+  /// 제보 데이터 저장
+  static void set(double lat, double lon, {double r = 15.0}) {
+    latitude = lat;
+    longitude = lon;
+    radius = r;
+    reportedAt = DateTime.now();
+  }
+
+  /// 데이터 소비 후 초기화 (한 번만 사용)
+  static Map<String, double>? consume() {
+    if (latitude == null || longitude == null) return null;
+    final data = {'lat': latitude!, 'lon': longitude!, 'radius': radius};
+    latitude = null;
+    longitude = null;
+    reportedAt = null;
+    return data;
+  }
+}
+
 class ApiService {
   static final _supabase = supabase.Supabase.instance.client;
 
@@ -218,6 +245,8 @@ class ApiService {
       final streamed = await request.send();
       final res = await http.Response.fromStream(streamed);
       if (res.statusCode == 200) {
+        // 제보 성공 시 장애물 위치를 LastReportedObstacle에 저장
+        LastReportedObstacle.set(latitude, longitude);
         return jsonDecode(utf8.decode(res.bodyBytes));
       } else {
         debugPrint('Submit Failed: ${res.statusCode} ${res.body}');

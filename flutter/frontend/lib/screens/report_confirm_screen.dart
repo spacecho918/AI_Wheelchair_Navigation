@@ -103,23 +103,25 @@ class _ReportConfirmScreenState extends State<ReportConfirmScreen> {
       );
     }
 
-    _mapController!.setNavigationDelegate(
-      NavigationDelegate(
-        onPageFinished: (String url) {
-          KakaoMapHelper.setCenter(
-            _mapController,
-            _currentLocation.latitude,
-            _currentLocation.longitude,
-          );
-          KakaoMapHelper.setMarker(
-            _mapController,
-            _currentLocation.latitude,
-            _currentLocation.longitude,
-          );
-          KakaoMapHelper.setStaticMode(_mapController, true);
-        },
-      ),
-    );
+    if (!kIsWeb) {
+      _mapController!.setNavigationDelegate(
+        NavigationDelegate(
+          onPageFinished: (String url) {
+            KakaoMapHelper.setCenter(
+              _mapController,
+              _currentLocation.latitude,
+              _currentLocation.longitude,
+            );
+            KakaoMapHelper.setMarker(
+              _mapController,
+              _currentLocation.latitude,
+              _currentLocation.longitude,
+            );
+            KakaoMapHelper.setStaticMode(_mapController, true);
+          },
+        ),
+      );
+    }
   }
 
   @override

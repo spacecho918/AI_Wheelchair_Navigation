@@ -13,6 +13,7 @@ class LoginScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     // [수정 1] MaterialApp 제거 (main.dart에 이미 있으므로 중복 제거)
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       backgroundColor: Theme.of(context).brightness == Brightness.dark
           ? Colors.black
           : const Color(0xFFF0FDF4),

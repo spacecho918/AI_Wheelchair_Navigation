@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -10,6 +11,7 @@ import 'package:latlong2/latlong.dart';
 import 'dart:convert';
 import 'package:gilbeot/helpers/kakao_map_helper.dart';
 import 'package:gilbeot/services/api_service.dart';
+import 'package:gilbeot/app_route_observer.dart';
 import 'camera_screen.dart';
 import 'navigation_end_screen.dart';
 
@@ -43,24 +45,74 @@ class NavigationScreen extends StatefulWidget {
   State<NavigationScreen> createState() => _NavigationScreenState();
 }
 
-class _NavigationScreenState extends State<NavigationScreen> {
+class _NavigationScreenState extends State<NavigationScreen> with RouteAware {
   WebViewController? _mapController;
   bool _isEndNavPressed = false;
   LatLng? _currentLiveLocation;
   Timer? _locationTimer;
+  bool _isRerouting = false;
+
+  // 재탐색 시 갱신 가능한 경로 데이터 (초기값은 widget에서 복사)
+  late List<List<double>>? _routeGeometry;
+  late List<Map<String, String>>? _instructions;
+  late String _estimatedTime;
+  late String _totalDistance;
+  late int _avoidedObstacles;
 
   @override
   void initState() {
     super.initState();
     _currentLiveLocation = widget.startLocation;
+    _routeGeometry = widget.routeGeometry;
+    _instructions = widget.instructions;
+    _estimatedTime = widget.estimatedTime;
+    _totalDistance = widget.totalDistance;
+    _avoidedObstacles = widget.avoidedObstacles;
     _initMapController();
     _startLocationTracking();
+  }
+
+  bool _routeObserverSubscribed = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_routeObserverSubscribed) {
+      final route = ModalRoute.of(context);
+      if (route is PageRoute) {
+        routeObserver.subscribe(this, route);
+        _routeObserverSubscribed = true;
+      }
+    }
   }
 
   @override
   void dispose() {
     _locationTimer?.cancel();
+    if (_routeObserverSubscribed) {
+      routeObserver.unsubscribe(this);
+    }
     super.dispose();
+  }
+
+  @override
+  void didPopNext() {
+    // 다른 화면에서 돌아왔을 때 지도 복원
+    _refreshMapAfterReturn();
+  }
+
+  void _refreshMapAfterReturn() {
+    if (_mapController == null) return;
+    
+    if (kIsWeb) {
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (!mounted || _mapController == null) return;
+        _onMapReady(); 
+      });
+    } else {
+      if (!mounted) return;
+      _onMapReady();
+    }
   }
 
   void _startLocationTracking() {
@@ -97,29 +149,184 @@ class _NavigationScreenState extends State<NavigationScreen> {
     });
   }
 
+  // ===== 장애물 제보 후 재탐색 관련 =====
+
+  /// 점(장애물)에서 선분(경로 세그먼트)까지의 최단 거리 계산 (미터)
+  double _pointToSegmentDistance(
+    double pLat, double pLon,
+    double sLat, double sLon,
+    double eLat, double eLon,
+  ) {
+    const latToM = 111000.0;
+    final lonToM = 111000.0 * math.cos((sLat + eLat) / 2 * math.pi / 180);
+
+    final px = (pLon - sLon) * lonToM;
+    final py = (pLat - sLat) * latToM;
+    final ex = (eLon - sLon) * lonToM;
+    final ey = (eLat - sLat) * latToM;
+
+    final lenSq = ex * ex + ey * ey;
+    if (lenSq == 0) return math.sqrt(px * px + py * py);
+
+    final t = ((px * ex + py * ey) / lenSq).clamp(0.0, 1.0);
+    final projX = t * ex;
+    final projY = t * ey;
+    return math.sqrt((px - projX) * (px - projX) + (py - projY) * (py - projY));
+  }
+
+  /// 장애물이 남은 경로와 겹치는지 확인
+  bool _isObstacleOnRoute(double obsLat, double obsLon, double obsRadius) {
+    if (_routeGeometry == null || _routeGeometry!.isEmpty) return false;
+
+    double minDist = double.infinity;
+    int minSegIdx = 0;
+
+    for (int i = 0; i < _routeGeometry!.length - 1; i++) {
+      final seg1 = _routeGeometry![i];
+      final seg2 = _routeGeometry![i + 1];
+      final dist = _pointToSegmentDistance(
+        obsLat, obsLon,
+        seg1[0], seg1[1],
+        seg2[0], seg2[1],
+      );
+      if (dist < minDist) {
+        minDist = dist;
+        minSegIdx = i;
+      }
+    }
+
+    debugPrint('=== 장애물-경로 거리 판정 ===');
+    debugPrint('장애물 좌표: ($obsLat, $obsLon)');
+    debugPrint('판정 반경: ${obsRadius}m');
+    debugPrint('가장 가까운 세그먼트: #$minSegIdx');
+    debugPrint('최소 거리: ${minDist.toStringAsFixed(1)}m');
+    debugPrint('결과: ${minDist <= obsRadius ? "경로 겹침 → 재탐색" : "경로 밖 → 유지"}');
+    debugPrint('=============================');
+
+    return minDist <= obsRadius;
+  }
+
+  /// 현재 위치부터 도착지까지 경로 재탐색
+  Future<void> _rerouteFromCurrentLocation() async {
+    if (_isRerouting || widget.endLocation == null) return;
+
+    final currentLoc = _currentLiveLocation ?? widget.startLocation;
+    if (currentLoc == null) return;
+
+    setState(() => _isRerouting = true);
+
+    try {
+      // 모드 결정
+      String mode;
+      if (widget.routeType.contains('추천')) {
+        mode = 'optimal';
+      } else if (widget.routeType.contains('최단')) {
+        mode = 'short';
+      } else if (widget.routeType.contains('안전')) {
+        mode = 'safe';
+      } else {
+        mode = 'optimal';
+      }
+
+      final result = await ApiService.findRoute(
+        startLat: currentLoc.latitude,
+        startLon: currentLoc.longitude,
+        endLat: widget.endLocation!.latitude,
+        endLon: widget.endLocation!.longitude,
+        mode: mode,
+      );
+
+      if (!mounted) return;
+
+      if (result['success'] == true) {
+        final routeData = result['route'] ?? result;
+        final newGeometry = (routeData['geometry'] as List)
+            .map((e) => (e as List).map((c) => (c as num).toDouble()).toList())
+            .toList();
+        final newInstructions = (routeData['instructions'] as List?)
+                ?.map((e) => Map<String, String>.from(e as Map))
+                .toList() ??
+            [];
+
+        setState(() {
+          _routeGeometry = newGeometry;
+          _instructions = newInstructions;
+          _estimatedTime = '${routeData['estimated_time']}분';
+          _totalDistance =
+              '${((routeData['distance'] as num).toDouble() / 1000).toStringAsFixed(1)}km';
+          _avoidedObstacles = routeData['avoided_obstacles'] ?? 0;
+          _currentInstructionIndex = 1;
+          _isRerouting = false;
+        });
+
+        // 지도에 새 경로 그리기
+        if (_mapController != null) {
+          KakaoMapHelper.drawRoute(
+            _mapController,
+            _routeGeometry!,
+            showFullRoute: false,
+            mapId: 'navigation',
+          );
+        }
+
+        // 장애물 마커 다시 로드
+        _loadObstacleMarkers();
+
+        debugPrint('경로 재탐색 성공: 새 경로 ${newGeometry.length}개 노드');
+      } else {
+        setState(() => _isRerouting = false);
+        debugPrint('경로 재탐색 실패: ${result['message']}');
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isRerouting = false);
+      debugPrint('경로 재탐색 오류: $e');
+    }
+  }
+
+  /// 장애물 제보 후 복귀 시 호출
+  Future<void> _handleObstacleReported() async {
+    final obstacle = LastReportedObstacle.consume();
+    if (obstacle == null) return;
+
+    final obsLat = obstacle['lat']!;
+    final obsLon = obstacle['lon']!;
+    final obsRadius = obstacle['radius']!;
+
+    // 장애물 마커 갱신
+    _loadObstacleMarkers();
+
+    // 장애물이 현재 경로와 겹치는지 확인
+    if (_isObstacleOnRoute(obsLat, obsLon, obsRadius)) {
+      debugPrint('장애물이 경로 위에 있음 → 재탐색 시작');
+      await _rerouteFromCurrentLocation();
+    } else {
+      debugPrint('장애물이 경로 밖에 있음 → 기존 경로 유지');
+    }
+  }
+
   void _updateNavigationProgress(LatLng currentLocation) {
-    if (widget.instructions == null || widget.instructions!.isEmpty) return;
-    if (_currentInstructionIndex >= widget.instructions!.length) return;
+    if (_instructions == null || _instructions!.isEmpty) return;
+    if (_currentInstructionIndex >= _instructions!.length) return;
 
     // 1. 현재 안내 단계에 해당하는 대략적인 목표 위경도를 찾습니다.
     // (실제 프로덕션에서는 경로의 각 노드 중 현재 구간의 끝점을 매핑해야 함)
-    // 현재는 단순 데모이므로, widget.routeGeometry의 노드들을 순회해서 도달 체크를 하거나
+    // 현재는 단순 데모이므로, _routeGeometry의 노드들을 순회해서 도달 체크를 하거나
     // 가상의 거리를 줄이는 방식을 쓸 수 있습니다.
 
     // 단순 시뮬레이션: 안내 메시지에 남은 거리가 있다면, 여기서 실제 GPS로 거리를 재계산
-    if (widget.routeGeometry != null && widget.routeGeometry!.isNotEmpty) {
+    if (_routeGeometry != null && _routeGeometry!.isNotEmpty) {
       // 다음 주요 회전 구간을 찾기 위해 현재 인덱스에 매칭되는 대략적인 좌표를 가져옵니다.
       // 실제로는 API에서 회전 노드의 정확한 인덱스를 줘야 하지만 임시 계산합니다.
       int targetIndex =
           (_currentInstructionIndex *
-                  (widget.routeGeometry!.length / widget.instructions!.length))
+                  (_routeGeometry!.length / _instructions!.length))
               .round();
-      if (targetIndex >= widget.routeGeometry!.length) {
-        targetIndex = widget.routeGeometry!.length - 1;
+      if (targetIndex >= _routeGeometry!.length) {
+        targetIndex = _routeGeometry!.length - 1;
       }
 
-      final targetLat = widget.routeGeometry![targetIndex][0];
-      final targetLng = widget.routeGeometry![targetIndex][1];
+      final targetLat = _routeGeometry![targetIndex][0];
+      final targetLng = _routeGeometry![targetIndex][1];
 
       const distance = Distance();
       final meter = distance(currentLocation, LatLng(targetLat, targetLng));
@@ -181,10 +388,10 @@ class _NavigationScreenState extends State<NavigationScreen> {
       const mapId = 'navigation';
 
       // 1. 경로 그리기 (전체 경로 자동 맞춤 비활성화)
-      if (widget.routeGeometry != null && widget.routeGeometry!.isNotEmpty) {
+      if (_routeGeometry != null && _routeGeometry!.isNotEmpty) {
         KakaoMapHelper.drawRoute(
           _mapController,
-          widget.routeGeometry!,
+          _routeGeometry!,
           showFullRoute: false,
           mapId: mapId,
         );
@@ -318,13 +525,13 @@ class _NavigationScreenState extends State<NavigationScreen> {
   /// 경로 안내 정보 계산
   Map<String, dynamic> _getCurrentDirection() {
     String instructionText = '${widget.routeType} 안내 중';
-    String detailText = '${widget.totalDistance} 남음';
+    String detailText = '$_totalDistance 남음';
     IconData icon = Icons.navigation_rounded;
 
-    if (widget.instructions != null &&
-        widget.instructions!.isNotEmpty &&
-        _currentInstructionIndex < widget.instructions!.length) {
-      final currentStep = widget.instructions![_currentInstructionIndex];
+    if (_instructions != null &&
+        _instructions!.isNotEmpty &&
+        _currentInstructionIndex < _instructions!.length) {
+      final currentStep = _instructions![_currentInstructionIndex];
       instructionText = currentStep['instruction'] ?? instructionText;
       detailText = '${currentStep['distance']} 앞';
 
@@ -349,8 +556,8 @@ class _NavigationScreenState extends State<NavigationScreen> {
       'icon': icon,
       'instruction': instructionText,
       'detail': detailText,
-      'tag': widget.avoidedObstacles > 0
-          ? '장애물 ${widget.avoidedObstacles}개 회피'
+      'tag': _avoidedObstacles > 0
+          ? '장애물 $_avoidedObstacles개 회피'
           : null,
     };
   }
@@ -498,8 +705,8 @@ class _NavigationScreenState extends State<NavigationScreen> {
                           child: Material(
                             color: Colors.transparent,
                             child: InkWell(
-                              onTap: () {
-                                Navigator.push(
+                              onTap: () async {
+                                await Navigator.push(
                                   context,
                                   MaterialPageRoute(
                                     builder: (context) => const CameraScreen(
@@ -507,6 +714,10 @@ class _NavigationScreenState extends State<NavigationScreen> {
                                     ),
                                   ),
                                 );
+                                // 제보 완료 후 복귀 → 재탐색 판단
+                                if (mounted) {
+                                  _handleObstacleReported();
+                                }
                               },
                               borderRadius: BorderRadius.circular(30),
                               child: Padding(
@@ -610,7 +821,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
                           children: [
                             // 남은 시간
                             Text(
-                              widget.estimatedTime,
+                              _estimatedTime,
                               style: TextStyle(
                                 fontSize: 28,
                                 fontWeight: FontWeight.bold,
@@ -622,7 +833,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
                             const SizedBox(width: 16),
                             // 남은 거리
                             Text(
-                              widget.totalDistance,
+                              _totalDistance,
                               style: TextStyle(
                                 fontSize: 16,
                                 color: Theme.of(context).brightness == Brightness.dark
@@ -678,10 +889,10 @@ class _NavigationScreenState extends State<NavigationScreen> {
                             ),
                             FractionallySizedBox(
                               widthFactor:
-                                  (widget.instructions != null &&
-                                      widget.instructions!.isNotEmpty)
+                                  (_instructions != null &&
+                                      _instructions!.isNotEmpty)
                                   ? (_currentInstructionIndex /
-                                            widget.instructions!.length)
+                                            _instructions!.length)
                                         .clamp(0.0, 1.0)
                                   : 0.0,
                               child: Container(
@@ -712,7 +923,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
                               ),
                             ),
                             const SizedBox(width: 16),
-                            if (widget.avoidedObstacles > 0) ...[
+                            if (_avoidedObstacles > 0) ...[
                               Icon(
                                 Icons.warning_amber_rounded,
                                 size: 14,
@@ -720,7 +931,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                '장애물 ${widget.avoidedObstacles}개 회피',
+                                '장애물 $_avoidedObstacles개 회피',
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: Color(0xFF9EA6B8),

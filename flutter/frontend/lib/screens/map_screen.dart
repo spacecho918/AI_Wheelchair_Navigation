@@ -119,7 +119,56 @@ class _MapScreenState extends State<MapScreen> with RouteAware {
   @override
   void didPopNext() {
     _loadDashboardData();
-    _loadObstacleMarkers();
+    // 다른 화면에서 돌아온 후 지도 상태 복원
+    _refreshMapAfterReturn();
+  }
+
+  /// 다른 화면에서 복귀 시 지도 relayout + 위치/마커 복원
+  void _refreshMapAfterReturn() {
+    if (_mapController == null) return;
+
+    if (kIsWeb) {
+      // iframe이 DOM에서 재생성될 수 있으므로 지연 후 relayout 및 위치 복원
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (!mounted || _mapController == null) return;
+
+        // 지도 중심 복원
+        if (_currentLocation != null) {
+          KakaoMapHelper.setCenter(
+            _mapController,
+            _currentLocation!.latitude,
+            _currentLocation!.longitude,
+            mapId: 'main',
+          );
+          KakaoMapHelper.setCurrentLocation(
+            _mapController,
+            _currentLocation!.latitude,
+            _currentLocation!.longitude,
+            mapId: 'main',
+          );
+        }
+
+        // 장애물 마커 복원
+        _loadObstacleMarkers();
+      });
+    } else {
+      // 모바일: relayout 호출 후 복원
+      if (_currentLocation != null) {
+        KakaoMapHelper.setCenter(
+          _mapController,
+          _currentLocation!.latitude,
+          _currentLocation!.longitude,
+          mapId: 'main',
+        );
+        KakaoMapHelper.setCurrentLocation(
+          _mapController,
+          _currentLocation!.latitude,
+          _currentLocation!.longitude,
+          mapId: 'main',
+        );
+      }
+      _loadObstacleMarkers();
+    }
   }
 
   Future<void> _loadDashboardData() async {
@@ -373,11 +422,13 @@ class _MapScreenState extends State<MapScreen> with RouteAware {
           _mapController,
           _currentLocation!.latitude,
           _currentLocation!.longitude,
+          mapId: 'main',
         );
         KakaoMapHelper.setCurrentLocation(
           _mapController,
           _currentLocation!.latitude,
           _currentLocation!.longitude,
+          mapId: 'main',
         );
       }
 
@@ -442,11 +493,13 @@ class _MapScreenState extends State<MapScreen> with RouteAware {
         _mapController,
         position.latitude,
         position.longitude,
+        mapId: 'main',
       );
       KakaoMapHelper.setCurrentLocation(
         _mapController,
         position.latitude,
         position.longitude,
+        mapId: 'main',
       );
     } catch (e) {
       debugPrint('Error refining location: $e');
@@ -465,7 +518,7 @@ class _MapScreenState extends State<MapScreen> with RouteAware {
         await Future.delayed(const Duration(milliseconds: 300));
       }
 
-      KakaoMapHelper.setObstacleMarkers(_mapController, _obstacleMarkers);
+      KakaoMapHelper.setObstacleMarkers(_mapController, _obstacleMarkers, mapId: 'main');
     } catch (e) {
       debugPrint('Error loading obstacle markers: $e');
     }
@@ -540,7 +593,7 @@ class _MapScreenState extends State<MapScreen> with RouteAware {
     if (kIsWeb) {
       _mapController!.loadRequest(
         Uri.parse(
-          '${Uri.base.origin}/kakao_map.html?v=${DateTime.now().millisecondsSinceEpoch}',
+          '${Uri.base.origin}/kakao_map.html?v=${DateTime.now().millisecondsSinceEpoch}&mapId=main',
         ),
       );
     } else {
@@ -602,11 +655,13 @@ class _MapScreenState extends State<MapScreen> with RouteAware {
         _mapController,
         position.latitude,
         position.longitude,
+        mapId: 'main',
       );
       KakaoMapHelper.setCurrentLocation(
         _mapController,
         position.latitude,
         position.longitude,
+        mapId: 'main',
       );
       if (!mounted) return;
       setState(() {
