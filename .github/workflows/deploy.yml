@@ -9,36 +9,35 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
 
+    defaults:
+      run:
+        working-directory: flutter/frontend   # 작업 디렉토리 고정
+
     steps:
       # 1. 코드 가져오기
       - name: Checkout
         uses: actions/checkout@v3
 
-      # 2. Flutter 설치
+      # 2. Flutter 설치 
       - name: Setup Flutter
-        uses: subosito/flutter-action@v3
+        uses: subosito/flutter-action@v2
         with:
-          channel: stable  
+          flutter-version: '3.27.0'
 
       # 3. .env 생성
       - name: Create .env
         run: |
           set -e
-          cd flutter/frontend
           echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" > .env
           echo "SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}" >> .env
 
       # 4. 의존성 설치
       - name: Install dependencies
-        run: |
-          cd flutter/frontend
-          flutter pub get
+        run: flutter pub get
 
       # 5. Flutter Web 빌드
       - name: Build Flutter Web
-        run: |
-          cd flutter/frontend
-          flutter build web --release
+        run: flutter build web --release
 
       # 6. Node 설치 (Vercel CLI용)
       - name: Setup Node
@@ -53,7 +52,7 @@ jobs:
       # 8. Vercel 배포 
       - name: Deploy to Vercel
         run: |
-          cd flutter/frontend/build/web
+          cd build/web
           vercel --prod \
             --token=${{ secrets.VERCEL_TOKEN }} \
             --scope=softcream3631 \
