@@ -42,19 +42,20 @@ class ApiService {
   static final _supabase = supabase.Supabase.instance.client;
 
   // 서버 주소 (AI 분석 및 길찾기용)
-  // 모바일: Supabase server_config 테이블에서 자동 읽어옴
-  // 웹: localhost 사용
+  // 웹, 모바일: Supabase server_config 테이블에서 자동 읽어옴
   static String? _cachedServerUrl;
 
   static String get baseUrl {
-    if (kIsWeb) return "http://localhost:8000";
-    return _cachedServerUrl ?? "http://localhost:8000";
+    if (_cachedServerUrl == null) {
+      throw Exception('Server URL not initialized');
+    }
+    return _cachedServerUrl!;
   }
 
   /// 서버 시작 시 Supabase에 등록된 서버 IP를 읽어와서 캐시
   /// 앱 시작 시 한 번만 호출하면 됨
   static Future<void> loadServerUrl() async {
-    if (kIsWeb) return;
+    /// 웹,앱 URL 자동 감지 적용
     if (_cachedServerUrl != null) return;
     try {
       final result = await _supabase
@@ -65,11 +66,15 @@ class ApiService {
       if (result != null && result['value'] != null) {
         _cachedServerUrl = result['value'] as String;
         debugPrint('서버 URL 자동 감지: $_cachedServerUrl');
+        return;
       }
     } catch (e) {
       debugPrint('서버 URL 로드 실패: $e');
     }
+    _cachedServerUrl = "http://10.0.2.2:8000";
+    debugPrint('fallback 서버 URL 사용: $_cachedServerUrl');
   }
+
 
   /// 1. 이미지 업로드 (Python 서버의 /api/upload 활용)
   static Future<String?> uploadImage(String imagePath) async {

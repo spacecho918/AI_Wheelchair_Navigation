@@ -3,6 +3,7 @@
 OSM 기반 경로 탐색 + 실시간 장애물 반영
 """
 # 실행 방법:
+# ngrok http 8000
 # python -m uvicorn main_server:app --host 0.0.0.0 --port 8000 --reload
 # 그래프 확인용 
 # http://localhost:8000/graph
@@ -19,6 +20,7 @@ import logging
 import os
 from pathlib import Path
 from dotenv import load_dotenv
+import requests
 
 # .env 파일 로드
 load_dotenv()
@@ -223,7 +225,19 @@ def initialize_system():
         return False
 
 
-# ===== API 엔드포인트 =====
+# 임시 서버 배포(로컬 pc)
+# AWS 변경 필요
+def _get_ngrok_url():
+    """ngrok에서 현재 public URL 가져오기"""
+    try:
+        res = requests.get("http://127.0.0.1:4040/api/tunnels", timeout=1)
+        data = res.json()
+        for tunnel in data["tunnels"]:
+            if tunnel["proto"] == "https":
+                return tunnel["public_url"]
+    except Exception as e:
+        logger.warning(f"ngrok URL 가져오기 실패: {e}")
+    return None
 
 def _get_local_ip() -> str:
     """현재 기기의 로컬 WiFi IP 주소를 자동 감지"""
@@ -237,20 +251,29 @@ def _get_local_ip() -> str:
         return ip
     except Exception:
         return "127.0.0.1"
-
-
+    
 def _register_server_ip():
-    """서버의 로컬 IP를 Supabase server_config 테이블에 등록"""
+    """SERVER_URL을 Supabase server_config 테이블에 등록"""
     if not HAS_SUPABASE:
         return
+
     supabase_url = os.getenv("SUPABASE_URL", "")
     supabase_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "") or os.getenv("SUPABASE_KEY", "")
-    if not supabase_url or not supabase_key:
-        return
 
-    local_ip = _get_local_ip()
-    server_url = f"http://{local_ip}:8000"
-    logger.info(f"서버 로컬 IP 감지: {local_ip} -> {server_url}")
+    # 현재 ngrok 주소복사
+    server_url = _get_ngrok_url()
+
+    # ngrok 미사용시 기존 local ip 방식 사용
+    if not server_url:
+        local_ip = _get_local_ip()
+        server_url = f"http://{local_ip}:8000"
+        logger.info(f"[LOCAL] {server_url}")
+    else:
+        logger.info(f"[NGROK] {server_url}")
+
+    if not supabase_url or not supabase_key:
+        logger.warning("SERVER_URL 또는 Supabase 설정이 없음")
+        return
 
     try:
         client = _create_supabase_client(supabase_url, supabase_key)
@@ -258,9 +281,10 @@ def _register_server_ip():
             "key": "server_url",
             "value": server_url,
         }, on_conflict="key").execute()
-        logger.info(f"서버 IP를 Supabase에 등록 완료: {server_url}")
+
+        logger.info(f"서버 URL Supabase 등록 완료: {server_url}")
     except Exception as e:
-        logger.warning(f"서버 IP Supabase 등록 실패: {e}")
+        logger.warning(f"서버 URL 등록 실패: {e}")
 
 
 @app.on_event("startup")
