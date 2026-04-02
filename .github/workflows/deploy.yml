@@ -1,0 +1,50 @@
+name: Deploy Flutter Web to Vercel
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.19.0'
+
+      - name: Create .env
+        run: |
+          set -e
+          cd flutter/frontend
+          echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" > .env
+          echo "SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}" >> .env
+
+      - name: Install dependencies
+        run: |
+          cd flutter/frontend
+          flutter pub get
+
+      - name: Build
+        run: |
+          cd flutter/frontend
+          flutter build web --release
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel
+
+      - name: Deploy
+        run: |
+          cd flutter/frontend/build/web
+          vercel --prod \
+            --token=${{ secrets.VERCEL_TOKEN }} \
+            --scope=softcream3631 \
+            --yes
