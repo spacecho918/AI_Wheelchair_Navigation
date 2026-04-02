@@ -10,12 +10,17 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      # 1. 코드 가져오기
+      - name: Checkout
+        uses: actions/checkout@v3
 
-      - uses: subosito/flutter-action@v2
+      # 2. Flutter 설치
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.19.0'
+          flutter-version: 'stable'
 
+      # 3. .env 생성
       - name: Create .env
         run: |
           set -e
@@ -23,25 +28,30 @@ jobs:
           echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" > .env
           echo "SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}" >> .env
 
+      # 4. 의존성 설치
       - name: Install dependencies
         run: |
           cd flutter/frontend
           flutter pub get
 
-      - name: Build
+      # 5. Flutter Web 빌드
+      - name: Build Flutter Web
         run: |
           cd flutter/frontend
           flutter build web --release
 
+      # 6. Node 설치 (Vercel CLI용)
       - name: Setup Node
         uses: actions/setup-node@v3
         with:
           node-version: 18
 
+      # 7. Vercel CLI 설치
       - name: Install Vercel CLI
         run: npm install -g vercel
 
-      - name: Deploy
+      # 8. Vercel 배포 
+      - name: Deploy to Vercel
         run: |
           cd flutter/frontend/build/web
           vercel --prod \
