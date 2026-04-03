@@ -22,9 +22,9 @@ import io
 import logging
 import os
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional
 
 from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, Request, UploadFile
 from dotenv import load_dotenv
@@ -50,6 +50,49 @@ UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 # Supabase Storage 버킷 이름
 STORAGE_BUCKET = "obstacle-images"
+
+# 기간 미입력 시 종류별 기본 유지 일수 (비계단)
+DEFAULT_SHORT_DAYS = 7       # 라바콘, 기타 등
+DEFAULT_LONG_DAYS = 183      # 약 6개월 — 경사로, 볼라드, 턱
+
+
+def _default_days_for_obstacle_id(oid: str) -> int:
+    if oid in ("slope", "bollard", "curb"):
+        return DEFAULT_LONG_DAYS
+    return DEFAULT_SHORT_DAYS
+
+
+def _parse_obstacle_ids(csv: Optional[str]) -> List[str]:
+    if not csv or not str(csv).strip():
+        return []
+    return [x.strip() for x in str(csv).split(",") if x.strip()]
+
+
+def compute_location_valid_until(
+    obstacle_ids_csv: Optional[str],
+    duration_mode: str,
+    location_valid_until_iso: Optional[str],
+) -> Optional[datetime]:
+    """
+    None = 영구(자동 만료 없음, 예: 계단만 선택).
+    그 외 UTC 시각 = 그 시점 이후 DB RPC 가 좌표를 비움.
+    """
+    ids = _parse_obstacle_ids(obstacle_ids_csv)
+    if not ids:
+        ids = ["other"]
+    non_stairs = [i for i in ids if i != "stairs"]
+    if not non_stairs:
+        return None
+    now = datetime.now(timezone.utc)
+    mode = (duration_mode or "unknown").strip().lower()
+    if mode == "custom" and location_valid_until_iso and location_valid_until_iso.strip():
+        s = location_valid_until_iso.strip().replace("Z", "+00:00")
+        dt = datetime.fromisoformat(s)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt
+    days = min(_default_days_for_obstacle_id(i) for i in non_stairs)
+    return now + timedelta(days=days)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -138,6 +181,9 @@ async def submit_report(
     address:       Optional[str]   = Form(None),
     reported_by:   Optional[str]   = Form(None),
     reporter_name: Optional[str]   = Form(None),
+    obstacle_ids:  Optional[str]   = Form(None),
+    duration_mode: str             = Form("unknown"),
+    location_valid_until: Optional[str] = Form(None),
 ):
     """
     장애물 제보를 접수합니다.
@@ -202,70 +248,79 @@ async def submit_report(
             image_url  = f"/static/uploads/{filename}"
             logger.warning("Supabase Storage 업로드 실패, 로컬 저장: %s", local_path)
 
-    # ── 메모리 그래프 업데이트 ───────────────────────────────────────────────
+    full_description = ""
+    if address:
+        full_description += f"[Location: {address}]\n"
+    if reporter_name:
+        full_description += f"[User: {reporter_name}]\n"
+    full_description += description
+
+    valid_until = compute_location_valid_until(
+        obstacle_ids, duration_mode, location_valid_until
+    )
+
+    # ── DB 저장 + 그래프 동기화 ─────────────────────────────────────────────
     try:
-        new_obstacle = obstacle_manager.add_obstacle_manually(
-            latitude=latitude,
-            longitude=longitude,
-            obstacle_type=obstacle_type,
-            description=description,
-            radius=15.0,
-        )
+        db_data = {
+            "latitude": latitude,
+            "longitude": longitude,
+            "obstacle_type": obstacle_type,
+            "description": full_description,
+            "image_url": image_url,
+            "is_active": True,
+            "radius": 15.0,
+            "severity": "high",
+            "reported_by": reported_by,
+            "location_valid_until": valid_until.isoformat() if valid_until else None,
+        }
 
-        blocked_count = 0
-        if route_calculator and route_calculator.graph:
-            _, blocked_count = obstacle_manager.apply_obstacles_to_graph(
-                route_calculator.graph,
-                [new_obstacle],
-            )
-
-        # ── Supabase DB Insert ───────────────────────────────────────────────
-        full_description = ""
-        if address:
-            full_description += f"[Location: {address}]\n"
-        if reporter_name:
-            full_description += f"[User: {reporter_name}]\n"
-        full_description += description
+        inserted_id: Optional[str] = None
+        insert_ok = False
 
         if supabase_client:
-            db_data = {
-                "latitude":      latitude,
-                "longitude":     longitude,
-                "obstacle_type": obstacle_type,
-                "description":   full_description,
-                "image_url":     image_url,
-                "is_active":     True,
-                "radius":        15.0,
-                "severity":      "high",
-                "reported_by":   reported_by,
-            }
             try:
-                supabase_client.table("obstacles").insert(db_data).execute()
+                res = supabase_client.table("obstacles").insert(db_data).execute()
+                insert_ok = True
+                if res.data and len(res.data) > 0:
+                    inserted_id = str(res.data[0].get("id", "") or "")
             except Exception as db_exc:
                 logger.error("DB 저장 실패: %s", db_exc)
         elif obstacle_manager.client:
-            # obstacle_manager가 직접 supabase client를 가진 경우 폴백
-            db_data = {
-                "latitude":      latitude,
-                "longitude":     longitude,
-                "obstacle_type": obstacle_type,
-                "description":   full_description,
-                "image_url":     image_url,
-                "is_active":     True,
-                "radius":        15.0,
-                "severity":      "high",
-                "reported_by":   reported_by,
-            }
             try:
-                obstacle_manager.client.table("obstacles").insert(db_data).execute()
+                res = obstacle_manager.client.table("obstacles").insert(db_data).execute()
+                insert_ok = True
+                if res.data and len(res.data) > 0:
+                    inserted_id = str(res.data[0].get("id", "") or "")
             except Exception as db_exc:
                 logger.error("DB 저장 실패 (fallback): %s", db_exc)
 
+        if insert_ok and route_calculator and route_calculator.graph:
+            obstacle_manager.refresh_obstacles_on_graph(route_calculator.graph)
+            msg = "신고가 접수되었습니다. 경로에 반영되었습니다."
+        elif not insert_ok:
+            new_obstacle = obstacle_manager.add_obstacle_manually(
+                latitude=latitude,
+                longitude=longitude,
+                obstacle_type=obstacle_type,
+                description=description,
+                radius=15.0,
+                location_valid_until=valid_until,
+            )
+            inserted_id = str(new_obstacle.id)
+            if route_calculator and route_calculator.graph:
+                _, blocked_count = obstacle_manager.apply_obstacles_to_graph(
+                    route_calculator.graph,
+                    [new_obstacle],
+                )
+            msg = f"신고가 접수되었습니다. {blocked_count}개 경로가 즉시 차단되었습니다."
+        else:
+            msg = "신고가 접수되었습니다."
+
         return {
-            "success":     True,
-            "message":     f"신고가 접수되었습니다. {blocked_count}개 경로가 즉시 차단되었습니다.",
-            "obstacle_id": new_obstacle.id,
-            "image_url":   image_url,
+            "success": True,
+            "message": msg,
+            "obstacle_id": inserted_id or "",
+            "image_url": image_url,
         }
 
     except Exception as exc:

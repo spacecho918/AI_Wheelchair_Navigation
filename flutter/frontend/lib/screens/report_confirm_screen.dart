@@ -50,6 +50,10 @@ class _ReportConfirmScreenState extends State<ReportConfirmScreen> {
   String? _currentObstacleType;
   String? _currentObstacleId;
 
+  /// 0: 잘 모름(종류별 기본 기간), 1: 직접 종료일 지정 (계단만 선택 시 미사용)
+  int _durationMode = 0;
+  String? _customValidUntilIso;
+
   final List<Map<String, String>> _obstacleData = [
     {'id': 'stairs', 'label': '계단', 'image': 'assets/stairs.png'},
     {'id': 'cone', 'label': '라바콘', 'image': 'assets/traffic_cone.png'},
@@ -68,6 +72,21 @@ class _ReportConfirmScreenState extends State<ReportConfirmScreen> {
     _currentObstacleType = widget.obstacleType;
     _currentObstacleId = widget.obstacleId;
     _initMapController();
+  }
+
+  List<String> get _parsedObstacleIds {
+    final raw = _currentObstacleId;
+    if (raw == null || raw.trim().isEmpty) return const ['other'];
+    return raw
+        .split(',')
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
+  }
+
+  bool get _isStairsOnly {
+    final ids = _parsedObstacleIds;
+    return ids.length == 1 && ids.first == 'stairs';
   }
 
   Future<void> _initMapController() async {
@@ -194,6 +213,8 @@ class _ReportConfirmScreenState extends State<ReportConfirmScreen> {
                             _buildObstacleCard(context),
                           if (_currentObstacleType != null)
                             const SizedBox(height: 20),
+                          if (!_isStairsOnly) _buildDurationCard(context),
+                          if (!_isStairsOnly) const SizedBox(height: 20),
                           _buildLocationCard(context),
                           const SizedBox(height: 20),
                           _buildDescriptionCard(),
@@ -383,6 +404,171 @@ class _ReportConfirmScreenState extends State<ReportConfirmScreen> {
     );
   }
 
+  Widget _buildDurationCard(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: isDark ? Theme.of(context).cardColor : Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '예상 유지 기간',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: isDark ? Colors.white : const Color(0xFF101727),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '기간이 지나면 지도 마커와 경로 반영은 해제되며, 게시글(글·사진)은 남습니다.',
+            style: TextStyle(
+              fontSize: 12,
+              color: isDark ? const Color(0xFF9CA3AF) : const Color(0xFF9EA6B8),
+            ),
+          ),
+          const SizedBox(height: 12),
+          RadioListTile<int>(
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            title: Text(
+              '잘 모르겠어요 (종류별 기본 기간 적용)',
+              style: TextStyle(
+                fontSize: 14,
+                color: isDark ? Colors.white : const Color(0xFF101727),
+              ),
+            ),
+            subtitle: Text(
+              '경사로·볼라드·턱: 약 6개월 / 라바콘·기타: 7일',
+              style: TextStyle(
+                fontSize: 11,
+                color: isDark ? const Color(0xFF9CA3AF) : const Color(0xFF9EA6B8),
+              ),
+            ),
+            value: 0,
+            groupValue: _durationMode,
+            activeColor: const Color(0xFF00C853),
+            onChanged: (v) {
+              if (v == null) return;
+              setState(() => _durationMode = v);
+            },
+          ),
+          RadioListTile<int>(
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            title: Text(
+              '이 장애물이 사라질 때까지 날짜로 지정할게요',
+              style: TextStyle(
+                fontSize: 14,
+                color: isDark ? Colors.white : const Color(0xFF101727),
+              ),
+            ),
+            value: 1,
+            groupValue: _durationMode,
+            activeColor: const Color(0xFF00C853),
+            onChanged: (v) {
+              if (v == null) return;
+              setState(() => _durationMode = v);
+            },
+          ),
+          if (_durationMode == 1) ...[
+            const SizedBox(height: 8),
+            Material(
+              color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFF3F4F6),
+              borderRadius: BorderRadius.circular(12),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: _pickValidUntilDate,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.calendar_today,
+                        size: 18,
+                        color: Color(0xFF00C853),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          _customValidUntilIso == null
+                              ? '종료 날짜 선택'
+                              : _formatValidUntilLabel(),
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: isDark ? Colors.white : const Color(0xFF101727),
+                          ),
+                        ),
+                      ),
+                      Icon(
+                        Icons.chevron_right,
+                        color: isDark ? Colors.white54 : Colors.black45,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  String _formatValidUntilLabel() {
+    if (_customValidUntilIso == null) return '';
+    final t = DateTime.tryParse(_customValidUntilIso!);
+    if (t == null) return '';
+    final local = t.toLocal();
+    final y = local.year.toString();
+    final m = local.month.toString().padLeft(2, '0');
+    final d = local.day.toString().padLeft(2, '0');
+    return '$y.$m.$d 까지 (해당일 종료)';
+  }
+
+  Future<void> _pickValidUntilDate() async {
+    if (!mounted) return;
+    final now = DateTime.now();
+    final initial = _customValidUntilIso != null
+        ? DateTime.tryParse(_customValidUntilIso!) ?? now
+        : now;
+    final first = DateTime(now.year, now.month, now.day);
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initial.isBefore(first) ? first : initial,
+      firstDate: first,
+      lastDate: now.add(const Duration(days: 365 * 5)),
+    );
+    if (picked == null || !mounted) return;
+    final endLocal = DateTime(
+      picked.year,
+      picked.month,
+      picked.day,
+      23,
+      59,
+      59,
+      999,
+    );
+    setState(() {
+      _customValidUntilIso = endLocal.toUtc().toIso8601String();
+    });
+  }
+
   Widget _buildLocationCard(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -562,6 +748,18 @@ class _ReportConfirmScreenState extends State<ReportConfirmScreen> {
       return;
     }
 
+    if (!_isStairsOnly &&
+        _durationMode == 1 &&
+        (_customValidUntilIso == null || _customValidUntilIso!.isEmpty)) {
+      if (mounted) {
+        CommonToast.show(context, '종료 날짜를 선택해 주세요.');
+        setState(() {
+          _isLoading = false;
+        });
+      }
+      return;
+    }
+
     try {
       // 웹에서 이미지 바이트 다운로드
       Uint8List? imageBytes;
@@ -587,8 +785,16 @@ class _ReportConfirmScreenState extends State<ReportConfirmScreen> {
         address: _currentAddress,
         imageBytes: imageBytes,
         imageName: 'report_${DateTime.now().millisecondsSinceEpoch}.jpg',
+        obstacleIds: _currentObstacleId,
+        durationMode: _isStairsOnly
+            ? null
+            : (_durationMode == 1 ? 'custom' : 'unknown'),
+        locationValidUntilIso: _isStairsOnly
+            ? null
+            : (_durationMode == 1 ? _customValidUntilIso : null),
       );
 
+      if (!mounted) return;
       if (result['success'] == true) {
         Navigator.pushReplacement(
           context,
@@ -689,6 +895,11 @@ class _ReportConfirmScreenState extends State<ReportConfirmScreen> {
         _currentImagePath = result['imagePath'];
         _currentObstacleType = result['obstacleType'];
         _currentObstacleId = result['obstacleId'];
+        final ids = _parsedObstacleIds;
+        if (ids.length == 1 && ids.first == 'stairs') {
+          _durationMode = 0;
+          _customValidUntilIso = null;
+        }
       });
     }
   }

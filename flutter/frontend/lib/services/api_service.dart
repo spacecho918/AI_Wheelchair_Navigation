@@ -215,6 +215,12 @@ class ApiService {
     String? address,
     Uint8List? imageBytes, // 웹용 이미지 바이트
     String? imageName, // 웹용 이미지 파일명
+    /// 콤마 구분 영문 id (예: stairs, cone). 서버에서 기간 기본값 판별에 사용.
+    String? obstacleIds,
+    /// unknown | custom (계단 전용 제보 시 생략)
+    String? durationMode,
+    /// custom 일 때 종료 시각 ISO8601 (UTC 권장)
+    String? locationValidUntilIso,
   }) async {
     final uri = Uri.parse('$baseUrl/report/submit');
     var request = http.MultipartRequest('POST', uri);
@@ -225,6 +231,15 @@ class ApiService {
     request.fields['obstacle_type'] = obstacleType;
     request.fields['description'] = description;
     if (address != null) request.fields['address'] = address;
+    if (obstacleIds != null && obstacleIds.isNotEmpty) {
+      request.fields['obstacle_ids'] = obstacleIds;
+    }
+    if (durationMode != null && durationMode.isNotEmpty) {
+      request.fields['duration_mode'] = durationMode;
+    }
+    if (locationValidUntilIso != null && locationValidUntilIso.isNotEmpty) {
+      request.fields['location_valid_until'] = locationValidUntilIso;
+    }
 
     final user = AuthService.currentUser;
     if (user != null) {
@@ -268,19 +283,29 @@ class ApiService {
     try {
       final data = await _supabase
           .from('obstacles')
-          .select('id, latitude, longitude, obstacle_type')
+          .select('id, latitude, longitude, obstacle_type, location_valid_until')
           .eq('is_active', true)
+          .not('latitude', 'is', null)
+          .not('longitude', 'is', null)
           .limit(200);
 
       final items = data as List;
+      final nowUtc = DateTime.now().toUtc();
       return items.map((item) {
+        final vu = item['location_valid_until'];
+        if (vu != null) {
+          final end = DateTime.tryParse(vu.toString());
+          if (end != null && !end.toUtc().isAfter(nowUtc)) {
+            return null;
+          }
+        }
         return {
           'id': item['id']?.toString() ?? '',
           'lat': (item['latitude'] as num?)?.toDouble(),
           'lng': (item['longitude'] as num?)?.toDouble(),
           'type': item['obstacle_type'] ?? '기타',
         };
-      }).where((o) => o['lat'] != null && o['lng'] != null).toList();
+      }).whereType<Map<String, dynamic>>().where((o) => o['lat'] != null && o['lng'] != null).toList();
     } catch (e) {
       debugPrint('Active Obstacles Fetch Error: $e');
       return [];
@@ -534,10 +559,23 @@ class ApiService {
           .delete()
           .eq('id', reportId)
           .eq('reported_by', user.id);
+      await _notifyAlgorithmServerObstaclesRefresh();
       return true;
     } catch (e) {
       debugPrint('Delete report error: $e');
       return false;
+    }
+  }
+
+  /// DB에서 장애물이 삭제·변경된 뒤 알고리즘 서버 그래프를 즉시 맞춤 (실패해도 무시)
+  static Future<void> _notifyAlgorithmServerObstaclesRefresh() async {
+    try {
+      final uri = Uri.parse('$baseUrl/obstacles/refresh');
+      await http
+          .post(uri)
+          .timeout(const Duration(seconds: 15));
+    } catch (e) {
+      debugPrint('알고리즘 서버 장애물 동기화 알림 실패(다음 주기에 반영될 수 있음): $e');
     }
   }
 

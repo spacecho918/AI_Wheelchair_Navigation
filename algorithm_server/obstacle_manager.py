@@ -4,13 +4,27 @@ Supabase에서 장애물 데이터를 가져와 그래프 가중치에 반영
 """
 
 import networkx as nx
-from typing import List, Dict, Tuple, Optional
+from typing import List, Dict, Tuple, Optional, Callable
 from dataclasses import dataclass
+from datetime import datetime, timezone
 import logging
 import math
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+def _parse_timestamp(value) -> Optional[datetime]:
+    """Supabase timestamptz → timezone-aware UTC datetime."""
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+    if isinstance(value, str):
+        s = value.replace("Z", "+00:00")
+        dt = datetime.fromisoformat(s)
+        return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+    return None
 
 
 @dataclass
@@ -24,6 +38,7 @@ class Obstacle:
     radius: float = 10.0  # 영향 반경 (미터)
     severity: str = "high"  # "low", "medium", "high"
     is_active: bool = True
+    location_valid_until: Optional[datetime] = None  # None이면 자동 만료 없음
 
 
 class ObstacleManager:
@@ -47,7 +62,8 @@ class ObstacleManager:
         self.supabase_key = supabase_key
         self.client = None
         self.obstacles: List[Obstacle] = []
-        
+        self._after_refresh: Optional[Callable[[], None]] = None
+
         if supabase_url and supabase_key:
             self._init_supabase_client()
     
@@ -62,6 +78,49 @@ class ObstacleManager:
         except Exception as e:
             logger.error(f"Supabase 연결 실패: {e}")
     
+    def expire_stale_obstacles_in_db(self) -> int:
+        """
+        location_valid_until 이 지난 행을 DB에서 비활성화하고 좌표를 NULL 로 둡니다.
+        SQL/migrations 의 expire_obstacle_locations() RPC 가 필요합니다.
+        """
+        if not self.client:
+            return 0
+        try:
+            res = self.client.rpc("expire_obstacle_locations", {}).execute()
+            data = res.data
+            if data is None:
+                n = 0
+            elif isinstance(data, int):
+                n = data
+            elif isinstance(data, (list, tuple)) and len(data) > 0:
+                n = int(data[0])
+            else:
+                n = int(data)
+            if n > 0:
+                logger.info(f"만료된 장애물 위치 {n}건 정리 (DB)")
+            return n
+        except Exception as e:
+            logger.warning(
+                "장애물 만료 RPC 실패(SQL/migrations/obstacles_location_expiry.sql 미적용일 수 있음): %s",
+                e,
+            )
+            return 0
+
+    def refresh_obstacles_on_graph(self, graph: Optional[nx.MultiDiGraph]) -> None:
+        """DB 만료 반영 후 그래프의 장애물 가중치를 전부 다시 계산합니다."""
+        if graph is None:
+            return
+        self.expire_stale_obstacles_in_db()
+        self.clear_obstacles_from_graph(graph)
+        self.fetch_obstacles()
+        self.apply_obstacles_to_graph(graph)
+        cb = self._after_refresh
+        if cb is not None:
+            try:
+                cb()
+            except Exception as exc:
+                logger.warning("장애물 refresh 후 콜백 실패: %s", exc)
+
     def fetch_obstacles(self, table_name: str = "obstacles") -> List[Obstacle]:
         """
         Supabase에서 활성화된 장애물 목록 조회
@@ -79,17 +138,26 @@ class ObstacleManager:
         try:
             response = self.client.table(table_name).select("*").eq("is_active", True).execute()
             
+            now = datetime.now(timezone.utc)
             self.obstacles = []
             for row in response.data:
+                lat, lon = row.get("latitude"), row.get("longitude")
+                if lat is None or lon is None:
+                    continue
+                vu = _parse_timestamp(row.get("location_valid_until"))
+                if vu is not None and vu <= now:
+                    continue
+
                 obstacle = Obstacle(
-                    id=row.get("id", ""),
-                    latitude=float(row.get("latitude", 0)),
-                    longitude=float(row.get("longitude", 0)),
+                    id=str(row.get("id", "")),
+                    latitude=float(lat),
+                    longitude=float(lon),
                     obstacle_type=row.get("obstacle_type", "unknown"),
                     description=row.get("description", ""),
                     radius=float(row.get("radius", self.DEFAULT_RADIUS)),
                     severity=row.get("severity", "high"),
-                    is_active=row.get("is_active", True)
+                    is_active=row.get("is_active", True),
+                    location_valid_until=vu,
                 )
                 self.obstacles.append(obstacle)
             
@@ -106,7 +174,8 @@ class ObstacleManager:
         longitude: float,
         obstacle_type: str = "obstacle",
         description: str = "",
-        radius: float = DEFAULT_RADIUS
+        radius: float = DEFAULT_RADIUS,
+        location_valid_until: Optional[datetime] = None,
     ) -> Obstacle:
         """
         수동으로 장애물 추가 (테스트용)
@@ -129,7 +198,8 @@ class ObstacleManager:
             description=description,
             radius=radius,
             severity="high",
-            is_active=True
+            is_active=True,
+            location_valid_until=location_valid_until,
         )
         self.obstacles.append(obstacle)
         logger.info(f"장애물 수동 추가: ({latitude}, {longitude})")
@@ -289,7 +359,10 @@ class ObstacleManager:
         for obstacle in obstacles:
             if not obstacle.is_active:
                 continue
-            
+            vu = obstacle.location_valid_until
+            if vu is not None and vu <= datetime.now(timezone.utc):
+                continue
+
             affected = self.find_affected_edges(graph, obstacle)
             
             for u, v, key in affected:

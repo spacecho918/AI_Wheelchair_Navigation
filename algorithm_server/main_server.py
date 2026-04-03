@@ -16,8 +16,10 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, HTMLResponse
 from pydantic import BaseModel, Field
 from typing import Optional, Literal, List, Tuple
+import asyncio
 import logging
 import os
+from datetime import datetime, timezone
 from pathlib import Path
 from dotenv import load_dotenv
 import requests
@@ -67,6 +69,26 @@ route_calculator: Optional[RouteCalculator] = None
 obstacle_manager: Optional[ObstacleManager] = None
 is_initialized = False
 edge_data_source: str = "none"  # 경사도 데이터 소스: "database", "json", "none"
+
+# 장애물 다음 만료 시각까지 대기 루프용 (스레드풀에서도 안전하게 깨우기)
+_main_loop: Optional[asyncio.AbstractEventLoop] = None
+_obstacle_expiry_replan_event: Optional[asyncio.Event] = None
+
+
+def _notify_obstacle_expiry_replan() -> None:
+    """refresh 후 또는 제보 등으로 다음 만료 시각이 바뀌었을 때 대기 루프를 재스케줄합니다."""
+    ev = _obstacle_expiry_replan_event
+    if ev is None:
+        return
+    loop = _main_loop
+    if loop is not None and loop.is_running():
+        loop.call_soon_threadsafe(ev.set)
+    else:
+        try:
+            ev.set()
+        except Exception:
+            pass
+
 
 # Supabase 클라이언트 (report_router의 Storage 업로드에 공유)
 try:
@@ -130,6 +152,9 @@ def initialize_system():
         # 환경변수 로드
         supabase_url = os.getenv("SUPABASE_URL", "")
         supabase_key = os.getenv("SUPABASE_KEY", "")
+        supabase_service_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip()
+        # 장애물 조회·만료 RPC(expire_obstacle_locations)는 service_role 권한이 필요할 수 있음
+        obstacle_supabase_key = supabase_service_key if supabase_service_key else supabase_key
         
         # 1. OSM 그래프 빌더 초기화
         graph_builder = OSMGraphBuilder()
@@ -186,13 +211,17 @@ def initialize_system():
         # 6. 경로 계산기 초기화
         route_calculator = RouteCalculator(graph)
         
-        # 7. 장애물 관리자 초기화
-        obstacle_manager = ObstacleManager(supabase_url, supabase_key)
-        
+        # 7. 장애물 관리자 초기화 (service_role 우선 → 만료 RPC·RLS와 일치)
+        obstacle_manager = ObstacleManager(supabase_url, obstacle_supabase_key)
+        obstacle_manager._after_refresh = _notify_obstacle_expiry_replan
+
         # 8. Supabase에서 장애물 로드 (연결된 경우)
-        if supabase_url and supabase_key:
-            obstacle_manager.fetch_obstacles()
-            obstacle_manager.apply_obstacles_to_graph(graph)
+        if supabase_url and obstacle_supabase_key:
+            obstacle_manager.refresh_obstacles_on_graph(graph)
+            logger.info(
+                "장애물 Supabase 키: %s",
+                "service_role" if supabase_service_key else "SUPABASE_KEY(anon 등)",
+            )
         
         # 앱 상태에 저장 (라우터에서 접근 가능하도록)
         app.state.graph_builder = graph_builder
@@ -201,7 +230,6 @@ def initialize_system():
 
         # Supabase 클라이언트 공유 (report_router: Storage 업로드 + obstacles insert)
         # service_role 키가 있으면 사용 → Storage RLS 통과로 업로드 실패 방지, 다른 사용자에게도 이미지 표시 가능
-        supabase_service_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip()
         report_key = supabase_service_key if supabase_service_key else supabase_key
         if HAS_SUPABASE and supabase_url and report_key:
             try:
@@ -287,15 +315,115 @@ def _register_server_ip():
         logger.warning(f"서버 URL 등록 실패: {e}")
 
 
+def _sync_obstacles_before_routing() -> None:
+    """
+    경로 API 직전에 호출합니다.
+    DB 만료 RPC로 행을 정리했거나, 메모리의 location_valid_until 이 지났으면
+    그래프를 즉시 refresh 합니다 (백그라운드 타이머를 기다리지 않음).
+    """
+    global is_initialized, obstacle_manager, route_calculator
+    if not is_initialized or obstacle_manager is None or route_calculator is None:
+        return
+    g = route_calculator.graph
+    if g is None:
+        return
+    now = datetime.now(timezone.utc)
+    stale_memory = any(
+        o.location_valid_until is not None and o.location_valid_until <= now
+        for o in obstacle_manager.obstacles
+    )
+    expired_rows = 0
+    if obstacle_manager.client:
+        expired_rows = obstacle_manager.expire_stale_obstacles_in_db()
+    if stale_memory or expired_rows > 0:
+        obstacle_manager.refresh_obstacles_on_graph(g)
+
+
+async def _obstacle_expiry_at_deadline_loop():
+    """
+    현재 로드된 장애물 중 가장 이른 location_valid_until 에 맞춰 깨어나
+    refresh_obstacles_on_graph 를 한 번 호출합니다 (만료 직후 경로 반영).
+    제보·주기 refresh 시 _notify_obstacle_expiry_replan 으로 대기를 재스케줄합니다.
+    """
+    while True:
+        try:
+            if not is_initialized or route_calculator is None or obstacle_manager is None:
+                await asyncio.sleep(2)
+                continue
+            g = route_calculator.graph
+            if g is None:
+                await asyncio.sleep(2)
+                continue
+
+            ev = _obstacle_expiry_replan_event
+            if ev is None:
+                await asyncio.sleep(2)
+                continue
+
+            now = datetime.now(timezone.utc)
+            next_deadline = None
+            for o in obstacle_manager.obstacles:
+                vu = o.location_valid_until
+                if vu is not None and vu > now:
+                    if next_deadline is None or vu < next_deadline:
+                        next_deadline = vu
+
+            ev.clear()
+
+            if next_deadline is None:
+                await ev.wait()
+                continue
+
+            delay = (next_deadline - datetime.now(timezone.utc)).total_seconds()
+            if delay <= 0:
+                obstacle_manager.refresh_obstacles_on_graph(g)
+                continue
+
+            try:
+                await asyncio.wait_for(ev.wait(), timeout=delay)
+            except asyncio.TimeoutError:
+                obstacle_manager.refresh_obstacles_on_graph(g)
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            logger.warning("장애물 만료 시각 동기화 루프 실패: %s", e)
+            await asyncio.sleep(5)
+
+
+async def _periodic_obstacle_expiry():
+    """주기적으로 만료된 장애물을 DB에서 정리하고 그래프를 다시 동기화합니다."""
+    interval_sec = int(os.getenv("OBSTACLE_EXPIRY_REFRESH_SEC", "300"))
+    while True:
+        await asyncio.sleep(interval_sec)
+        try:
+            if not is_initialized or route_calculator is None or obstacle_manager is None:
+                continue
+            g = route_calculator.graph
+            if g is None:
+                continue
+            obstacle_manager.refresh_obstacles_on_graph(g)
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            logger.warning("장애물 만료 주기 동기화 실패: %s", e)
+
+
 @app.on_event("startup")
 async def startup_event():
     """서버 시작 시 초기화"""
+    global _main_loop, _obstacle_expiry_replan_event
+    _main_loop = asyncio.get_running_loop()
+    _obstacle_expiry_replan_event = asyncio.Event()
+
     logger.info("서버 시작 중... 시스템 초기화를 수행합니다.")
     # 즉시 초기화 수행 (라우터들이 의존하는 객체들을 준비하기 위함)
     if not initialize_system():
         logger.error("시스템 초기화 실패")
     else:
         logger.info("시스템 초기화 완료")
+
+    asyncio.create_task(_obstacle_expiry_at_deadline_loop())
+    asyncio.create_task(_periodic_obstacle_expiry())
 
     # 서버 IP를 Supabase에 등록 (Flutter 앱이 자동으로 서버 IP를 찾을 수 있도록)
     _register_server_ip()
@@ -451,7 +579,9 @@ async def find_route(request: RouteRequest):
         logger.info("첫 요청으로 시스템 초기화 시작...")
         if not initialize_system():
             raise HTTPException(status_code=500, detail="시스템 초기화 실패")
-    
+
+    _sync_obstacles_before_routing()
+
     try:
         # 경로 탐색 (모드 + 휠체어 유형 적용)
         result: RouteResult = route_calculator.find_route(
@@ -502,7 +632,9 @@ async def compare_routes(request: RouteRequest):
     if not is_initialized:
         if not initialize_system():
             raise HTTPException(status_code=500, detail="시스템 초기화 실패")
-    
+
+    _sync_obstacles_before_routing()
+
     try:
         import osmnx as ox
         
@@ -601,6 +733,33 @@ async def get_obstacles():
         ],
         "count": len(obstacle_manager.obstacles)
     }
+
+
+@app.post("/obstacles/refresh")
+async def refresh_obstacles_from_db():
+    """
+    Supabase `obstacles` 테이블과 메모리 그래프를 동기화합니다.
+    앱에서 제보 삭제 등으로 DB만 바뀐 직후 호출해 경로 반영을 즉시 맞춥니다.
+    """
+    global is_initialized
+
+    if not is_initialized:
+        if not initialize_system():
+            raise HTTPException(status_code=503, detail="시스템 초기화 실패")
+
+    if obstacle_manager is None or route_calculator is None:
+        raise HTTPException(status_code=503, detail="장애물 관리자가 없습니다.")
+
+    try:
+        obstacle_manager.refresh_obstacles_on_graph(route_calculator.graph)
+        return {
+            "success": True,
+            "message": "장애물 목록을 반영했습니다.",
+            "active_count": len(obstacle_manager.obstacles),
+        }
+    except Exception as e:
+        logger.error("POST /obstacles/refresh 실패: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.delete("/obstacles/clear")
