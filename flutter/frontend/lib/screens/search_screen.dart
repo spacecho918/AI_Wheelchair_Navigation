@@ -578,7 +578,16 @@ class _SearchScreenState extends State<SearchScreen> {
             ? Theme.of(context).cardColor
             : Colors.white,
         child: InkWell(
-          onTap: () => _showPlaceDetailSheet(context, item),
+          onTap: () async {
+            if (item['type'] != 'saved') {
+              await RecentSearchesService.addSearch(item);
+            } else {
+              await RecentSearchesService.addSearch(item);
+            }
+            if (context.mounted) {
+              _showPlaceDetailSheet(context, item);
+            }
+          },
           child: Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: 4, // 리스트 형태라 패딩 조절

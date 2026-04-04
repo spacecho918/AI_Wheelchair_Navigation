@@ -8,11 +8,14 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:gilbeot/app_route_observer.dart';
 import 'package:gilbeot/screens/login_screen.dart';
 import 'package:gilbeot/screens/map_screen.dart';
+import 'package:gilbeot/screens/navigation_screen.dart';
 import 'package:gilbeot/services/auth_service.dart';
+import 'package:gilbeot/services/navigation_state_service.dart';
 import 'package:gilbeot/services/recent_searches_service.dart';
 import 'package:gilbeot/services/session_storage_local_storage.dart';
 import 'package:gilbeot/services/theme_service.dart';
 import 'package:gilbeot/services/api_service.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 bool _isOurAuthScheme(Uri uri) =>
@@ -286,9 +289,59 @@ class _LoginScreenWrapperState extends State<LoginScreenWrapper>
   void _redirectIfSession() {
     if (!mounted) return;
     if (AuthService.currentUser != null) {
+      // 경로 안내 중 새로고침 여부 확인
+      if (kIsWeb) {
+        final navState = NavigationStateService.load();
+        if (navState != null) {
+          _restoreNavigationScreen(navState);
+          return;
+        }
+      }
       Navigator.of(
         context,
       ).pushReplacement(MaterialPageRoute(builder: (_) => const MapScreen()));
+    }
+  }
+
+  void _restoreNavigationScreen(Map<String, dynamic> state) {
+    try {
+      final routeGeometry = (state['routeGeometry'] as List)
+          .map((e) => (e as List).map((c) => (c as num).toDouble()).toList())
+          .toList();
+      final instructions = (state['instructions'] as List)
+          .map((e) => Map<String, String>.from(e as Map))
+          .toList();
+
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          settings: const RouteSettings(name: 'navigation'),
+          builder: (_) => NavigationScreen(
+            routeType: state['routeType'] as String,
+            estimatedTime: state['estimatedTime'] as String,
+            totalDistance: state['totalDistance'] as String,
+            startLocation: LatLng(
+              (state['startLat'] as num).toDouble(),
+              (state['startLon'] as num).toDouble(),
+            ),
+            endLocation: LatLng(
+              (state['endLat'] as num).toDouble(),
+              (state['endLon'] as num).toDouble(),
+            ),
+            routeGeometry: routeGeometry,
+            instructions: instructions,
+            avoidedObstacles: (state['avoidedObstacles'] as num).toInt(),
+            startLocationName: state['startLocationName'] as String,
+            endLocationName: state['endLocationName'] as String,
+          ),
+        ),
+      );
+    } catch (e) {
+      debugPrint('NavigationScreen 복원 실패: $e');
+      // 복원 실패 시 메인 화면으로
+      NavigationStateService.clear();
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const MapScreen()),
+      );
     }
   }
 

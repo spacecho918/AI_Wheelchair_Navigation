@@ -11,6 +11,7 @@ import 'package:latlong2/latlong.dart';
 import 'dart:convert';
 import 'package:gilbeot/helpers/kakao_map_helper.dart';
 import 'package:gilbeot/services/api_service.dart';
+import 'package:gilbeot/services/navigation_state_service.dart';
 import 'package:gilbeot/app_route_observer.dart';
 import 'camera_screen.dart';
 import 'navigation_end_screen.dart';
@@ -70,6 +71,26 @@ class _NavigationScreenState extends State<NavigationScreen> with RouteAware {
     _avoidedObstacles = widget.avoidedObstacles;
     _initMapController();
     _startLocationTracking();
+    // 웹 새로고침 복원을 위해 경로 상태 저장
+    _saveNavigationState();
+  }
+
+  void _saveNavigationState() {
+    if (widget.startLocation == null || widget.endLocation == null) return;
+    NavigationStateService.save(
+      routeType: widget.routeType,
+      estimatedTime: widget.estimatedTime,
+      totalDistance: widget.totalDistance,
+      startLat: widget.startLocation!.latitude,
+      startLon: widget.startLocation!.longitude,
+      endLat: widget.endLocation!.latitude,
+      endLon: widget.endLocation!.longitude,
+      routeGeometry: widget.routeGeometry ?? [],
+      instructions: widget.instructions ?? [],
+      avoidedObstacles: widget.avoidedObstacles,
+      startLocationName: widget.startLocationName,
+      endLocationName: widget.endLocationName,
+    );
   }
 
   bool _routeObserverSubscribed = false;
@@ -501,6 +522,8 @@ class _NavigationScreenState extends State<NavigationScreen> with RouteAware {
   }
 
   void _endNavigation() {
+    // 사용자가 직접 안내를 종료할 때만 저장 상태 삭제
+    NavigationStateService.clear();
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(

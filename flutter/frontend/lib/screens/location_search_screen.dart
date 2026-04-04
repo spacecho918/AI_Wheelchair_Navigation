@@ -185,7 +185,8 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
                         decoration: InputDecoration(
                           hintText: '장소, 주소 검색',
                           hintStyle: TextStyle(
-                            color: Theme.of(context).brightness == Brightness.dark
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
                                 ? Color(0xFF697282)
                                 : Color(0xFF9EA6B8),
                             fontSize: 14,
@@ -444,7 +445,9 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w400,
-                              color: Theme.of(context).brightness == Brightness.dark
+                              color:
+                                  Theme.of(context).brightness ==
+                                      Brightness.dark
                                   ? Colors.white
                                   : Color(0xFF101727),
                             ),
@@ -505,13 +508,22 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
             ? Color(0xFF2A2A2A)
             : Colors.white,
         child: InkWell(
-          onTap: () {
-            // Return result directly without showing detail sheet
-            Navigator.pop(context, {
-              'latlng': LatLng(item['lat'], item['lng']),
-              'name': item['name'],
-              'address': item['address'],
-            });
+          onTap: () async {
+            // 클릭한 항목을 최근 검색 맨 위로 올리기 위해 다시 추가
+            if (item['type'] != 'saved') {
+              // 저장된 장소가 아닌 최근검색일때만 (또는 원한다면 모두)
+              await RecentSearchesService.addSearch(item);
+            } else {
+              // 저장된 장소라도 최근 검색에 추가하고 싶다면
+              await RecentSearchesService.addSearch(item);
+            }
+            if (context.mounted) {
+              Navigator.pop(context, {
+                'latlng': LatLng(item['lat'], item['lng']),
+                'name': item['name'],
+                'address': item['address'],
+              });
+            }
           },
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
