@@ -27,6 +27,14 @@ class EdgeInfo:
     length: float
     grade: float
     max_grade: float
+    min_grade: float
+    avg_grade: float
+    grade_segments: int
+    elevation_start: float
+    elevation_end: float
+    elevation_max: float
+    elevation_min: float
+    surface_type: str
     surface_penalty: float
     highway_type: str
     is_wheelchair_accessible: bool
@@ -108,6 +116,14 @@ class EdgeDataLoader:
                     length=float(row.get("length", 0)),
                     grade=float(row.get("grade", 0)),
                     max_grade=float(row.get("max_grade", 0)),
+                    min_grade=float(row.get("min_grade", 0)),
+                    avg_grade=float(row.get("avg_grade", 0)),
+                    grade_segments=int(row.get("grade_segments", 0)),
+                    elevation_start=float(row.get("elevation_start", 0)),
+                    elevation_end=float(row.get("elevation_end", 0)),
+                    elevation_max=float(row.get("elevation_max", 0)),
+                    elevation_min=float(row.get("elevation_min", 0)),
+                    surface_type=row.get("surface_type", "unknown"),
                     surface_penalty=float(row.get("surface_penalty", 1.0)),
                     highway_type=row.get("highway_type", "unknown"),
                     is_wheelchair_accessible=row.get("is_wheelchair_accessible", True),
@@ -155,6 +171,14 @@ class EdgeDataLoader:
                     length=float(row.get("length", 0)),
                     grade=float(row.get("grade", 0)),
                     max_grade=float(row.get("max_grade", 0)),
+                    min_grade=float(row.get("min_grade", 0)),
+                    avg_grade=float(row.get("avg_grade", 0)),
+                    grade_segments=int(row.get("grade_segments", 0)),
+                    elevation_start=float(row.get("elevation_start", 0)),
+                    elevation_end=float(row.get("elevation_end", 0)),
+                    elevation_max=float(row.get("elevation_max", 0)),
+                    elevation_min=float(row.get("elevation_min", 0)),
+                    surface_type=row.get("surface_type", "unknown"),
                     surface_penalty=float(row.get("surface_penalty", 1.0)),
                     highway_type=row.get("highway_type", "unknown"),
                     is_wheelchair_accessible=row.get("is_wheelchair_accessible", True),

@@ -105,29 +105,27 @@
         /* 엣지 정보 패널 스타일 */
         .edge-info-panel {
             position: fixed;
-            bottom: 20px;
-            right: 20px;
-            width: 420px;
-            max-width: calc(100vw - 40px);
-            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-            border-radius: 16px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-            padding: 20px;
+            top: 0;
+            right: 0;
+            width: 480px;
+            max-width: 100vw;
+            height: 100vh;
+            background: #ffffff;
+            box-shadow: -5px 0 30px rgba(0, 0, 0, 0.2);
             z-index: 1000;
             display: none;
-            animation: slideIn 0.3s ease-out;
-            border: 1px solid rgba(52, 152, 219, 0.2);
+            animation: slideInRight 0.3s ease-out;
+            overflow-y: auto;
         }
 
-        @keyframes slideIn {
+        @keyframes slideInRight {
             from {
                 opacity: 0;
-                transform: translateY(20px);
+                transform: translateX(100%);
             }
-
             to {
                 opacity: 1;
-                transform: translateY(0);
+                transform: translateX(0);
             }
         }
 
@@ -135,32 +133,34 @@
             display: block;
         }
 
-        .edge-info-header {
+        .edge-panel-header {
+            position: sticky;
+            top: 0;
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            color: white;
+            padding: 18px 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 15px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #3498db;
+            z-index: 10;
         }
 
-        .edge-info-header h3 {
+        .edge-panel-header h3 {
             font-size: 1.1rem;
-            color: #2c3e50;
             display: flex;
             align-items: center;
             gap: 8px;
         }
 
         .close-btn {
-            background: #e74c3c;
+            background: rgba(255, 255, 255, 0.2);
             color: white;
             border: none;
-            width: 28px;
-            height: 28px;
+            width: 32px;
+            height: 32px;
             border-radius: 50%;
             cursor: pointer;
-            font-size: 1rem;
+            font-size: 1.1rem;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -168,49 +168,142 @@
         }
 
         .close-btn:hover {
-            background: #c0392b;
+            background: rgba(255, 255, 255, 0.4);
             transform: scale(1.1);
         }
 
-        .edge-info-content {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
+        .edge-panel-body {
+            padding: 16px 20px 30px;
         }
 
-        .info-row {
+        .section-title {
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #7f8c8d;
+            margin: 18px 0 10px;
+            padding-bottom: 6px;
+            border-bottom: 2px solid #ecf0f1;
+        }
+
+        .section-title:first-child {
+            margin-top: 0;
+        }
+
+        .field-row {
             display: flex;
             align-items: center;
             gap: 10px;
-            padding: 10px 12px;
-            background: rgba(52, 152, 219, 0.08);
-            border-radius: 10px;
-            transition: all 0.2s;
+            padding: 8px 10px;
+            border-radius: 8px;
+            margin-bottom: 4px;
+            transition: background 0.15s;
         }
 
-        .info-row:hover {
-            background: rgba(52, 152, 219, 0.15);
-            transform: translateX(5px);
+        .field-row:hover {
+            background: #f8f9fa;
         }
 
-        .info-icon {
-            font-size: 1.2rem;
-            width: 30px;
+        .field-icon {
+            font-size: 1.1rem;
+            width: 26px;
             text-align: center;
+            flex-shrink: 0;
         }
 
-        .info-label {
-            font-size: 0.85rem;
+        .field-label {
+            font-size: 0.82rem;
             color: #7f8c8d;
-            min-width: 60px;
+            min-width: 100px;
+            flex-shrink: 0;
         }
 
-        .info-value {
-            font-size: 0.95rem;
+        .field-value {
+            font-size: 0.92rem;
             font-weight: 600;
             color: #2c3e50;
             flex: 1;
             word-break: break-all;
+        }
+
+        /* 편집 가능한 필드 */
+        .field-input {
+            flex: 1;
+            padding: 6px 10px;
+            border: 1.5px solid #dcdfe6;
+            border-radius: 6px;
+            font-size: 0.88rem;
+            font-family: 'Segoe UI', sans-serif;
+            color: #2c3e50;
+            background: #fafbfc;
+            transition: all 0.2s;
+        }
+
+        .field-input:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.15);
+            background: #fff;
+        }
+
+        .field-input[type="number"] {
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* 토글 스위치 */
+        .toggle-switch {
+            position: relative;
+            width: 48px;
+            height: 26px;
+            cursor: pointer;
+        }
+
+        .toggle-switch input {
+            display: none;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            inset: 0;
+            background: #ccc;
+            border-radius: 26px;
+            transition: background 0.3s;
+        }
+
+        .toggle-slider::before {
+            content: '';
+            position: absolute;
+            left: 3px;
+            top: 3px;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.3s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .toggle-switch input:checked + .toggle-slider {
+            background: #27ae60;
+        }
+
+        .toggle-switch input:checked + .toggle-slider::before {
+            transform: translateX(22px);
+        }
+
+        /* 자동 계산 배지 */
+        .auto-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            background: rgba(155, 89, 182, 0.12);
+            color: #8e44ad;
+            margin-left: 4px;
         }
 
         /* 경사도 배지 */
@@ -225,24 +318,184 @@
         }
 
         .grade-low {
-            background: rgba(39, 174, 96, 0.2);
+            background: rgba(39, 174, 96, 0.15);
             color: #27ae60;
         }
 
         .grade-mid {
-            background: rgba(243, 156, 18, 0.2);
-            color: #f39c12;
+            background: rgba(243, 156, 18, 0.15);
+            color: #e67e22;
         }
 
         .grade-high {
-            background: rgba(231, 76, 60, 0.2);
+            background: rgba(231, 76, 60, 0.15);
             color: #e74c3c;
+        }
+
+        /* 저장 버튼 영역 */
+        .save-area {
+            position: sticky;
+            bottom: 0;
+            background: #fff;
+            border-top: 1px solid #ecf0f1;
+            padding: 14px 20px;
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .btn-save {
+            background: linear-gradient(135deg, #27ae60, #2ecc71);
+            color: white;
+            padding: 10px 28px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+        }
+
+        .btn-save:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3);
+        }
+
+        .btn-save:active {
+            transform: translateY(0);
+        }
+
+        .btn-save:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-cancel {
+            background: #ecf0f1;
+            color: #7f8c8d;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+        }
+
+        .btn-cancel:hover {
+            background: #dfe6e9;
+        }
+
+        /* 반대 방향 엣지 표시 */
+        .reverse-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 14px;
+            background: rgba(52, 152, 219, 0.08);
+            border-radius: 10px;
+            border-left: 3px solid #3498db;
+            margin-top: 8px;
+        }
+
+        .reverse-badge .icon {
+            font-size: 1.2rem;
+        }
+
+        .reverse-badge .text {
+            font-size: 0.82rem;
+            color: #2c3e50;
+        }
+
+        .reverse-badge .edge-id {
+            font-weight: 600;
+            color: #3498db;
+            word-break: break-all;
+        }
+
+        /* 토스트 알림 */
+        .toast {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-100px);
+            padding: 14px 28px;
+            border-radius: 12px;
+            color: white;
+            font-weight: 600;
+            font-size: 0.95rem;
+            z-index: 9999;
+            transition: transform 0.4s ease;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .toast.success {
+            background: linear-gradient(135deg, #27ae60, #2ecc71);
+        }
+
+        .toast.error {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
         }
 
         /* 선택된 엣지 하이라이트 */
         .leaflet-interactive.selected {
             stroke-width: 6 !important;
             opacity: 1 !important;
+        }
+
+        /* 로딩 오버레이 */
+        .loading-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(255,255,255,0.7);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 20;
+        }
+
+        .loading-overlay.show {
+            display: flex;
+        }
+
+        .spinner {
+            width: 36px;
+            height: 36px;
+            border: 4px solid #ddd;
+            border-top-color: #3498db;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Select 드롭다운 */
+        .field-select {
+            flex: 1;
+            padding: 6px 10px;
+            border: 1.5px solid #dcdfe6;
+            border-radius: 6px;
+            font-size: 0.88rem;
+            font-family: 'Segoe UI', sans-serif;
+            color: #2c3e50;
+            background: #fafbfc;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .field-select:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.15);
+            background: #fff;
         }
     </style>
 </head>
@@ -270,53 +523,172 @@
     </div>
     <div id="map"></div>
 
-    <!-- 엣지 정보 패널 -->
+    <!-- 토스트 알림 -->
+    <div class="toast" id="toast"></div>
+
+    <!-- 엣지 정보/편집 패널 -->
     <div class="edge-info-panel" id="edgeInfoPanel">
-        <div class="edge-info-header">
-            <h3>📍 엣지 정보</h3>
+        <div class="edge-panel-header">
+            <h3>📍 엣지 정보 편집</h3>
             <button class="close-btn" onclick="closeEdgeInfo()">✕</button>
         </div>
-        <div class="edge-info-content">
-            <div class="info-row">
-                <span class="info-icon">🆔</span>
-                <span class="info-label">ID</span>
-                <span class="info-value" id="edge-id">-</span>
+
+        <div class="edge-panel-body" id="edgePanelBody" style="position:relative;">
+            <div class="loading-overlay" id="panelLoading">
+                <div class="spinner"></div>
             </div>
-            <div class="info-row">
-                <span class="info-icon">📐</span>
-                <span class="info-label">경사도</span>
-                <span class="info-value" id="edge-grade">-</span>
+
+            <!-- 기본 정보 (읽기 전용) -->
+            <div class="section-title">기본 정보</div>
+            <div class="field-row">
+                <span class="field-icon">🆔</span>
+                <span class="field-label">Edge ID</span>
+                <span class="field-value" id="f-edge-id">-</span>
             </div>
-            <div class="info-row">
-                <span class="info-icon">📏</span>
-                <span class="info-label">거리</span>
-                <span class="info-value" id="edge-length">-</span>
+            <div class="field-row">
+                <span class="field-icon">📏</span>
+                <span class="field-label">거리 (m)</span>
+                <span class="field-value" id="f-length">-</span>
             </div>
-            <div class="info-row">
-                <span class="info-icon">🛤️</span>
-                <span class="info-label">노면</span>
-                <span class="info-value" id="edge-surface">-</span>
+            <div class="field-row">
+                <span class="field-icon">📍</span>
+                <span class="field-label">시작점</span>
+                <span class="field-value" id="f-start-coord">-</span>
             </div>
-            <div class="info-row">
-                <span class="info-icon">🛣️</span>
-                <span class="info-label">도로</span>
-                <span class="info-value" id="edge-highway">-</span>
+            <div class="field-row">
+                <span class="field-icon">🏁</span>
+                <span class="field-label">끝점</span>
+                <span class="field-value" id="f-end-coord">-</span>
             </div>
-            <div class="info-row">
-                <span class="info-icon">📍</span>
-                <span class="info-label">시작점</span>
-                <span class="info-value" id="edge-start">-</span>
+
+            <!-- 반대 방향 엣지 -->
+            <div class="reverse-badge" id="reverseBadge" style="display:none;">
+                <span class="icon">🔄</span>
+                <div class="text">
+                    반대 방향: <span class="edge-id" id="f-reverse-id">-</span>
+                    <br><small style="color:#7f8c8d;">수정 시 자동으로 동기화됩니다</small>
+                </div>
             </div>
-            <div class="info-row">
-                <span class="info-icon">🏁</span>
-                <span class="info-label">끝점</span>
-                <span class="info-value" id="edge-end">-</span>
+
+            <!-- 경사도 (편집 가능) -->
+            <div class="section-title">경사도 데이터</div>
+            <div class="field-row">
+                <span class="field-icon">📐</span>
+                <span class="field-label">경사도 (°)</span>
+                <input type="number" step="0.01" class="field-input" id="f-grade" data-field="grade">
             </div>
-            <div class="info-row">
-                <span class="info-icon">♿</span>
-                <span class="info-label">휠체어</span>
-                <span class="info-value" id="edge-wheelchair">-</span>
+            <div class="field-row">
+                <span class="field-icon">⬆️</span>
+                <span class="field-label">최대 경사도</span>
+                <input type="number" step="0.01" class="field-input" id="f-max-grade" data-field="max_grade">
             </div>
+            <div class="field-row">
+                <span class="field-icon">⬇️</span>
+                <span class="field-label">최소 경사도</span>
+                <input type="number" step="0.01" class="field-input" id="f-min-grade" data-field="min_grade">
+            </div>
+            <div class="field-row">
+                <span class="field-icon">📊</span>
+                <span class="field-label">평균 경사도 <span class="auto-badge">⚡ 자동</span></span>
+                <span class="field-value" id="f-avg-grade">-</span>
+            </div>
+            <div class="field-row">
+                <span class="field-icon">🧮</span>
+                <span class="field-label">경사 구간 수</span>
+                <input type="number" step="1" min="0" class="field-input" id="f-grade-segments" data-field="grade_segments">
+            </div>
+
+            <!-- 고도 데이터 (편집 가능) -->
+            <div class="section-title">고도 데이터</div>
+            <div class="field-row">
+                <span class="field-icon">🏔️</span>
+                <span class="field-label">시작 고도 (m)</span>
+                <input type="number" step="0.1" class="field-input" id="f-elev-start" data-field="elevation_start">
+            </div>
+            <div class="field-row">
+                <span class="field-icon">🏔️</span>
+                <span class="field-label">끝 고도 (m)</span>
+                <input type="number" step="0.1" class="field-input" id="f-elev-end" data-field="elevation_end">
+            </div>
+            <div class="field-row">
+                <span class="field-icon">🔺</span>
+                <span class="field-label">최고 고도 (m)</span>
+                <input type="number" step="0.1" class="field-input" id="f-elev-max" data-field="elevation_max">
+            </div>
+            <div class="field-row">
+                <span class="field-icon">🔻</span>
+                <span class="field-label">최저 고도 (m)</span>
+                <input type="number" step="0.1" class="field-input" id="f-elev-min" data-field="elevation_min">
+            </div>
+            <div class="field-row">
+                <span class="field-icon">📈</span>
+                <span class="field-label">총 상승 (m) <span class="auto-badge">⚡ 자동</span></span>
+                <span class="field-value" id="f-total-ascent">-</span>
+            </div>
+            <div class="field-row">
+                <span class="field-icon">📉</span>
+                <span class="field-label">총 하강 (m) <span class="auto-badge">⚡ 자동</span></span>
+                <span class="field-value" id="f-total-descent">-</span>
+            </div>
+
+            <!-- 도로 속성 (편집 가능) -->
+            <div class="section-title">도로 속성</div>
+            <div class="field-row">
+                <span class="field-icon">🛤️</span>
+                <span class="field-label">노면 타입</span>
+                <select class="field-select" id="f-surface-type" data-field="surface_type">
+                    <option value="paved">paved (포장)</option>
+                    <option value="asphalt">asphalt (아스팔트)</option>
+                    <option value="concrete">concrete (콘크리트)</option>
+                    <option value="unpaved">unpaved (비포장)</option>
+                    <option value="gravel">gravel (자갈)</option>
+                    <option value="dirt">dirt (흙)</option>
+                    <option value="grass">grass (잔디)</option>
+                    <option value="sand">sand (모래)</option>
+                    <option value="unknown">unknown (미확인)</option>
+                </select>
+            </div>
+            <div class="field-row">
+                <span class="field-icon">⚖️</span>
+                <span class="field-label">노면 패널티</span>
+                <input type="number" step="0.1" min="0" class="field-input" id="f-surface-penalty" data-field="surface_penalty">
+            </div>
+            <div class="field-row">
+                <span class="field-icon">🛣️</span>
+                <span class="field-label">도로 유형</span>
+                <select class="field-select" id="f-highway-type" data-field="highway_type">
+                    <option value="footway">footway (보행로)</option>
+                    <option value="pedestrian">pedestrian (보행자)</option>
+                    <option value="path">path (경로)</option>
+                    <option value="cycleway">cycleway (자전거도로)</option>
+                    <option value="residential">residential (주택가)</option>
+                    <option value="tertiary">tertiary (3차도로)</option>
+                    <option value="secondary">secondary (2차도로)</option>
+                    <option value="primary">primary (1차도로)</option>
+                    <option value="living_street">living_street (생활도로)</option>
+                    <option value="service">service (서비스도로)</option>
+                    <option value="steps">steps (계단)</option>
+                    <option value="unknown">unknown (미확인)</option>
+                </select>
+            </div>
+
+            <!-- 접근성 -->
+            <div class="section-title">접근성</div>
+            <div class="field-row">
+                <span class="field-icon">♿</span>
+                <span class="field-label">휠체어 접근</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="f-wheelchair" data-field="is_wheelchair_accessible">
+                    <span class="toggle-slider"></span>
+                </label>
+                <span class="field-value" id="f-wheelchair-label" style="min-width:auto; font-size:0.85rem;">-</span>
+            </div>
+        </div>
+
+        <!-- 저장 버튼 -->
+        <div class="save-area">
+            <button class="btn-cancel" onclick="resetEdgeForm()">↩️ 초기화</button>
+            <button class="btn-save" id="saveBtn" onclick="saveEdgeChanges()">💾 저장</button>
         </div>
     </div>
 
@@ -330,6 +702,17 @@
         let edgesData = [];
         let edgeLayers = [];
         let selectedEdge = null;
+        let selectedLayer = null;
+        let currentEdgeData = null;  // 현재 선택된 엣지의 원본 데이터
+
+        // 토스트 알림
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast ${type}`;
+            setTimeout(() => toast.classList.add('show'), 10);
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
 
         // 데이터 로드 (DB 우선, 실패 시 JSON 폴백)
         async function loadEdgesData() {
@@ -340,7 +723,6 @@
                 const response = await fetch('/api/edges');
                 if (response.ok) {
                     const result = await response.json();
-                    // API 응답 형식: { success, source, count, edges }
                     if (result.success && result.edges && result.edges.length > 0) {
                         edgesData = result.edges;
                         document.getElementById('edgeCount').textContent = result.count + '개';
@@ -358,7 +740,6 @@
             try {
                 const response = await fetch('edges_data.json');
                 const data = await response.json();
-                // JSON은 배열 형태 또는 { edges: [] } 형태일 수 있음
                 edgesData = Array.isArray(data) ? data : (data.edges || []);
                 document.getElementById('edgeCount').textContent = edgesData.length + '개';
                 dataSourceEl.textContent = '📄 JSON 파일';
@@ -375,9 +756,9 @@
         loadEdgesData();
 
         function getGradeColor(grade) {
-            if (grade <= 5) return '#27ae60';  // 녹색 (완만)
-            if (grade <= 10) return '#f39c12'; // 주황 (중간)
-            return '#e74c3c';                   // 빨강 (급경사)
+            if (grade <= 5) return '#27ae60';
+            if (grade <= 10) return '#f39c12';
+            return '#e74c3c';
         }
 
         function getGradeClass(grade) {
@@ -399,85 +780,246 @@
             closeEdgeInfo();
         }
 
+        function populateEdgePanel(edge) {
+            currentEdgeData = JSON.parse(JSON.stringify(edge));  // deep copy
+
+            // 기본 정보 (읽기 전용)
+            document.getElementById('f-edge-id').textContent = edge.edge_id || '-';
+            document.getElementById('f-length').textContent = (edge.length || 0).toFixed(2);
+            document.getElementById('f-start-coord').textContent =
+                `${(edge.start_lat || 0).toFixed(6)}, ${(edge.start_lon || 0).toFixed(6)}`;
+            document.getElementById('f-end-coord').textContent =
+                `${(edge.end_lat || 0).toFixed(6)}, ${(edge.end_lon || 0).toFixed(6)}`;
+
+            // 반대 방향 엣지
+            const reverseId = getReversEdgeId(edge.edge_id);
+            const reverseBadge = document.getElementById('reverseBadge');
+            if (reverseId) {
+                const exists = edgesData.some(e => e.edge_id === reverseId);
+                document.getElementById('f-reverse-id').textContent = reverseId;
+                reverseBadge.style.display = exists ? 'flex' : 'none';
+            } else {
+                reverseBadge.style.display = 'none';
+            }
+
+            // 경사도 (편집 가능)
+            document.getElementById('f-grade').value = (edge.grade || 0).toFixed(2);
+            document.getElementById('f-max-grade').value = (edge.max_grade || 0).toFixed(2);
+            document.getElementById('f-min-grade').value = (edge.min_grade || 0).toFixed(2);
+            document.getElementById('f-avg-grade').textContent = (edge.avg_grade || 0).toFixed(4);
+            document.getElementById('f-grade-segments').value = edge.grade_segments || 0;
+
+            // 고도 (편집 가능)
+            document.getElementById('f-elev-start').value = (edge.elevation_start || 0).toFixed(1);
+            document.getElementById('f-elev-end').value = (edge.elevation_end || 0).toFixed(1);
+            document.getElementById('f-elev-max').value = (edge.elevation_max || 0).toFixed(1);
+            document.getElementById('f-elev-min').value = (edge.elevation_min || 0).toFixed(1);
+            document.getElementById('f-total-ascent').textContent = (edge.total_ascent || 0).toFixed(2);
+            document.getElementById('f-total-descent').textContent = (edge.total_descent || 0).toFixed(2);
+
+            // 도로 속성 (편집 가능)
+            const surfaceSelect = document.getElementById('f-surface-type');
+            surfaceSelect.value = edge.surface_type || 'unknown';
+            // 해당 옵션 없으면 추가
+            if (!Array.from(surfaceSelect.options).some(o => o.value === edge.surface_type)) {
+                const opt = new Option(edge.surface_type, edge.surface_type);
+                surfaceSelect.add(opt);
+                surfaceSelect.value = edge.surface_type;
+            }
+
+            document.getElementById('f-surface-penalty').value = (edge.surface_penalty || 1.0).toFixed(1);
+
+            const highwaySelect = document.getElementById('f-highway-type');
+            highwaySelect.value = edge.highway_type || 'unknown';
+            if (!Array.from(highwaySelect.options).some(o => o.value === edge.highway_type)) {
+                const opt = new Option(edge.highway_type, edge.highway_type);
+                highwaySelect.add(opt);
+                highwaySelect.value = edge.highway_type;
+            }
+
+            // 접근성
+            const wheelchairCheckbox = document.getElementById('f-wheelchair');
+            wheelchairCheckbox.checked = edge.is_wheelchair_accessible !== false;
+            updateWheelchairLabel();
+        }
+
+        function updateWheelchairLabel() {
+            const checked = document.getElementById('f-wheelchair').checked;
+            const label = document.getElementById('f-wheelchair-label');
+            if (checked) {
+                label.innerHTML = '<span style="color:#27ae60; font-weight:600;">✅ 접근 가능</span>';
+            } else {
+                label.innerHTML = '<span style="color:#e74c3c; font-weight:600;">❌ 접근 불가</span>';
+            }
+        }
+
+        // 휠체어 토글 이벤트
+        document.getElementById('f-wheelchair').addEventListener('change', updateWheelchairLabel);
+
+        function getReversEdgeId(edgeId) {
+            if (!edgeId) return null;
+            const lastUnderscoreIdx = edgeId.lastIndexOf('_');
+            if (lastUnderscoreIdx === -1) return null;
+            const key = edgeId.substring(lastUnderscoreIdx + 1);
+            const prefix = edgeId.substring(0, lastUnderscoreIdx);
+            const firstUnderscoreIdx = prefix.indexOf('_');
+            if (firstUnderscoreIdx === -1) return null;
+            const nodeA = prefix.substring(0, firstUnderscoreIdx);
+            const nodeB = prefix.substring(firstUnderscoreIdx + 1);
+            return `${nodeB}_${nodeA}_${key}`;
+        }
+
         function showEdgeInfo(edge, layer) {
             // 이전 선택 해제
-            if (selectedEdge) {
-                selectedEdge.getElement()?.classList.remove('selected');
+            if (selectedLayer) {
+                selectedLayer.getElement()?.classList.remove('selected');
             }
 
-            // 새로운 선택
-            selectedEdge = layer;
+            selectedLayer = layer;
             layer.getElement()?.classList.add('selected');
 
-            const grade = edge.grade || 0;
-            const gradeClass = getGradeClass(grade);
-            const gradeLabel = getGradeLabel(grade);
-
-            document.getElementById('edge-id').textContent = edge.edge_id || '-';
-            document.getElementById('edge-grade').innerHTML = `
-                <span class="grade-badge ${gradeClass}">
-                    ${grade.toFixed(1)}° (${gradeLabel})
-                </span>
-            `;
-            document.getElementById('edge-length').textContent = (edge.length || 0).toFixed(1) + 'm';
-            document.getElementById('edge-surface').textContent = edge.surface_type || 'unknown';
-            document.getElementById('edge-highway').textContent = edge.highway_type || 'unknown';
-            document.getElementById('edge-start').textContent = `${edge.start_lat?.toFixed(5)}, ${edge.start_lon?.toFixed(5)}`;
-            document.getElementById('edge-end').textContent = `${edge.end_lat?.toFixed(5)}, ${edge.end_lon?.toFixed(5)}`;
-
-            // 휠체어 접근성 표시
-            const isAccessible = edge.is_wheelchair_accessible;
-            if (isAccessible === true) {
-                document.getElementById('edge-wheelchair').innerHTML = '<span style="color: #27ae60; font-weight: 600;">✅ 접근 가능</span>';
-            } else if (isAccessible === false) {
-                document.getElementById('edge-wheelchair').innerHTML = '<span style="color: #e74c3c; font-weight: 600;">❌ 접근 불가</span>';
-            } else {
-                document.getElementById('edge-wheelchair').innerHTML = '<span style="color: #95a5a6;">정보 없음</span>';
-            }
-
+            populateEdgePanel(edge);
             document.getElementById('edgeInfoPanel').classList.add('show');
         }
 
         function closeEdgeInfo() {
             document.getElementById('edgeInfoPanel').classList.remove('show');
-            if (selectedEdge) {
-                selectedEdge.getElement()?.classList.remove('selected');
-                selectedEdge = null;
+            if (selectedLayer) {
+                selectedLayer.getElement()?.classList.remove('selected');
+                selectedLayer = null;
             }
+            currentEdgeData = null;
+        }
+
+        function resetEdgeForm() {
+            if (currentEdgeData) {
+                populateEdgePanel(currentEdgeData);
+                showToast('폼이 초기화되었습니다', 'success');
+            }
+        }
+
+        function collectFormData() {
+            const data = {};
+            
+            // 숫자 필드
+            const numericFields = [
+                { id: 'f-grade', field: 'grade' },
+                { id: 'f-max-grade', field: 'max_grade' },
+                { id: 'f-min-grade', field: 'min_grade' },
+                { id: 'f-grade-segments', field: 'grade_segments' },
+                { id: 'f-elev-start', field: 'elevation_start' },
+                { id: 'f-elev-end', field: 'elevation_end' },
+                { id: 'f-elev-max', field: 'elevation_max' },
+                { id: 'f-elev-min', field: 'elevation_min' },
+                { id: 'f-surface-penalty', field: 'surface_penalty' },
+            ];
+
+            for (const { id, field } of numericFields) {
+                const el = document.getElementById(id);
+                const val = parseFloat(el.value);
+                if (!isNaN(val)) {
+                    data[field] = field === 'grade_segments' ? parseInt(el.value) : val;
+                }
+            }
+
+            // 문자열 필드 (select)
+            data.surface_type = document.getElementById('f-surface-type').value;
+            data.highway_type = document.getElementById('f-highway-type').value;
+
+            // 불리언 필드
+            data.is_wheelchair_accessible = document.getElementById('f-wheelchair').checked;
+
+            return data;
+        }
+
+        async function saveEdgeChanges() {
+            if (!currentEdgeData) return;
+
+            const edgeId = currentEdgeData.edge_id;
+            const formData = collectFormData();
+            
+            const saveBtn = document.getElementById('saveBtn');
+            const loadingEl = document.getElementById('panelLoading');
+            saveBtn.disabled = true;
+            saveBtn.textContent = '⏳ 저장 중...';
+            loadingEl.classList.add('show');
+
+            try {
+                const response = await fetch(`/api/edges/${edgeId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    // 로컬 edgesData도 업데이트
+                    const updatedEdge = result.edge;
+                    const reverseEdge = result.reverse_edge;
+
+                    for (let i = 0; i < edgesData.length; i++) {
+                        if (edgesData[i].edge_id === updatedEdge.edge_id) {
+                            edgesData[i] = updatedEdge;
+                        }
+                        if (reverseEdge && edgesData[i].edge_id === reverseEdge.edge_id) {
+                            edgesData[i] = reverseEdge;
+                        }
+                    }
+
+                    // 폼 새로고침
+                    populateEdgePanel(updatedEdge);
+                    currentEdgeData = JSON.parse(JSON.stringify(updatedEdge));
+
+                    const msg = result.updated_edges.length > 1
+                        ? `✅ ${result.updated_edges.length}개 엣지 저장 완료 (DB 포함)`
+                        : '✅ 엣지 저장 완료 (DB 포함)';
+                    showToast(msg, 'success');
+                } else {
+                    showToast(`❌ 저장 실패: ${result.detail || '알 수 없는 오류'}`, 'error');
+                }
+            } catch (err) {
+                console.error('저장 오류:', err);
+                showToast('❌ 서버 연결 실패', 'error');
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.textContent = '💾 저장';
+                loadingEl.classList.remove('show');
+            }
+        }
+
+        function addEdgeToMap(edge, weight = 3, opacity = 0.7) {
+            const line = L.polyline([
+                [edge.start_lat, edge.start_lon],
+                [edge.end_lat, edge.end_lon]
+            ], {
+                color: getGradeColor(edge.grade || 0),
+                weight: weight,
+                opacity: opacity
+            }).addTo(map);
+
+            line.on('click', function (e) {
+                L.DomEvent.stopPropagation(e);
+                showEdgeInfo(edge, line);
+            });
+
+            line.on('mouseover', function () {
+                if (this !== selectedLayer) {
+                    this.setStyle({ weight: weight + 2, opacity: Math.min(opacity + 0.2, 1) });
+                }
+            });
+            line.on('mouseout', function () {
+                if (this !== selectedLayer) {
+                    this.setStyle({ weight: weight, opacity: opacity });
+                }
+            });
+
+            edgeLayers.push(line);
         }
 
         function showAllEdges() {
             clearEdges();
-            edgesData.forEach(edge => {
-                const line = L.polyline([
-                    [edge.start_lat, edge.start_lon],
-                    [edge.end_lat, edge.end_lon]
-                ], {
-                    color: getGradeColor(edge.grade || 0),
-                    weight: 3,
-                    opacity: 0.7
-                }).addTo(map);
-
-                // 클릭 이벤트 추가
-                line.on('click', function (e) {
-                    L.DomEvent.stopPropagation(e);
-                    showEdgeInfo(edge, line);
-                });
-
-                // 호버 효과
-                line.on('mouseover', function () {
-                    if (this !== selectedEdge) {
-                        this.setStyle({ weight: 5, opacity: 0.9 });
-                    }
-                });
-                line.on('mouseout', function () {
-                    if (this !== selectedEdge) {
-                        this.setStyle({ weight: 3, opacity: 0.7 });
-                    }
-                });
-
-                edgeLayers.push(line);
-            });
+            edgesData.forEach(edge => addEdgeToMap(edge, 3, 0.7));
             document.getElementById('visibleCount').textContent = edgeLayers.length;
             updateButtons('all');
         }
@@ -494,36 +1036,7 @@
                 filtered = edgesData.filter(e => (e.grade || 0) > 10);
             }
 
-            filtered.forEach(edge => {
-                const line = L.polyline([
-                    [edge.start_lat, edge.start_lon],
-                    [edge.end_lat, edge.end_lon]
-                ], {
-                    color: getGradeColor(edge.grade || 0),
-                    weight: 4,
-                    opacity: 0.9
-                }).addTo(map);
-
-                // 클릭 이벤트 추가
-                line.on('click', function (e) {
-                    L.DomEvent.stopPropagation(e);
-                    showEdgeInfo(edge, line);
-                });
-
-                // 호버 효과
-                line.on('mouseover', function () {
-                    if (this !== selectedEdge) {
-                        this.setStyle({ weight: 6, opacity: 1 });
-                    }
-                });
-                line.on('mouseout', function () {
-                    if (this !== selectedEdge) {
-                        this.setStyle({ weight: 4, opacity: 0.9 });
-                    }
-                });
-
-                edgeLayers.push(line);
-            });
+            filtered.forEach(edge => addEdgeToMap(edge, 4, 0.9));
             document.getElementById('visibleCount').textContent = edgeLayers.length;
             updateButtons(level);
         }

@@ -19,6 +19,7 @@ from typing import Optional, Literal, List, Tuple
 import asyncio
 import logging
 import os
+import json
 from datetime import datetime, timezone
 from pathlib import Path
 from dotenv import load_dotenv
@@ -774,6 +775,174 @@ async def clear_obstacles():
     obstacle_manager.clear_obstacles_from_graph(route_calculator.graph)
     
     return {"success": True, "message": "장애물 가중치 초기화 완료"}
+
+
+class EdgeUpdateRequest(BaseModel):
+    """엣지 속성 수정 요청 모델"""
+    grade: Optional[float] = None
+    max_grade: Optional[float] = None
+    min_grade: Optional[float] = None
+    grade_segments: Optional[int] = None
+    elevation_start: Optional[float] = None
+    elevation_end: Optional[float] = None
+    elevation_max: Optional[float] = None
+    elevation_min: Optional[float] = None
+    surface_type: Optional[str] = None
+    surface_penalty: Optional[float] = None
+    highway_type: Optional[str] = None
+    is_wheelchair_accessible: Optional[bool] = None
+
+
+def _compute_derived_fields(edge: dict) -> dict:
+    """경사도 관련 파생 필드 자동 계산"""
+    el_start = edge.get("elevation_start", 0.0)
+    el_end = edge.get("elevation_end", 0.0)
+    el_max = edge.get("elevation_max", 0.0)
+    el_min = edge.get("elevation_min", 0.0)
+    
+    diff = el_end - el_start
+    edge["total_ascent"] = max(0.0, diff)
+    edge["total_descent"] = max(0.0, -diff)
+    
+    length = edge.get("length", 0.0)
+    if length > 0:
+        edge["avg_grade"] = abs(diff) / length * 100
+    else:
+        edge["avg_grade"] = 0.0
+    
+    return edge
+
+
+def _get_reverse_edge_id(edge_id: str) -> Optional[str]:
+    """반대 방향 엣지 ID를 생성 (A_B_0 → B_A_0)"""
+    parts = edge_id.rsplit("_", 1)  # 마지막 _ 기준으로 분리 (key)
+    if len(parts) != 2:
+        return None
+    prefix = parts[0]
+    key = parts[1]
+    nodes = prefix.split("_")
+    if len(nodes) != 2:
+        return None
+    return f"{nodes[1]}_{nodes[0]}_{key}"
+
+
+@app.put("/api/edges/{edge_id}")
+async def update_edge(edge_id: str, edge_update: EdgeUpdateRequest, request: Request):
+    """
+    엣지 속성 수정 API
+    - 수정 가능한 필드만 업데이트
+    - avg_grade, total_ascent, total_descent는 자동 계산
+    - 반대 방향 엣지도 자동 동기화
+    - JSON 파일 업데이트 및 Supabase DB 동기화
+    """
+    json_path = os.path.join(os.path.dirname(__file__) or ".", "edges_data.json")
+    
+    try:
+        with open(json_path, "r", encoding="utf-8") as f:
+            all_edges = json.load(f)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"JSON 파일 읽기 실패: {e}")
+    
+    # edge_id로 인덱스 찾기
+    edge_index = None
+    for i, edge in enumerate(all_edges):
+        if edge.get("edge_id") == edge_id:
+            edge_index = i
+            break
+    
+    if edge_index is None:
+        raise HTTPException(status_code=404, detail=f"엣지를 찾을 수 없습니다: {edge_id}")
+    
+    # 업데이트할 필드 적용
+    update_data = edge_update.dict(exclude_none=True)
+    updated_edges = [edge_id]
+    
+    for key, value in update_data.items():
+        all_edges[edge_index][key] = value
+    
+    # 파생 필드 자동 계산
+    all_edges[edge_index] = _compute_derived_fields(all_edges[edge_index])
+    
+    # 반대 방향 엣지 자동 동기화
+    reverse_id = _get_reverse_edge_id(edge_id)
+    reverse_index = None
+    if reverse_id:
+        for i, edge in enumerate(all_edges):
+            if edge.get("edge_id") == reverse_id:
+                reverse_index = i
+                break
+    
+    if reverse_index is not None:
+        # 방향 의존적 필드는 반전해서 적용
+        for key, value in update_data.items():
+            if key == "elevation_start":
+                all_edges[reverse_index]["elevation_end"] = value
+            elif key == "elevation_end":
+                all_edges[reverse_index]["elevation_start"] = value
+            else:
+                all_edges[reverse_index][key] = value
+        
+        # 반대 방향 엣지도 파생 필드 자동 계산
+        all_edges[reverse_index] = _compute_derived_fields(all_edges[reverse_index])
+        updated_edges.append(reverse_id)
+    
+    # JSON 파일 저장
+    try:
+        with open(json_path, "w", encoding="utf-8") as f:
+            json.dump(all_edges, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"JSON 파일 저장 실패: {e}")
+        
+    # Supabase DB 동기화
+    supabase_client = getattr(request.app.state, "supabase_client", None)
+    if supabase_client:
+        try:
+            edges_to_upsert = [all_edges[edge_index]]
+            if reverse_index is not None:
+                edges_to_upsert.append(all_edges[reverse_index])
+            supabase_client.table("edges").upsert(edges_to_upsert).execute()
+            logger.info(f"Supabase DB에 {len(updated_edges)}개 엣지 업데이트 성공")
+        except Exception as e:
+            logger.warning(f"Supabase DB 엣지 업데이트 실패: {e}")
+
+    
+    return {
+        "success": True,
+        "message": f"{len(updated_edges)}개 엣지 업데이트 완료",
+        "updated_edges": updated_edges,
+        "edge": all_edges[edge_index],
+        "reverse_edge": all_edges[reverse_index] if reverse_index is not None else None
+    }
+
+
+@app.get("/api/edges/{edge_id}")
+async def get_edge(edge_id: str):
+    """특정 엣지 정보 조회"""
+    json_path = os.path.join(os.path.dirname(__file__) or ".", "edges_data.json")
+    
+    try:
+        with open(json_path, "r", encoding="utf-8") as f:
+            all_edges = json.load(f)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"JSON 파일 읽기 실패: {e}")
+    
+    for edge in all_edges:
+        if edge.get("edge_id") == edge_id:
+            reverse_id = _get_reverse_edge_id(edge_id)
+            reverse_edge = None
+            if reverse_id:
+                for e2 in all_edges:
+                    if e2.get("edge_id") == reverse_id:
+                        reverse_edge = e2
+                        break
+            return {
+                "success": True,
+                "edge": edge,
+                "reverse_edge_id": reverse_id,
+                "reverse_edge": reverse_edge
+            }
+    
+    raise HTTPException(status_code=404, detail=f"엣지를 찾을 수 없습니다: {edge_id}")
 
 
 @app.get("/graph/info")
