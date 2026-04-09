@@ -61,6 +61,31 @@ CREATE INDEX IF NOT EXISTS idx_obstacles_type ON obstacles(obstacle_type);
 ALTER TABLE edges ENABLE ROW LEVEL SECURITY;
 ALTER TABLE obstacles ENABLE ROW LEVEL SECURITY;
 
+-- user_profiles.role 및 is_admin() — obstacles UPDATE/DELETE RLS에서 사용
+-- (user_profiles 테이블이 이미 존재해야 함)
+ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'user';
+ALTER TABLE user_profiles DROP CONSTRAINT IF EXISTS user_profiles_role_check;
+ALTER TABLE user_profiles ADD CONSTRAINT user_profiles_role_check CHECK (role IN ('user', 'admin'));
+
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.user_profiles up
+    WHERE up.user_id = auth.uid()
+      AND up.role = 'admin'
+  );
+$$;
+
+REVOKE ALL ON FUNCTION public.is_admin() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.is_admin() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.is_admin() TO service_role;
+
 -- 읽기 정책: 모든 사용자가 읽기 가능
 CREATE POLICY "edges_read_all" ON edges FOR SELECT USING (true);
 CREATE POLICY "obstacles_read_all" ON obstacles FOR SELECT USING (true);
@@ -70,9 +95,17 @@ CREATE POLICY "obstacles_read_all" ON obstacles FOR SELECT USING (true);
 CREATE POLICY "edges_insert_service" ON edges FOR INSERT WITH CHECK (true);
 CREATE POLICY "obstacles_insert_auth" ON obstacles FOR INSERT WITH CHECK (true);
 
--- 제보 삭제: 본인이 작성한 제보만 삭제 가능
-CREATE POLICY "obstacles_delete_own" ON obstacles FOR DELETE
-  USING (reported_by = auth.uid()::text);
+-- 제보 삭제: 본인 또는 role=admin
+DROP POLICY IF EXISTS "obstacles_delete_own" ON obstacles;
+DROP POLICY IF EXISTS "obstacles_delete_own_or_admin" ON obstacles;
+CREATE POLICY "obstacles_delete_own_or_admin" ON obstacles FOR DELETE
+  USING (reported_by = auth.uid()::text OR public.is_admin());
+
+-- 제보 수정: 본인 또는 admin (정책 없으면 UPDATE 불가)
+DROP POLICY IF EXISTS "obstacles_update_own_or_admin" ON obstacles;
+CREATE POLICY "obstacles_update_own_or_admin" ON obstacles FOR UPDATE
+  USING (reported_by = auth.uid()::text OR public.is_admin())
+  WITH CHECK (reported_by = auth.uid()::text OR public.is_admin());
 
 -- updated_at 자동 갱신 트리거
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -252,6 +285,7 @@ CREATE TRIGGER trg_notify_on_comment
     EXECUTE FUNCTION notify_on_comment();
 -- ================================================================
 -- [7] user_profiles 테이블 컬럼 추가 (점수)
+--     role 컬럼은 파일 상단 obstacles RLS 직전에 ADD 됨.
 -- ================================================================
 ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS score INTEGER DEFAULT 0;
 

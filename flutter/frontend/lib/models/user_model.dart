@@ -3,6 +3,8 @@ class User {
   final String email;
   final String? profileImage;
   final String wheelchairType; // 'Electric', 'Manual', 'CaregiverManual', 'None'
+  /// DB `user_profiles.role`: `user` | `admin`
+  final String role;
   final double totalDistance;
   final int driveCount;
   final int reportCount;
@@ -11,11 +13,14 @@ class User {
   final int level;
   final int score;
 
+  bool get isAdmin => role == 'admin';
+
   User({
     required this.nickname,
     required this.email,
     this.profileImage,
     required this.wheelchairType,
+    this.role = 'user',
     this.totalDistance = 0.0,
     this.driveCount = 0,
     this.reportCount = 0,
@@ -31,6 +36,7 @@ class User {
       email: json['email'] ?? '',
       profileImage: json['profile_image'],
       wheelchairType: json['wheelchair_type'] ?? 'None',
+      role: json['role']?.toString() ?? 'user',
       totalDistance: (json['total_distance'] ?? 0).toDouble(),
       driveCount: json['drive_count'] ?? 0,
       reportCount: json['report_count'] ?? 0,

@@ -205,6 +205,23 @@ class ApiService {
 
   // === Supabase 직접 호출 ===
 
+  /// `user_profiles.role == 'admin'` 여부 (RLS와 별도로 UI/API 분기용)
+  static Future<bool> isCurrentUserAdmin() async {
+    final user = AuthService.currentUser;
+    if (user == null) return false;
+    try {
+      final row = await _supabase
+          .from('user_profiles')
+          .select('role')
+          .eq('user_id', user.id)
+          .maybeSingle();
+      return row != null && row['role'] == 'admin';
+    } catch (e) {
+      debugPrint('isCurrentUserAdmin error: $e');
+      return false;
+    }
+  }
+
   /// 4. 제보하기 (Python 서버 /report/submit - 이미지 업로드 + DB 저장 + 그래프 즉시 반영)
   static Future<Map<String, dynamic>> submitReport({
     required double latitude,
@@ -438,6 +455,7 @@ class ApiService {
           'dislikes': dislikeCountMap[idStr] ?? 0,
           'comments': commentCountMap[idStr] ?? 0,
           'imageUrl': item['image_url'],
+          if (reportedBy != null) 'reported_by': reportedBy,
         };
       }).toList();
     } catch (e) {
@@ -465,17 +483,28 @@ class ApiService {
   }
 
   /// 6. 내 제보 (Direct Select) — 댓글/좋아요/싫어요 수 집계 포함
+  /// 관리자(`role=admin`)는 본인 글이 아닌 **전체 제보** 목록(최대 500건)을 동일 형식으로 반환.
   static Future<List<ReportSummary>> getUserReports() async {
     final user = AuthService.currentUser;
     if (user == null) return [];
     try {
-      final data = await _supabase
-          .from('obstacles')
-          .select('*')
-          .eq('reported_by', user.id)
-          .order('created_at', ascending: false);
-
-      final items = data as List;
+      final admin = await isCurrentUserAdmin();
+      final List<dynamic> items;
+      if (admin) {
+        final data = await _supabase
+            .from('obstacles')
+            .select('*')
+            .order('created_at', ascending: false)
+            .limit(500);
+        items = data as List;
+      } else {
+        final data = await _supabase
+            .from('obstacles')
+            .select('*')
+            .eq('reported_by', user.id)
+            .order('created_at', ascending: false);
+        items = data as List;
+      }
       if (items.isEmpty) return [];
 
       final obstacleIds = items
@@ -549,20 +578,73 @@ class ApiService {
     }
   }
 
-  /// 6-1. 제보글 삭제 (본인 작성 글만)
+  /// 6-1. 제보글 삭제 — 본인 글 또는 관리자(`role=admin`)는 전체 삭제 가능 (RLS와 동일)
   static Future<bool> deleteReport(String reportId) async {
     final user = AuthService.currentUser;
     if (user == null) return false;
     try {
-      await _supabase
-          .from('obstacles')
-          .delete()
-          .eq('id', reportId)
-          .eq('reported_by', user.id);
+      final admin = await isCurrentUserAdmin();
+      if (admin) {
+        await _supabase.from('obstacles').delete().eq('id', reportId);
+      } else {
+        await _supabase
+            .from('obstacles')
+            .delete()
+            .eq('id', reportId)
+            .eq('reported_by', user.id);
+      }
       await _notifyAlgorithmServerObstaclesRefresh();
       return true;
     } catch (e) {
       debugPrint('Delete report error: $e');
+      return false;
+    }
+  }
+
+  /// 제보 `description` 원문 (주소 `[Location: …]` 접두 포함). 관리자 수정 다이얼로그용.
+  static Future<String?> getObstacleRawDescription(String reportId) async {
+    try {
+      final row = await _supabase
+          .from('obstacles')
+          .select('description')
+          .eq('id', reportId)
+          .maybeSingle();
+      return row?['description'] as String?;
+    } catch (e) {
+      debugPrint('getObstacleRawDescription error: $e');
+      return null;
+    }
+  }
+
+  /// 제보 수정 — 본인 또는 관리자. `description`은 DB 컬럼 전체를 덮어씀.
+  static Future<bool> updateObstacleReport(
+    String reportId, {
+    String? description,
+    String? obstacleType,
+    bool? isActive,
+  }) async {
+    final user = AuthService.currentUser;
+    if (user == null) return false;
+    final updates = <String, dynamic>{};
+    if (description != null) updates['description'] = description;
+    if (obstacleType != null) updates['obstacle_type'] = obstacleType;
+    if (isActive != null) updates['is_active'] = isActive;
+    if (updates.isEmpty) return true;
+    try {
+      final admin = await isCurrentUserAdmin();
+      if (admin) {
+        await _supabase.from('obstacles').update(updates).eq('id', reportId);
+      } else {
+        await _supabase
+            .from('obstacles')
+            .update(updates)
+            .eq('id', reportId)
+            .eq('reported_by', user.id);
+      }
+      await _notifyAlgorithmServerObstaclesRefresh();
+      return true;
+    } catch (e) {
+      debugPrint('updateObstacleReport error: $e');
       return false;
     }
   }
@@ -764,6 +846,7 @@ class ApiService {
         final reportLevel = res['report_level'] ?? 0;
         final score = res['score'] ?? 0;
         final profileImageUrl = res['profile_image_url'] as String?;
+        final roleStr = res['role']?.toString() ?? 'user';
         return User(
           nickname: nick?.isNotEmpty == true
               ? nick
@@ -775,6 +858,7 @@ class ApiService {
           wheelchairType: _normalizeWheelchairType(
             wt ?? metadata?['wheelchair_type'] ?? 'none',
           ),
+          role: roleStr == 'admin' ? 'admin' : 'user',
           driveCount: metadata?['drive_count'] ?? 0,
           reportCount: realReportCount,
           likeCount: metadata?['like_count'] ?? 0,
@@ -866,6 +950,7 @@ class ApiService {
       nickname: metadata?['nickname'] ?? '사용자',
       email: user.email ?? '',
       wheelchairType: metadata?['wheelchair_type'] ?? 'None',
+      role: 'user',
       driveCount: metadata?['drive_count'] ?? 0,
       reportCount: metadata?['report_count'] ?? 0,
       likeCount: metadata?['like_count'] ?? 0,

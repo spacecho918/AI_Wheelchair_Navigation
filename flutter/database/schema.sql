@@ -188,6 +188,16 @@ CREATE TABLE public.user_profiles (
   name text NOT NULL,
   report_level integer NOT NULL DEFAULT 0 CHECK (report_level >= 0),  -- 제보 레벨
   profile_image_url text,
+  role text NOT NULL DEFAULT 'user'::text CHECK (role = ANY (ARRAY['user'::text, 'admin'::text])),  -- 일반 / 관리자
   CONSTRAINT user_profiles_pkey PRIMARY KEY (user_id),
   CONSTRAINT user_profiles_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
 );
+
+-- -----------------------------------------------------------------
+-- 참고: public.obstacles RLS (실제 DB는 algorithm_server/supabase_schema.sql 기준)
+-- - obstacles_read_all: SELECT USING (true)
+-- - obstacles_insert_auth: INSERT WITH CHECK (true)
+-- - obstacles_delete_own_or_admin: DELETE — reported_by = auth.uid()::text OR is_admin()
+-- - obstacles_update_own_or_admin: UPDATE — 동일 USING / WITH CHECK
+-- - public.is_admin(): user_profiles에서 현재 사용자(auth.uid()) 행의 role = 'admin' 판별 (SECURITY DEFINER)
+-- -----------------------------------------------------------------

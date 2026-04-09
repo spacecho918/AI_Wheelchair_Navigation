@@ -20,6 +20,7 @@ import 'package:gilbeot/app_route_observer.dart';
 import '../services/api_service.dart';
 import '../models/driving_history.dart';
 import 'package:gilbeot/widgets/common_toast.dart';
+import 'package:gilbeot/utils/time_format.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -184,20 +185,6 @@ class _MapScreenState extends State<MapScreen> with RouteAware {
     } catch (e) {
       if (!mounted) return;
       setState(() => _isDashboardLoading = false);
-    }
-  }
-
-  String _formatTimeAgo(String timestamp) {
-    try {
-      final date = DateTime.parse(timestamp);
-      final now = DateTime.now();
-      final difference = now.difference(date);
-      if (difference.inDays > 0) return '${difference.inDays}일 전';
-      if (difference.inHours > 0) return '${difference.inHours}시간 전';
-      if (difference.inMinutes > 0) return '${difference.inMinutes}분 전';
-      return '방금 전';
-    } catch (e) {
-      return '알 수 없음';
     }
   }
 
@@ -882,7 +869,9 @@ class _MapScreenState extends State<MapScreen> with RouteAware {
                             ...List.generate(_latestPosts.length, (i) {
                               final post = _latestPosts[i];
                               final tag = post['tag'] ?? '';
-                              final time = _formatTimeAgo(post['time'] ?? '');
+                              final time = formatTimeAgo(
+                                post['time']?.toString() ?? '',
+                              );
                               final content = post['content'] ?? '';
                               final address = post['address'] ?? '위치 정보 없음';
                               final user = post['user'] ?? '알 수 없음';
@@ -1314,7 +1303,9 @@ class _MapScreenState extends State<MapScreen> with RouteAware {
     final comments = report['comments'] ?? 0;
     final imageUrl = report['imageUrl']?.toString();
     final user = report['user'] ?? '알 수 없음';
-    final time = report['time'] != null ? _formatTimeAgo(report['time']) : '';
+    final time = report['time'] != null
+        ? formatTimeAgo(report['time'].toString())
+        : '';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

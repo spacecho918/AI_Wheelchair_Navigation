@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
 import 'package:gilbeot/widgets/custom_back_button.dart';
+import 'package:gilbeot/widgets/common_toast.dart';
 import 'package:gilbeot/screens/report_edit_screen.dart';
 import 'package:gilbeot/services/api_service.dart';
+import 'package:gilbeot/utils/time_format.dart';
 
 class CommunityDetailScreen extends StatefulWidget {
   final Map<String, dynamic> report;
@@ -27,6 +29,11 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
   List<Map<String, dynamic>> comments = [];
   bool isLoadingComments = false;
 
+  bool _isAdmin = false;
+  /// 관리자가 본문 수정 후 목록과 맞추기 위한 표시용 (원문 description 파싱 결과)
+  String? _displayContentOverride;
+  String? _displayAddressOverride;
+
   @override
   void initState() {
     super.initState();
@@ -34,6 +41,112 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
     dislikeCount = widget.report['dislikes'] ?? 0;
     _fetchComments();
     _loadMyReaction();
+    _loadAdminFlag();
+  }
+
+  Future<void> _loadAdminFlag() async {
+    final v = await ApiService.isCurrentUserAdmin();
+    if (mounted) setState(() => _isAdmin = v);
+  }
+
+  void _applyRawDescriptionToDisplayOverrides(String raw) {
+    var content = raw;
+    var address = widget.report['address']?.toString() ?? '위치 정보 없음';
+    final locMatch = RegExp(r'\[Location: (.*?)\]').firstMatch(raw);
+    if (locMatch != null) {
+      address = locMatch.group(1)!;
+      content = raw.replaceAll(locMatch.group(0)!, '').trim();
+    }
+    final userMatch = RegExp(r'\[User: (.*?)\]').firstMatch(content);
+    if (userMatch != null) {
+      content = content.replaceAll(userMatch.group(0)!, '').trim();
+    }
+    setState(() {
+      _displayAddressOverride = address;
+      _displayContentOverride = content;
+    });
+  }
+
+  Future<void> _adminDeleteReport() async {
+    final id = widget.report['id']?.toString();
+    if (id == null) return;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('제보 삭제 (관리자)'),
+        content: const Text('이 제보를 삭제하시겠습니까? 복구할 수 없습니다.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('취소'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('삭제', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    final success = await ApiService.deleteReport(id);
+    if (!mounted) return;
+    if (success) {
+      CommonToast.show(context, '삭제되었습니다.');
+      Navigator.pop(context, {
+        'likeCount': likeCount,
+        'dislikeCount': dislikeCount,
+        'isLiked': isLiked,
+        'isDisliked': isDisliked,
+        'deleted': true,
+      });
+    } else {
+      CommonToast.show(context, '삭제에 실패했습니다.');
+    }
+  }
+
+  Future<void> _adminEditDescription() async {
+    final id = widget.report['id']?.toString();
+    if (id == null) return;
+    final raw = await ApiService.getObstacleRawDescription(id);
+    if (!mounted) return;
+    final controller = TextEditingController(text: raw ?? '');
+    final save = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('본문 수정 (관리자)'),
+        content: SingleChildScrollView(
+          child: TextField(
+            controller: controller,
+            maxLines: 10,
+            decoration: const InputDecoration(
+              border: OutlineInputBorder(),
+              hintText: '[Location: 주소] 줄이 있으면 유지하는 것을 권장합니다.',
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('취소'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('저장'),
+          ),
+        ],
+      ),
+    );
+    final newDesc = controller.text;
+    controller.dispose();
+    if (save != true || !mounted) return;
+    final success = await ApiService.updateObstacleReport(id, description: newDesc);
+    if (!mounted) return;
+    if (success) {
+      CommonToast.show(context, '저장되었습니다.');
+      _applyRawDescriptionToDisplayOverrides(newDesc);
+    } else {
+      CommonToast.show(context, '저장에 실패했습니다.');
+    }
   }
 
   Future<void> _loadMyReaction() async {
@@ -211,12 +324,46 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                   ),
                   Align(
                     alignment: Alignment.centerRight,
-                    child: IconButton(
-                      icon: const Icon(Icons.close),
-                      color: textDark,
-                      onPressed: _popWithResult,
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (_isAdmin)
+                          PopupMenuButton<String>(
+                            icon: Icon(
+                              Icons.more_vert,
+                              color: Theme.of(context).brightness == Brightness.dark
+                                  ? Colors.white
+                                  : textDark,
+                            ),
+                            padding: EdgeInsets.zero,
+                            onSelected: (value) {
+                              if (value == 'edit') _adminEditDescription();
+                              if (value == 'delete') _adminDeleteReport();
+                            },
+                            itemBuilder: (context) => const [
+                              PopupMenuItem(
+                                value: 'edit',
+                                child: Text('본문 수정'),
+                              ),
+                              PopupMenuItem(
+                                value: 'delete',
+                                child: Text(
+                                  '제보 삭제',
+                                  style: TextStyle(color: Colors.red),
+                                ),
+                              ),
+                            ],
+                          ),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.white
+                              : textDark,
+                          onPressed: _popWithResult,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -386,7 +533,9 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                                 ),
                               ),
                               Text(
-                                widget.report['time'],
+                                formatTimeAgo(
+                                  widget.report['time']?.toString() ?? '',
+                                ),
                                 style: TextStyle(color: Theme.of(context).brightness == Brightness.dark
                                     ? const Color(0xFF9CA3AF)
                                     : textGrey, fontSize: 12),
@@ -407,7 +556,9 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            widget.report['address'],
+                            _displayAddressOverride ??
+                                widget.report['address']?.toString() ??
+                                '',
                             style: TextStyle(
                               color: Theme.of(context).brightness == Brightness.dark
                                   ? const Color(0xFF2A2A2A)
@@ -440,7 +591,9 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
-                          widget.report['content'],
+                          _displayContentOverride ??
+                              widget.report['content']?.toString() ??
+                              '',
                           style: TextStyle(
                             color: Theme.of(context).brightness == Brightness.dark
                                 ? Colors.white

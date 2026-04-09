@@ -143,7 +143,7 @@ class _MyReportsScreenState extends State<MyReportsScreen>
                     child: CustomBackButton(),
                   ),
                   Text(
-                    '나의 제보',
+                    _userProfile?.isAdmin == true ? '제보 관리' : '나의 제보',
                     style: TextStyle(
                       color: Theme.of(context).brightness == Brightness.dark
                           ? Colors.white
