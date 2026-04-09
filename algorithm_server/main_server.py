@@ -24,6 +24,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from dotenv import load_dotenv
 import requests
+from pyngrok import ngrok, conf
 
 # .env 파일 로드
 load_dotenv()
@@ -256,17 +257,37 @@ def initialize_system():
 
 # 임시 서버 배포(로컬 pc)
 # AWS 변경 필요
+
+# .env NGROK_AUTHTOKEN 입력
+def setup_ngrok_auth():
+    token = os.getenv("NGROK_AUTHTOKEN")
+    if not token:
+        logger.warning("NGROK_AUTHTOKEN 없음")
+        return
+
+    # 이미 설정되어 있으면 스킵
+    if conf.get_default().auth_token == token:
+        return
+
+    conf.get_default().auth_token = token
+    logger.info("ngrok authtoken 설정 완료")
+
+def start_ngrok():
+# 이미 실행된 ngrok 있으면 재사용
+    tunnels = ngrok.get_tunnels()
+    if tunnels:
+        return tunnels[0].public_url
+
+    public_url = ngrok.connect(8000).public_url
+    print("NGROK URL:", public_url)
+    return public_url
+
 def _get_ngrok_url():
-    """ngrok에서 현재 public URL 가져오기"""
     try:
-        res = requests.get("http://127.0.0.1:4040/api/tunnels", timeout=1)
-        data = res.json()
-        for tunnel in data["tunnels"]:
-            if tunnel["proto"] == "https":
-                return tunnel["public_url"]
+        return start_ngrok()
     except Exception as e:
-        logger.warning(f"ngrok URL 가져오기 실패: {e}")
-    return None
+        logger.warning(f"pyngrok 실행 실패: {e}")
+        return None
 
 def _get_local_ip() -> str:
     """현재 기기의 로컬 WiFi IP 주소를 자동 감지"""
@@ -411,6 +432,9 @@ async def _periodic_obstacle_expiry():
 
 @app.on_event("startup")
 async def startup_event():
+    # ngrok 사용시 최초 1회 NGROK_AUTHTOKEN 등록
+    setup_ngrok_auth()
+
     """서버 시작 시 초기화"""
     global _main_loop, _obstacle_expiry_replan_event
     _main_loop = asyncio.get_running_loop()
