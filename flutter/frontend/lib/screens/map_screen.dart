@@ -18,6 +18,7 @@ import 'package:gilbeot/helpers/kakao_map_helper.dart';
 import 'wheelchair_settings_screen.dart';
 import 'package:gilbeot/app_route_observer.dart';
 import '../services/api_service.dart';
+import 'package:gilbeot/config/kakao_config.dart';
 import '../models/driving_history.dart';
 import 'package:gilbeot/widgets/common_toast.dart';
 import 'package:gilbeot/utils/time_format.dart';
@@ -578,14 +579,16 @@ class _MapScreenState extends State<MapScreen> with RouteAware {
     if (_mapController == null) return;
 
     if (kIsWeb) {
+      final jsKey = KakaoConfig.jsAppKey;
       _mapController!.loadRequest(
         Uri.parse(
-          '${Uri.base.origin}/kakao_map.html?v=${DateTime.now().millisecondsSinceEpoch}&mapId=main',
+          '${Uri.base.origin}/kakao_map.html?appkey=$jsKey&v=${DateTime.now().millisecondsSinceEpoch}&mapId=main',
         ),
       );
     } else {
       // 카카오 개발자 콘솔에 등록된 baseURL로 HTML 로드
       String htmlContent = await rootBundle.loadString('assets/kakao_map.html');
+      htmlContent = htmlContent.replaceAll('__KAKAO_KEY__', KakaoConfig.jsAppKey);
 
       // gilbeot.app을 baseURL로 사용 (카카오 콘솔 등록)
       await (_mapController as WebViewController).loadHtmlString(

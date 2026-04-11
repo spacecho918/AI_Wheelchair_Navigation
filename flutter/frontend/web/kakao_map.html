@@ -4,12 +4,32 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <!-- 
-      TODO: Replace YOUR_KAKAO_JAVASCRIPT_KEY with your actual Kakao JavaScript Key.
-      Ensure you have registered the domain used in WebView's baseUrl (e.g., https://gilbeot.app) in the Kakao Developers Console.
-    -->
-    <script type="text/javascript"
-        src="//dapi.kakao.com/v2/maps/sdk.js?appkey=6ff3cb082b2de3ee67a2a1e74076eadf"></script>
+    <script>
+      window.addEventListener('DOMContentLoaded', function() {
+        var params = new URLSearchParams(window.location.search);
+        var appkey = params.get('appkey');
+        if (!appkey || appkey === '') { 
+            document.body.innerHTML = '<h2 style="color:red; padding: 20px;">에러: appkey 값이 URL에 없습니다! (.env 파일 로드 실패)</h2>';
+            return; 
+        }
+        var script = document.createElement('script');
+        script.src = 'https://dapi.kakao.com/v2/maps/sdk.js?appkey=' + appkey + '&libraries=services,clusterer,drawing&autoload=false';
+        script.onload = function() {
+          kakao.maps.load(function() {
+            try {
+                initMap();
+            } catch (e) {
+                document.body.innerHTML = '<h2 style="color:red; padding: 20px;">지도 초기화 에러: ' + e.message + '</h2>';
+            }
+          });
+        };
+        script.onerror = function() {
+            document.body.innerHTML = '<h2 style="color:red; padding: 20px;">카카오 SDK 스크립트 로드 실패 (CORS 또는 키 오류)</h2>';
+        };
+        document.head.appendChild(script);
+      });
+    </script>
+
     <style>
         html,
         body {
@@ -32,6 +52,7 @@
 <body>
     <div id="map"></div>
     <script>
+        function initMap() {
         var container = document.getElementById('map');
 
         // Function to get URL parameters
@@ -550,6 +571,7 @@
                 window.parent.postMessage(message, '*');
             }
         });
+        } // end initMap
     </script>
 </body>
 

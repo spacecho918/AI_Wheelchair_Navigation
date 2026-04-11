@@ -13,6 +13,7 @@ import 'package:gilbeot/helpers/kakao_map_helper.dart';
 import 'package:gilbeot/services/api_service.dart';
 import 'package:gilbeot/services/navigation_state_service.dart';
 import 'package:gilbeot/app_route_observer.dart';
+import 'package:gilbeot/config/kakao_config.dart';
 import 'camera_screen.dart';
 import 'navigation_end_screen.dart';
 
@@ -488,8 +489,9 @@ class _NavigationScreenState extends State<NavigationScreen> with RouteAware {
     if (kIsWeb) {
       // 웹: URL 파라미터로 초기화 + 캐시 방지
       // level=1 (최대 확대), mapId=navigation (iframe 식별용)
+      final jsKey = KakaoConfig.jsAppKey;
       var url =
-          '${Uri.base.origin}/kakao_map.html?lat=$lat&lng=$lng&marker=false&level=1&mapId=navigation&t=${DateTime.now().millisecondsSinceEpoch}';
+          '${Uri.base.origin}/kakao_map.html?appkey=$jsKey&lat=$lat&lng=$lng&marker=false&level=1&mapId=navigation&t=${DateTime.now().millisecondsSinceEpoch}';
 
       _mapController!.loadRequest(Uri.parse(url));
 
@@ -500,6 +502,7 @@ class _NavigationScreenState extends State<NavigationScreen> with RouteAware {
     } else {
       // 모바일: HTML 직접 로드 후 onPageFinished에서 _onMapReady 호출
       String fileText = await rootBundle.loadString('assets/kakao_map.html');
+      fileText = fileText.replaceAll('__KAKAO_KEY__', KakaoConfig.jsAppKey);
       await _mapController!.loadHtmlString(
         fileText,
         baseUrl: 'https://gilbeot.app',

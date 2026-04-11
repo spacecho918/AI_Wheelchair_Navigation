@@ -7,6 +7,7 @@ import 'package:webview_flutter/webview_flutter.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
 // Import conditional helper
 import 'package:gilbeot/helpers/kakao_map_helper.dart';
+import 'package:gilbeot/config/kakao_config.dart';
 
 import 'package:gilbeot/screens/location_search_screen.dart'; // 장소 검색 화면
 import 'package:gilbeot/screens/navigation_screen.dart';
@@ -112,8 +113,9 @@ class _RouteSearchScreenState extends State<RouteSearchScreen> {
       if (kIsWeb) {
         // 웹: URL 파라미터로 초기화
         // mapId 전달, level=3 적당한 줌
+        final jsKey = KakaoConfig.jsAppKey;
         var url =
-            '${Uri.base.origin}/kakao_map.html?v=${DateTime.now().millisecondsSinceEpoch}&mapId=$_mapId&level=3';
+            '${Uri.base.origin}/kakao_map.html?appkey=$jsKey&v=${DateTime.now().millisecondsSinceEpoch}&mapId=$_mapId&level=3';
 
         // 출발지 좌표가 있으면 거기를 중심으로 (없으면 기본 서울)
         final startLatLng = _getPlaceLatLng(_startPlace);
@@ -141,6 +143,7 @@ class _RouteSearchScreenState extends State<RouteSearchScreen> {
         );
 
         String fileText = await rootBundle.loadString('assets/kakao_map.html');
+        fileText = fileText.replaceAll('__KAKAO_KEY__', KakaoConfig.jsAppKey);
         await _mapController!.loadHtmlString(
           fileText,
           baseUrl: 'https://gilbeot.app',

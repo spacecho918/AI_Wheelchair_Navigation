@@ -8,6 +8,7 @@ import 'package:pointer_interceptor/pointer_interceptor.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:gilbeot/services/kakao_service.dart';
 import 'package:gilbeot/helpers/kakao_map_helper.dart';
+import 'package:gilbeot/config/kakao_config.dart';
 import 'dart:convert';
 
 class LocationAdjustScreen extends StatefulWidget {
@@ -161,11 +162,12 @@ class _LocationAdjustScreenState extends State<LocationAdjustScreen> {
       if (kIsWeb) {
         final lat = _currentCenter.latitude;
         final lng = _currentCenter.longitude;
+        final jsKey = KakaoConfig.jsAppKey;
         debugPrint('Loading web map with initial center: $lat, $lng');
 
         await _mapController!.loadRequest(
           Uri.parse(
-            '${Uri.base.origin}/kakao_map.html?v=${DateTime.now().millisecondsSinceEpoch}&lat=$lat&lng=$lng',
+            '${Uri.base.origin}/kakao_map.html?appkey=$jsKey&v=${DateTime.now().millisecondsSinceEpoch}&lat=$lat&lng=$lng',
           ),
         );
 
@@ -186,6 +188,7 @@ class _LocationAdjustScreenState extends State<LocationAdjustScreen> {
         });
       } else {
         String fileText = await rootBundle.loadString('assets/kakao_map.html');
+        fileText = fileText.replaceAll('__KAKAO_KEY__', KakaoConfig.jsAppKey);
         await _mapController!.loadHtmlString(
           fileText,
           baseUrl: 'https://gilbeot.app',
