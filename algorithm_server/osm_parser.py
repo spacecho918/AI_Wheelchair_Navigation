@@ -22,10 +22,10 @@ JEONGWANG_STATION_LAT = 37.35166
 JEONGWANG_STATION_LON = 126.74279
 
 # 바운딩 박스
-BBOX_NORTH = 37.363  # 북쪽 경계
+BBOX_NORTH = 37.373  # 북쪽 경계
 BBOX_SOUTH = 37.330  # 남쪽 경계
-BBOX_EAST = 126.750  # 동쪽 경계
-BBOX_WEST = 126.720  # 서쪽 경계
+BBOX_EAST = 126.755  # 동쪽 경계
+BBOX_WEST = 126.715  # 서쪽 경계
 
 
 class OSMGraphBuilder:
