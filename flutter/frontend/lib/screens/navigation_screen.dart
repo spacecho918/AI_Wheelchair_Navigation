@@ -61,6 +61,9 @@ class _NavigationScreenState extends State<NavigationScreen> with RouteAware {
   late String _totalDistance;
   late int _avoidedObstacles;
 
+  List<Map<String, dynamic>> _activeObstacles = [];
+  final Set<String> _promptedObstacleIds = {};
+
   @override
   void initState() {
     super.initState();
@@ -154,6 +157,7 @@ class _NavigationScreenState extends State<NavigationScreen> with RouteAware {
         });
 
         _updateNavigationProgress(newLocation);
+        _checkNearbyObstacles(newLocation);
 
         if (_mapController != null) {
           // 마커 위치 업데이트
@@ -169,6 +173,146 @@ class _NavigationScreenState extends State<NavigationScreen> with RouteAware {
         debugPrint("Location tracking error: $e");
       }
     });
+  }
+
+  // ===== 주행 중 주변 장애물 확인 알림 =====
+
+  void _checkNearbyObstacles(LatLng currentLoc) {
+    if (_activeObstacles.isEmpty) return;
+    const distanceCalculator = Distance();
+
+    for (var obstacle in _activeObstacles) {
+      final obsId = obstacle['id']?.toString();
+      if (obsId == null || _promptedObstacleIds.contains(obsId)) continue;
+
+      final obsLat = obstacle['lat'] as double?;
+      final obsLng = obstacle['lng'] as double?;
+      if (obsLat == null || obsLng == null) continue;
+
+      final meter = distanceCalculator(currentLoc, LatLng(obsLat, obsLng));
+      if (meter <= 40.0) {
+        _promptedObstacleIds.add(obsId);
+        _showObstacleConfirmDialog(obstacle);
+        // 겹쳐서 다이얼로그가 여러 개 뜨는 것을 방지
+        break;
+      }
+    }
+  }
+
+  void _showObstacleConfirmDialog(Map<String, dynamic> obstacle) {
+    final type = obstacle['type'] ?? '장애물';
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: false,
+      barrierColor: Colors.transparent, // 지도가 보이도록 투명 배경
+      transitionDuration: const Duration(milliseconds: 300),
+      pageBuilder: (context, anim1, anim2) {
+        return Align(
+          alignment: Alignment.topCenter,
+          child: Container(
+            margin: EdgeInsets.only(
+              top: MediaQuery.of(context).padding.top + 120, // 네비게이션 안내 카드 아래에 위치
+              left: 16,
+              right: 16,
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).cardColor,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.15),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '주변 $type 확인',
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                    ),
+                    const SizedBox(height: 8),
+                    Text('전방 40m 내에 이전에 제보된 $type(이)가 있습니다.\n해당 장애물이 아직 존재하나요?'),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () {
+                              debugPrint('사용자 응답: 장애물($type) 존재함');
+                              ApiService.submitObstacleVerification(obstacle['id'].toString(), 'exists');
+                              Navigator.of(context).pop();
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF00C853),
+                              elevation: 0,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                            child: const Text('예(존재함)', style: TextStyle(color: Colors.white)),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () async {
+                              debugPrint('사용자 응답: 장애물($type) 사라짐');
+                              Navigator.of(context).pop(); // 화면을 가리지 않게 창 먼저 닫기
+                              await ApiService.submitObstacleVerification(obstacle['id'].toString(), 'missing');
+                              // 백엔드 처리(3회 누적 등) 대기 후, 실시간 경로 재탐색 시도
+                              _rerouteFromCurrentLocation();
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFFFEBEE),
+                              foregroundColor: Colors.red,
+                              elevation: 0,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                            child: const Text('아니오(사라짐)'),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: TextButton(
+                        onPressed: () {
+                          debugPrint('사용자 응답: 장애물($type) 확인 불가 (무시)');
+                          Navigator.of(context).pop();
+                        },
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        child: const Text('확인불가', style: TextStyle(color: Colors.grey)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+      transitionBuilder: (context, anim1, anim2, child) {
+        return SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0, -0.1),
+            end: Offset.zero,
+          ).animate(anim1),
+          child: FadeTransition(
+            opacity: anim1,
+            child: child,
+          ),
+        );
+      },
+    );
   }
 
   // ===== 장애물 제보 후 재탐색 관련 =====
@@ -467,8 +611,13 @@ class _NavigationScreenState extends State<NavigationScreen> with RouteAware {
   Future<void> _loadObstacleMarkers() async {
     try {
       final obstacles = await ApiService.getActiveObstacles();
-      if (!mounted || _mapController == null) return;
+      if (!mounted) return;
+      
+      setState(() {
+        _activeObstacles = obstacles;
+      });
 
+      if (_mapController == null) return;
       KakaoMapHelper.setObstacleMarkers(
         _mapController,
         obstacles,

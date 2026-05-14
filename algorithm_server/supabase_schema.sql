@@ -424,3 +424,100 @@ BEGIN
     RETURN NEW;
 END;
 $$;
+
+DROP TRIGGER IF EXISTS trg_score_on_likes ON likes;
+CREATE TRIGGER trg_score_on_likes
+    AFTER INSERT OR UPDATE ON likes
+    FOR EACH ROW
+    EXECUTE FUNCTION award_score_on_likes();
+
+-- ================================================================
+-- [12] 트리거: 싫어요 5개 누적 시 장애물 자동 비활성화
+-- ================================================================
+CREATE OR REPLACE FUNCTION deactivate_obstacle_on_dislikes()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_dislike_count INTEGER;
+BEGIN
+    -- '싫어요 추가' 상태인지 확인 (is_like = false)
+    IF NEW.is_like = true THEN
+        RETURN NEW;
+    END IF;
+
+    -- 제보의 총 싫어요 개수 계산
+    SELECT COUNT(*) INTO v_dislike_count
+    FROM likes
+    WHERE obstacle_id = NEW.obstacle_id AND is_like = false;
+
+    -- 싫어요가 5개 이상이면 해당 장애물을 비활성화
+    IF v_dislike_count >= 5 THEN
+        UPDATE obstacles
+        SET is_active = false
+        WHERE id = NEW.obstacle_id AND is_active = true;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_deactivate_on_dislikes ON likes;
+CREATE TRIGGER trg_deactivate_on_dislikes
+    AFTER INSERT OR UPDATE ON likes
+    FOR EACH ROW
+    EXECUTE FUNCTION deactivate_obstacle_on_dislikes();
+
+-- ================================================================
+-- [13] 주행 중 장애물 존재 여부 검증 (obstacle_verifications)
+-- ================================================================
+CREATE TABLE IF NOT EXISTS obstacle_verifications (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    obstacle_id UUID NOT NULL REFERENCES obstacles(id) ON DELETE CASCADE,
+    status VARCHAR(20) NOT NULL, -- 'exists'(존재함), 'missing'(사라짐)
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(user_id, obstacle_id)
+);
+
+ALTER TABLE obstacle_verifications ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "verifications_read_all" ON obstacle_verifications FOR SELECT USING (true);
+CREATE POLICY "verifications_insert_own" ON obstacle_verifications FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "verifications_update_own" ON obstacle_verifications FOR UPDATE USING (auth.uid() = user_id);
+
+-- '사라짐(missing)' 3회 누적 시 비활성화 트리거
+CREATE OR REPLACE FUNCTION deactivate_obstacle_on_missing()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_missing_count INTEGER;
+BEGIN
+    -- 상태가 'missing'일 때만 검사
+    IF NEW.status != 'missing' THEN
+        RETURN NEW;
+    END IF;
+
+    -- 해당 장애물의 'missing' 개수 계산
+    SELECT COUNT(*) INTO v_missing_count
+    FROM obstacle_verifications
+    WHERE obstacle_id = NEW.obstacle_id AND status = 'missing';
+
+    -- 3회 이상이면 비활성화
+    IF v_missing_count >= 3 THEN
+        UPDATE obstacles
+        SET is_active = false
+        WHERE id = NEW.obstacle_id AND is_active = true;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_deactivate_on_missing ON obstacle_verifications;
+CREATE TRIGGER trg_deactivate_on_missing
+    AFTER INSERT OR UPDATE ON obstacle_verifications
+    FOR EACH ROW
+    EXECUTE FUNCTION deactivate_obstacle_on_missing();

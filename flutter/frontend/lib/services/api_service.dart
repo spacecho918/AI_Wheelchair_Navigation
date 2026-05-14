@@ -1256,4 +1256,19 @@ class ApiService {
       return {'success': false, 'message': e.toString()};
     }
   }
+
+  /// 주행 중 장애물 존재 여부 검증 데이터 전송
+  static Future<void> submitObstacleVerification(String obstacleId, String status) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) return;
+    try {
+      await _supabase.from('obstacle_verifications').upsert({
+        'user_id': user.id,
+        'obstacle_id': obstacleId,
+        'status': status,
+      });
+    } catch (e) {
+      debugPrint('Error submitting verification: $e');
+    }
+  }
 }
