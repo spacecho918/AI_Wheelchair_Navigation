@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
 import '../widgets/custom_back_button.dart';
 import '../services/auth_service.dart';
+import '../services/api_service.dart';
+import 'community_detail_screen.dart';
 
 class NotificationScreen extends StatefulWidget {
   const NotificationScreen({super.key});
@@ -135,6 +137,30 @@ class _NotificationScreenState extends State<NotificationScreen> {
       }
     } catch (e) {
       debugPrint('모두 읽음 처리 오류: $e');
+    }
+  }
+
+  Future<void> _onNotificationTap(Map<String, dynamic> item) async {
+    await _markAsRead(item);
+
+    final deeplinkUrl = item['deeplink_url']?.toString();
+    if (deeplinkUrl == null || deeplinkUrl.isEmpty) return;
+
+    final match = RegExp(r'^/community/(.+)$').firstMatch(deeplinkUrl);
+    if (match == null) return;
+    final obstacleId = match.group(1);
+    if (obstacleId == null) return;
+
+    try {
+      final report = await ApiService.getReportById(obstacleId);
+      if (!mounted || report == null) return;
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => CommunityDetailScreen(report: report),
+        ),
+      );
+    } catch (e) {
+      debugPrint('게시글 이동 오류: $e');
     }
   }
 
@@ -330,7 +356,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
     final iconColor = _getIconColor(type);
 
     return GestureDetector(
-      onTap: () => _markAsRead(item),
+      onTap: () => _onNotificationTap(item),
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),

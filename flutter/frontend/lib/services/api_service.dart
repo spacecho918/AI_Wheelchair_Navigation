@@ -464,6 +464,81 @@ class ApiService {
     }
   }
 
+  /// 단일 게시글 조회 (알림 딥링크용) — getCommunityReports와 동일한 형태 반환
+  static Future<Map<String, dynamic>?> getReportById(String obstacleId) async {
+    try {
+      final item = await _supabase
+          .from('obstacles')
+          .select('*')
+          .eq('id', obstacleId)
+          .single();
+
+      int likes = 0, dislikes = 0, comments = 0;
+      try {
+        final likesData = await _supabase
+            .from('likes')
+            .select('is_like')
+            .eq('obstacle_id', obstacleId);
+        for (final row in likesData as List) {
+          if (row['is_like'] == true) likes++; else dislikes++;
+        }
+      } catch (_) {}
+      try {
+        final commentsData = await _supabase
+            .from('comments')
+            .select('obstacle_id')
+            .eq('obstacle_id', obstacleId);
+        comments = (commentsData as List).length;
+      } catch (_) {}
+
+      final reportedBy = item['reported_by']?.toString();
+      String user = '알 수 없음';
+      String? avatarUrl;
+      if (reportedBy != null) {
+        try {
+          final profile = await _supabase
+              .from('user_profiles')
+              .select('nickname, profile_image_url')
+              .eq('user_id', reportedBy)
+              .maybeSingle();
+          user = profile?['nickname']?.toString() ?? '알 수 없음';
+          avatarUrl = profile?['profile_image_url']?.toString();
+        } catch (_) {}
+      }
+
+      String content = item['description'] ?? '';
+      String address = '위치 정보 없음';
+      final locMatch = RegExp(r'\[Location: (.*?)\]').firstMatch(content);
+      if (locMatch != null) {
+        address = locMatch.group(1)!;
+        content = content.replaceAll(locMatch.group(0)!, '').trim();
+      }
+      final userMatch = RegExp(r'\[User: (.*?)\]').firstMatch(content);
+      if (userMatch != null) {
+        content = content.replaceAll(userMatch.group(0)!, '').trim();
+      }
+
+      return {
+        'id': obstacleId,
+        'tag': item['obstacle_type'],
+        'user': user,
+        'user_avatar_url': avatarUrl,
+        'time': item['created_at'],
+        'timestamp': item['created_at'],
+        'address': address,
+        'content': content,
+        'likes': likes,
+        'dislikes': dislikes,
+        'comments': comments,
+        'imageUrl': item['image_url'],
+        if (reportedBy != null) 'reported_by': reportedBy,
+      };
+    } catch (e) {
+      debugPrint('getReportById error: $e');
+      return null;
+    }
+  }
+
   /// 5-1. 현재 사용자의 좋아요/싫어요 상태 (상세 화면용). true=좋아요, false=싫어요, null=미선택
   static Future<bool?> getMyReaction(String reportId) async {
     final user = AuthService.currentUser;

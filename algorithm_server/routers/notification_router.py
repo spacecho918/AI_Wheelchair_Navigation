@@ -72,7 +72,11 @@ async def notification_webhook(
             user_id=user_id,
             title=title,
             body=body,
-            data={"type": noti_type, "notification_id": str(record.get("notification_id", ""))},
+            data={
+                "type": noti_type,
+                "notification_id": str(record.get("notification_id", "")),
+                "deeplink_url": str(record.get("deeplink_url", "")),
+            },
         )
         return {"ok": True, "sent": success}
     except Exception as e:

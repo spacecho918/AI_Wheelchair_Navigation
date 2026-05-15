@@ -296,6 +296,7 @@ class _LoginScreenWrapperState extends State<LoginScreenWrapper>
     if (!mounted) return;
     if (AuthService.currentUser != null) {
       if (!kIsWeb) {
+        FcmService.instance.navigatorKey = _rootNavigatorKey;
         FcmService.instance.initialize();
       }
       // 경로 안내 중 새로고침 여부 확인

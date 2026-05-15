@@ -2,7 +2,10 @@ import 'dart:convert';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:gilbeot/screens/community_detail_screen.dart';
+import 'package:gilbeot/services/api_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 // 앱이 완전히 종료된 상태에서 수신되는 메시지 핸들러 (top-level 필수)
@@ -18,6 +21,9 @@ class FcmService {
   final _messaging = FirebaseMessaging.instance;
   final _localNotifications = FlutterLocalNotificationsPlugin();
 
+  // main.dart의 navigatorKey를 주입받아 사용
+  GlobalKey<NavigatorState>? navigatorKey;
+
   static const _androidChannel = AndroidNotificationChannel(
     'gilbeot_high_importance',
     '길벗 알림',
@@ -26,25 +32,21 @@ class FcmService {
   );
 
   Future<void> initialize() async {
-    // 백그라운드 핸들러 등록
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
-    // Android 알림 채널 생성
     await _localNotifications
         .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>()
         ?.createNotificationChannel(_androidChannel);
 
-    // 로컬 알림 초기화
     const androidSettings =
         AndroidInitializationSettings('@mipmap/ic_launcher');
     const iosSettings = DarwinInitializationSettings();
     await _localNotifications.initialize(
-      const InitializationSettings(
-          android: androidSettings, iOS: iosSettings),
+      const InitializationSettings(android: androidSettings, iOS: iosSettings),
+      onDidReceiveNotificationResponse: _onLocalNotificationTap,
     );
 
-    // 알림 권한 요청
     final settings = await _messaging.requestPermission(
       alert: true,
       badge: true,
@@ -52,23 +54,33 @@ class FcmService {
     );
     debugPrint('[FCM] 권한 상태: ${settings.authorizationStatus}');
 
-    // Android 13+ 알림 권한 (flutter_local_notifications)
     await _localNotifications
         .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>()
         ?.requestNotificationsPermission();
 
-    // 포그라운드 알림 표시 설정 (iOS)
     await _messaging.setForegroundNotificationPresentationOptions(
       alert: true,
       badge: true,
       sound: true,
     );
 
-    // 포그라운드 메시지 수신 시 로컬 알림으로 표시
     FirebaseMessaging.onMessage.listen(_onForegroundMessage);
 
-    // FCM 토큰 발급 및 저장
+    // 백그라운드에서 알림 탭
+    FirebaseMessaging.onMessageOpenedApp.listen((message) {
+      _handleDeeplink(message.data);
+    });
+
+    // 앱 종료 상태에서 알림 탭
+    final initial = await _messaging.getInitialMessage();
+    if (initial != null) {
+      // 앱이 완전히 초기화된 후 이동
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _handleDeeplink(initial.data);
+      });
+    }
+
     await _saveToken();
     _messaging.onTokenRefresh.listen(_uploadToken);
   }
@@ -94,6 +106,41 @@ class FcmService {
       ),
       payload: jsonEncode(message.data),
     );
+  }
+
+  void _onLocalNotificationTap(NotificationResponse response) {
+    if (response.payload == null) return;
+    try {
+      final data = jsonDecode(response.payload!) as Map<String, dynamic>;
+      _handleDeeplink(data);
+    } catch (e) {
+      debugPrint('[FCM] 로컬 알림 탭 파싱 실패: $e');
+    }
+  }
+
+  Future<void> _handleDeeplink(Map<String, dynamic> data) async {
+    final deeplinkUrl = data['deeplink_url'] as String?;
+    if (deeplinkUrl == null || deeplinkUrl.isEmpty) return;
+
+    // /community/{obstacle_id} 형태 파싱
+    final match = RegExp(r'^/community/(.+)$').firstMatch(deeplinkUrl);
+    if (match == null) return;
+    final obstacleId = match.group(1);
+    if (obstacleId == null) return;
+
+    try {
+      final report = await ApiService.getReportById(obstacleId);
+      final context = navigatorKey?.currentContext;
+      if (report == null || context == null) return;
+
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => CommunityDetailScreen(report: report),
+        ),
+      );
+    } catch (e) {
+      debugPrint('[FCM] 딥링크 이동 실패: $e');
+    }
   }
 
   Future<void> _saveToken() async {
