@@ -37,7 +37,7 @@ from edge_data_loader import EdgeDataLoader
 from dataclasses import asdict
 
 # 라우터 임포트
-from routers import report_router
+from routers import report_router, notification_router
 
 # 로깅 설정
 logging.basicConfig(level=logging.INFO)
@@ -55,6 +55,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # 라우터 등록
 app.include_router(report_router.router)
+app.include_router(notification_router.router)
 
 # CORS 설정 (Flutter 앱 연동용)
 app.add_middleware(

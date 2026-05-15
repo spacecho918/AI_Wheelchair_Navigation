@@ -1,15 +1,18 @@
 import 'dart:async';
 
 import 'package:app_links/app_links.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:gilbeot/app_route_observer.dart';
+import 'package:gilbeot/firebase_options.dart';
 import 'package:gilbeot/screens/login_screen.dart';
 import 'package:gilbeot/screens/map_screen.dart';
 import 'package:gilbeot/screens/navigation_screen.dart';
 import 'package:gilbeot/services/auth_service.dart';
+import 'package:gilbeot/services/fcm_service.dart';
 import 'package:gilbeot/services/navigation_state_service.dart';
 import 'package:gilbeot/services/recent_searches_service.dart';
 import 'package:gilbeot/services/session_storage_local_storage.dart';
@@ -36,6 +39,9 @@ void main() async {
 
   // .env 파일에서 환경변수 로드
   await dotenv.load(fileName: '.env');
+
+  // Firebase 초기화
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   final supabaseUrl = dotenv.env['SUPABASE_URL'] ?? '';
   final supabaseAnonKey = dotenv.env['SUPABASE_ANON_KEY'] ?? '';
@@ -289,6 +295,9 @@ class _LoginScreenWrapperState extends State<LoginScreenWrapper>
   void _redirectIfSession() {
     if (!mounted) return;
     if (AuthService.currentUser != null) {
+      if (!kIsWeb) {
+        FcmService.instance.initialize();
+      }
       // 경로 안내 중 새로고침 여부 확인
       if (kIsWeb) {
         final navState = NavigationStateService.load();

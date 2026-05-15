@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "426256318070",
+    "project_id": "gilbeot-51e5f",
+    "storage_bucket": "gilbeot-51e5f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:426256318070:android:e306bbcf437915cb69e957",
+        "android_client_info": {
+          "package_name": "com.example.gilbeot"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB29uOkcdl2BCetM4ekTGsQKwQDXi1YOGg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

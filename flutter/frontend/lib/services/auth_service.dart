@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:gilbeot/services/fcm_service.dart';
 import 'package:gilbeot/services/pkce_async_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -79,6 +80,7 @@ class AuthService {
   /// 로그아웃 (OAuth PKCE code_verifier 키 삭제 → 재로그인 시 새 PKCE로 진행)
   static Future<void> signOut() async {
     try {
+      await FcmService.instance.deleteToken();
       await _client.auth.signOut();
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(supabasePkceCodeVerifierKey);

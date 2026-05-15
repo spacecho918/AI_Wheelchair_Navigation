@@ -3,6 +3,10 @@
 .env.local
 .env.*.local
 
+# Firebase 서비스 계정 키
+firebase-service-account.json
+*-service-account.json
+
 # Python
 __pycache__/
 *.py[cod]
