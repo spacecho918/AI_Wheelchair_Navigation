@@ -37,6 +37,16 @@ final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // 상태바(Status Bar) 불투명 설정 – edge-to-edge 비활성화
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.white,
+      statusBarIconBrightness: Brightness.dark, // 어두운 아이콘 (라이트 모드)
+      statusBarBrightness: Brightness.light, // iOS용
+    ),
+  );
+
   // .env 파일에서 환경변수 로드
   await dotenv.load(fileName: '.env');
 
@@ -159,41 +169,77 @@ class _MyAppState extends State<MyApp> {
     setState(() {
       _themeMode = mode;
     });
+    // 상태바 색상 즉시 반영
+    final isDark = mode == ThemeMode.dark ||
+        (mode == ThemeMode.system &&
+            WidgetsBinding.instance.platformDispatcher.platformBrightness ==
+                Brightness.dark);
+    SystemChrome.setSystemUIOverlayStyle(
+      SystemUiOverlayStyle(
+        statusBarColor: isDark ? const Color(0xFF121212) : Colors.white,
+        statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+        statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      navigatorKey: _rootNavigatorKey,
-      navigatorObservers: [routeObserver],
-      debugShowCheckedModeBanner: false,
-      title: 'Flutter Demo',
-      themeMode: _themeMode,
+    // 현재 테마 모드에 따라 다크/라이트 판별
+    final isDark = _themeMode == ThemeMode.dark ||
+        (_themeMode == ThemeMode.system &&
+            WidgetsBinding.instance.platformDispatcher.platformBrightness ==
+                Brightness.dark);
 
-      theme: ThemeData(
-        brightness: Brightness.light,
-        scaffoldBackgroundColor: Colors.white,
-        cardColor: Colors.white,
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF00C853)),
-        inputDecorationTheme: const InputDecorationTheme(
-          border: OutlineInputBorder(),
+    final overlayStyle = SystemUiOverlayStyle(
+      statusBarColor: isDark ? const Color(0xFF121212) : Colors.white,
+      statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+      statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
+    );
+
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: overlayStyle,
+      child: MaterialApp(
+        navigatorKey: _rootNavigatorKey,
+        navigatorObservers: [routeObserver],
+        debugShowCheckedModeBanner: false,
+        title: 'Flutter Demo',
+        themeMode: _themeMode,
+
+        theme: ThemeData(
+          brightness: Brightness.light,
+          scaffoldBackgroundColor: Colors.white,
+          cardColor: Colors.white,
+          colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF00C853)),
+          inputDecorationTheme: const InputDecorationTheme(
+            border: OutlineInputBorder(),
+          ),
+          appBarTheme: AppBarTheme(
+            systemOverlayStyle: overlayStyle,
+          ),
+          fontFamily: 'Pretendard',
         ),
 
-        fontFamily: 'Pretendard',
-      ),
-
-      darkTheme: ThemeData(
-        brightness: Brightness.dark,
-        scaffoldBackgroundColor: const Color(0xFF121212),
-        cardColor: const Color(0xFF1E1E1E),
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF00C853),
+        darkTheme: ThemeData(
           brightness: Brightness.dark,
+          scaffoldBackgroundColor: const Color(0xFF121212),
+          cardColor: const Color(0xFF1E1E1E),
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: const Color(0xFF00C853),
+            brightness: Brightness.dark,
+          ),
+          appBarTheme: const AppBarTheme(
+            systemOverlayStyle: SystemUiOverlayStyle(
+              statusBarColor: Color(0xFF121212),
+              statusBarIconBrightness: Brightness.light,
+              statusBarBrightness: Brightness.dark,
+            ),
+          ),
+          fontFamily: 'Pretendard',
         ),
-        fontFamily: 'Pretendard',
-      ),
 
-      home: const LoginScreenWrapper(),
+        home: const LoginScreenWrapper(),
+      ),
     );
   }
 }
