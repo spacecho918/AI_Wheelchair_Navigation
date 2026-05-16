@@ -41,6 +41,7 @@ def send_push_notification(
     title: str,
     body: str,
     data: Optional[dict] = None,
+    supabase_client=None,
 ) -> bool:
     """FCM 토큰으로 푸시 알림 발송. 성공 시 True 반환."""
     if not _init_firebase():
@@ -69,7 +70,19 @@ def send_push_notification(
         logger.info("[FCM] 알림 발송 성공 → token: %s…", fcm_token[:20])
         return True
     except Exception as e:
-        logger.error("[FCM] 알림 발송 실패: %s", e)
+        error_str = str(e)
+        # 만료되거나 무효한 토큰은 DB에서 삭제
+        if supabase_client and any(
+            keyword in error_str
+            for keyword in ("registration-token-not-registered", "invalid-registration-token", "Unregistered")
+        ):
+            logger.warning("[FCM] 무효 토큰 감지, DB에서 삭제: %s…", fcm_token[:20])
+            try:
+                supabase_client.table("user_fcm_tokens").delete().eq("token", fcm_token).execute()
+            except Exception as del_e:
+                logger.warning("[FCM] 토큰 삭제 실패: %s", del_e)
+        else:
+            logger.error("[FCM] 알림 발송 실패: %s", e)
         return False
 
 
@@ -86,14 +99,14 @@ def send_push_to_user(
             supabase_client.table("user_fcm_tokens")
             .select("token")
             .eq("user_id", user_id)
-            .single()
             .execute()
         )
-        token = res.data.get("token") if res.data else None
+        rows = res.data or []
+        token = rows[0].get("token") if rows else None
         if not token:
             logger.info("[FCM] user_id=%s 의 FCM 토큰 없음 (알림 생략)", user_id)
             return False
-        return send_push_notification(token, title, body, data)
+        return send_push_notification(token, title, body, data, supabase_client=supabase_client)
     except Exception as e:
         logger.warning("[FCM] 토큰 조회 실패 (user_id=%s): %s", user_id, e)
         return False

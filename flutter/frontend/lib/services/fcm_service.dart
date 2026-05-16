@@ -31,7 +31,15 @@ class FcmService {
     importance: Importance.high,
   );
 
+  bool _initialized = false;
+
   Future<void> initialize() async {
+    if (_initialized) {
+      await _saveToken();
+      return;
+    }
+    _initialized = true;
+
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
     await _localNotifications
