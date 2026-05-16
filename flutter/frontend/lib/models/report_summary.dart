@@ -9,6 +9,9 @@ class ReportSummary {
   final DateTime date;
   final String content;
   final String? imageUrl;
+  final String? reportedBy;
+  final String? authorNickname;
+  final String? authorAvatarUrl;
 
   ReportSummary({
     required this.id,
@@ -21,6 +24,9 @@ class ReportSummary {
     required this.date,
     this.content = '',
     this.imageUrl,
+    this.reportedBy,
+    this.authorNickname,
+    this.authorAvatarUrl,
   });
 
   factory ReportSummary.fromJson(Map<String, dynamic> json) {
@@ -35,6 +41,9 @@ class ReportSummary {
       date: DateTime.parse(json['date']),
       content: json['content'] ?? '',
       imageUrl: json['image_url'],
+      reportedBy: json['reported_by']?.toString(),
+      authorNickname: json['author_nickname'] as String?,
+      authorAvatarUrl: json['author_avatar_url'] as String?,
     );
   }
 }

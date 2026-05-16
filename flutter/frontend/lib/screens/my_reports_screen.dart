@@ -105,6 +105,7 @@ class _MyReportsScreenState extends State<MyReportsScreen>
       'tag': item['title'], // Map title to tag
       'commentContent': isComment ? item['content'] : null,
       'imageUrl': item['imageUrl'],
+      if (item['reported_by'] != null) 'reported_by': item['reported_by'],
     };
 
     Navigator.push(
@@ -275,6 +276,33 @@ class _MyReportsScreenState extends State<MyReportsScreen>
     return Container(width: 1, height: 40, color: Colors.grey.shade200);
   }
 
+  String _displayName(ReportSummary report) {
+    return report.authorNickname ??
+        _userProfile?.nickname ??
+        '나';
+  }
+
+  String? _avatarUrl(ReportSummary report) {
+    final url = report.authorAvatarUrl ?? _userProfile?.profileImage;
+    return url != null && url.isNotEmpty ? url : null;
+  }
+
+  Widget _buildUserAvatar(ReportSummary report) {
+    final name = _displayName(report);
+    final avatarUrl = _avatarUrl(report);
+    return CircleAvatar(
+      backgroundColor: Colors.grey.shade200,
+      radius: 14,
+      backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl) : null,
+      child: avatarUrl == null
+          ? Text(
+              name.isNotEmpty ? name[0] : '?',
+              style: TextStyle(fontSize: 12, color: textDark),
+            )
+          : null,
+    );
+  }
+
   Widget _buildReportList() {
     if (_reports.isEmpty) {
       return const Center(child: Text('작성한 제보가 없습니다.'));
@@ -287,9 +315,12 @@ class _MyReportsScreenState extends State<MyReportsScreen>
         final report = _reports[index];
 
         // Create a map for navigation
+        final displayName = _displayName(report);
+        final avatarUrl = _avatarUrl(report);
         final reportMap = {
           'id': report.id,
-          'user': _userProfile?.nickname ?? '나',
+          'user': displayName,
+          if (avatarUrl != null) 'user_avatar_url': avatarUrl,
           'time': '${report.date.month}월 ${report.date.day}일',
           'address': report.location,
           'location': report.location,
@@ -301,6 +332,7 @@ class _MyReportsScreenState extends State<MyReportsScreen>
           'status': report.status,
           'date': report.date,
           'imageUrl': report.imageUrl,
+          if (report.reportedBy != null) 'reported_by': report.reportedBy,
         };
 
         return Center(
@@ -408,20 +440,13 @@ class _MyReportsScreenState extends State<MyReportsScreen>
                     // User Info
                     Row(
                       children: [
-                        CircleAvatar(
-                          backgroundColor: Colors.grey.shade200,
-                          radius: 14,
-                          child: Text(
-                            (_userProfile?.nickname ?? '나')[0],
-                            style: TextStyle(fontSize: 12, color: textDark),
-                          ),
-                        ),
+                        _buildUserAvatar(report),
                         const SizedBox(width: 8),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              _userProfile?.nickname ?? '나',
+                              displayName,
                               style: TextStyle(
                                 color: Theme.of(context).brightness == Brightness.dark
                                     ? Colors.white

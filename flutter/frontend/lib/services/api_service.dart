@@ -621,6 +621,34 @@ class ApiService {
         }
       } catch (_) {}
 
+      final reportedByIds = items
+          .map((item) => item['reported_by']?.toString())
+          .whereType<String>()
+          .where((id) => id.isNotEmpty)
+          .toSet()
+          .toList();
+      final authorProfileMap = <String, Map<String, dynamic>>{};
+      if (reportedByIds.isNotEmpty) {
+        try {
+          final profiles = await _supabase
+              .from('user_profiles')
+              .select('user_id, nickname, profile_image_url')
+              .inFilter('user_id', reportedByIds);
+          for (final p in profiles as List) {
+            final uid = p['user_id']?.toString();
+            if (uid != null) {
+              authorProfileMap[uid] = {
+                'nickname': p['nickname'] as String?,
+                'profile_image_url':
+                    (p['profile_image_url'] as String?)?.isNotEmpty == true
+                    ? p['profile_image_url'] as String
+                    : null,
+              };
+            }
+          }
+        } catch (_) {}
+      }
+
       return items.map((item) {
         String content = item['description'] ?? "";
         String address = "위치 정보 없음";
@@ -634,6 +662,10 @@ class ApiService {
           content = content.replaceAll(userMatch.group(0)!, '').trim();
 
         final idStr = item['id']?.toString() ?? '';
+        final reportedBy = item['reported_by']?.toString();
+        final authorProfile = reportedBy != null
+            ? authorProfileMap[reportedBy]
+            : null;
 
         return ReportSummary(
           id: idStr,
@@ -646,6 +678,9 @@ class ApiService {
           date: DateTime.parse(item['created_at']),
           content: content,
           imageUrl: item['image_url'],
+          reportedBy: reportedBy,
+          authorNickname: authorProfile?['nickname'] as String?,
+          authorAvatarUrl: authorProfile?['profile_image_url'] as String?,
         );
       }).toList();
     } catch (e) {
@@ -777,6 +812,13 @@ class ApiService {
     final user = AuthService.currentUser;
     if (user == null) return false;
     try {
+      final obstacle = await _supabase
+          .from('obstacles')
+          .select('reported_by')
+          .eq('id', reportId)
+          .maybeSingle();
+      if (obstacle?['reported_by']?.toString() == user.id) return false;
+
       // 기존 반응 확인
       final existing = await _supabase
           .from('likes')

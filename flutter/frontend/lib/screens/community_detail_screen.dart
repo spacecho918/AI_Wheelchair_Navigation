@@ -4,6 +4,7 @@ import 'package:gilbeot/widgets/custom_back_button.dart';
 import 'package:gilbeot/widgets/common_toast.dart';
 import 'package:gilbeot/screens/report_edit_screen.dart';
 import 'package:gilbeot/services/api_service.dart';
+import 'package:gilbeot/services/auth_service.dart';
 import 'package:gilbeot/utils/time_format.dart';
 
 class CommunityDetailScreen extends StatefulWidget {
@@ -33,6 +34,12 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
   /// 관리자가 본문 수정 후 목록과 맞추기 위한 표시용 (원문 description 파싱 결과)
   String? _displayContentOverride;
   String? _displayAddressOverride;
+
+  bool get _isOwnReport {
+    final reportedBy = widget.report['reported_by']?.toString();
+    final me = AuthService.currentUser?.id;
+    return reportedBy != null && me != null && reportedBy == me;
+  }
 
   @override
   void initState() {
@@ -170,6 +177,10 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
   }
 
   Future<void> _toggleLike() async {
+    if (_isOwnReport) {
+      CommonToast.show(context, '본인 제보에는 좋아요를 할 수 없습니다.');
+      return;
+    }
     // Optimistic Update
     setState(() {
       if (isLiked) {
@@ -204,6 +215,10 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
   }
 
   Future<void> _toggleDislike() async {
+    if (_isOwnReport) {
+      CommonToast.show(context, '본인 제보에는 싫어요를 할 수 없습니다.');
+      return;
+    }
     // Optimistic Update
     setState(() {
       if (isDisliked) {
@@ -606,11 +621,13 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                       const SizedBox(height: 20),
 
                       // 5. Like/Dislike Buttons
-                      Row(
+                      Opacity(
+                        opacity: _isOwnReport ? 0.45 : 1,
+                        child: Row(
                         children: [
                           Expanded(
                             child: GestureDetector(
-                              onTap: _toggleLike,
+                              onTap: _isOwnReport ? null : _toggleLike,
                               child: AnimatedContainer(
                                 duration: const Duration(milliseconds: 200),
                                 padding: const EdgeInsets.symmetric(
@@ -666,7 +683,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                           const SizedBox(width: 12),
                           Expanded(
                             child: GestureDetector(
-                              onTap: _toggleDislike,
+                              onTap: _isOwnReport ? null : _toggleDislike,
                               child: AnimatedContainer(
                                 duration: const Duration(milliseconds: 200),
                                 padding: const EdgeInsets.symmetric(
@@ -720,6 +737,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                             ),
                           ),
                         ],
+                      ),
                       ),
                       const SizedBox(height: 16),
 
