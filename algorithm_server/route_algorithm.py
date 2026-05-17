@@ -431,7 +431,7 @@ class RouteCalculator:
             return "유턴"
 
     def _generate_instructions(self, geometry: List[Tuple[float, float]]) -> List[Dict[str, Any]]:
-        \"\"\"geometry를 기반으로 턴바이턴 안내 메시지 생성\"\"\"
+        #geometry를 기반으로 턴바이턴 안내 메시지 생성
         if len(geometry) < 2:
             return [{"instruction": "도착지에 도달했습니다", "distance": "0m", "pointIndex": 0}]
 
