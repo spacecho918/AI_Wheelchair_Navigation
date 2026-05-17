@@ -458,8 +458,25 @@ class _NavigationScreenState extends State<NavigationScreen> with RouteAware {
     final obsLon = obstacle['lon']!;
     final obsRadius = obstacle['radius']!;
 
-    // 장애물 마커 갱신
-    _loadObstacleMarkers();
+    // 장애물 마커 갱신 (await로 목록이 완전히 갱신된 후 제외 처리 진행)
+    await _loadObstacleMarkers();
+
+    // 방금 제보한 장애물을 확인 알림 대상에서 제외
+    // (좌표가 일치하는 장애물의 ID를 _promptedObstacleIds에 미리 등록)
+    for (var obs in _activeObstacles) {
+      final lat = obs['lat'] as double?;
+      final lng = obs['lng'] as double?;
+      if (lat == null || lng == null) continue;
+      // 좌표가 10m 이내로 일치하면 본인이 방금 제보한 장애물로 판단
+      final dist = const Distance()(LatLng(obsLat, obsLon), LatLng(lat, lng));
+      if (dist <= 10.0) {
+        final id = obs['id']?.toString();
+        if (id != null) {
+          _promptedObstacleIds.add(id);
+          debugPrint('본인 제보 장애물($id) → 확인 알림 제외 처리');
+        }
+      }
+    }
 
     // 장애물이 현재 경로와 겹치는지 확인
     if (_isObstacleOnRoute(obsLat, obsLon, obsRadius)) {
