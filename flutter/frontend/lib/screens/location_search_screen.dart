@@ -103,29 +103,50 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
   Future<void> _getCurrentLocation() async {
     setState(() => _isLoading = true);
     try {
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) throw Exception('Location services are disabled.');
+      LatLng? targetLatLng = widget.userLocation;
 
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
+      if (targetLatLng == null) {
+        bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+        if (!serviceEnabled) throw Exception('Location services are disabled.');
+
+        LocationPermission permission = await Geolocator.checkPermission();
         if (permission == LocationPermission.denied) {
-          throw Exception('Permission denied.');
+          permission = await Geolocator.requestPermission();
+          if (permission == LocationPermission.denied) {
+            throw Exception('Permission denied.');
+          }
+        }
+
+        Position? position;
+        try {
+          position = await Geolocator.getCurrentPosition(
+            desiredAccuracy: LocationAccuracy.high,
+            timeLimit: const Duration(seconds: 5),
+          );
+        } catch (e) {
+          debugPrint("getCurrentPosition timeout or error: $e");
+          position = await Geolocator.getLastKnownPosition();
+        }
+
+        if (position != null) {
+          targetLatLng = LatLng(position.latitude, position.longitude);
         }
       }
 
-      Position position = await Geolocator.getCurrentPosition();
+      if (targetLatLng == null) {
+        throw Exception('현재 위치를 찾을 수 없습니다.');
+      }
 
       // Reverse Geocoding via Kakao API
       String formattedAddress = await KakaoService.coord2Address(
-        position.latitude,
-        position.longitude,
+        targetLatLng.latitude,
+        targetLatLng.longitude,
       );
 
       if (mounted) {
         Navigator.pop(context, {
-          'latlng': LatLng(position.latitude, position.longitude),
-          'name': '현위치: $formattedAddress',
+          'latlng': targetLatLng,
+          'name': '현재 위치',
           'address': formattedAddress,
         });
       }

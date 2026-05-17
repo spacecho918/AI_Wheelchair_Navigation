@@ -365,7 +365,7 @@ class _LoginScreenWrapperState extends State<LoginScreenWrapper>
           .map((e) => (e as List).map((c) => (c as num).toDouble()).toList())
           .toList();
       final instructions = (state['instructions'] as List)
-          .map((e) => Map<String, String>.from(e as Map))
+          .map((e) => Map<String, dynamic>.from(e as Map))
           .toList();
 
       Navigator.of(context).pushReplacement(

@@ -14,6 +14,7 @@ import 'package:gilbeot/screens/navigation_screen.dart';
 import 'package:gilbeot/services/kakao_service.dart';
 import 'package:gilbeot/services/api_service.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:gilbeot/widgets/common_toast.dart';
 
 class RouteSearchScreen extends StatefulWidget {
@@ -68,6 +69,9 @@ class _RouteSearchScreenState extends State<RouteSearchScreen> {
     // 1. 출발지 기본 값은 현재위치
     _startPlace = _currentLocationPlace;
     _fetchCurrentAddress();
+    
+    // 초기 진입 시 userLocation이 null인 경우를 대비해 비동기 수집 실행
+    _fetchCurrentLocationIfNull();
 
     // 2. 도착지가 전달되었으면 설정
     if (widget.destination != null) {
@@ -144,6 +148,14 @@ class _RouteSearchScreenState extends State<RouteSearchScreen> {
 
         String fileText = await rootBundle.loadString('assets/kakao_map.html');
         fileText = fileText.replaceAll('__KAKAO_KEY__', KakaoConfig.jsAppKey);
+
+        // 모바일 환경에서 Seongsu Station 디폴트 좌표를 출발지(현재위치) 좌표로 동적 치환
+        final startLatLng = _getPlaceLatLng(_startPlace);
+        if (startLatLng != null) {
+          fileText = fileText.replaceAll('37.5445', startLatLng.latitude.toString());
+          fileText = fileText.replaceAll('127.0560', startLatLng.longitude.toString());
+        }
+
         await _mapController!.loadHtmlString(
           fileText,
           baseUrl: 'https://gilbeot.app',
@@ -265,11 +277,12 @@ class _RouteSearchScreenState extends State<RouteSearchScreen> {
   }
 
   Future<void> _fetchCurrentAddress() async {
-    if (widget.userLocation != null) {
+    final latLng = _getPlaceLatLng(_startPlace);
+    if (latLng != null) {
       try {
         String address = await KakaoService.coord2Address(
-          widget.userLocation!.latitude,
-          widget.userLocation!.longitude,
+          latLng.latitude,
+          latLng.longitude,
         );
         if (mounted) {
           setState(() {
@@ -278,6 +291,48 @@ class _RouteSearchScreenState extends State<RouteSearchScreen> {
         }
       } catch (e) {
         debugPrint('Error fetching address: $e');
+      }
+    }
+  }
+
+  // userLocation이 초기 null일 때 비동기로 현재 위치를 받아 보완하는 로직
+  Future<void> _fetchCurrentLocationIfNull() async {
+    if (widget.userLocation == null) {
+      try {
+        Position? position;
+        try {
+          position = await Geolocator.getCurrentPosition(
+            desiredAccuracy: LocationAccuracy.high,
+            timeLimit: const Duration(seconds: 3),
+          );
+        } catch (_) {
+          position = await Geolocator.getLastKnownPosition();
+        }
+
+        if (position != null && mounted) {
+          setState(() {
+            _startPlace = {
+              'latlng': LatLng(position!.latitude, position!.longitude),
+              'name': '현재 위치',
+              'address': '',
+            };
+          });
+          await _fetchCurrentAddress();
+          _updateMapMarkers();
+
+          if (_mapController != null) {
+            // 모바일 HTML 37.5445, 127.0560 교체 로직은 HTML 로드 시 적용되므로,
+            // 이미 로드된 맵은 setCenter로 다시 이동시켜줍니다.
+            KakaoMapHelper.setCenter(
+              _mapController!,
+              position.latitude,
+              position.longitude,
+              mapId: _mapId,
+            );
+          }
+        }
+      } catch (e) {
+        debugPrint('Error fetching location dynamically: $e');
       }
     }
   }

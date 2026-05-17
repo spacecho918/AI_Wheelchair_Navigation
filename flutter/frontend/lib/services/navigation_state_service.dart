@@ -20,7 +20,7 @@ class NavigationStateService {
     required double endLat,
     required double endLon,
     required List<List<double>> routeGeometry,
-    required List<Map<String, String>> instructions,
+    required List<Map<String, dynamic>> instructions,
     required int avoidedObstacles,
     required String startLocationName,
     required String endLocationName,

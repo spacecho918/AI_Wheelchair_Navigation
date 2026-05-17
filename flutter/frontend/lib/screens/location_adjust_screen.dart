@@ -187,11 +187,14 @@ class _LocationAdjustScreenState extends State<LocationAdjustScreen> {
           KakaoMapHelper.setCenter(_mapController, lat, lng);
         });
       } else {
+        final lat = _currentCenter.latitude;
+        final lng = _currentCenter.longitude;
         String fileText = await rootBundle.loadString('assets/kakao_map.html');
         fileText = fileText.replaceAll('__KAKAO_KEY__', KakaoConfig.jsAppKey);
         await _mapController!.loadHtmlString(
           fileText,
-          baseUrl: 'https://gilbeot.app',
+          baseUrl:
+              'https://gilbeot.app/?lat=$lat&lng=$lng&v=${DateTime.now().millisecondsSinceEpoch}',
         );
       }
     } catch (e) {

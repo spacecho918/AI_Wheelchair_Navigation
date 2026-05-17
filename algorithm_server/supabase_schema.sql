@@ -284,7 +284,55 @@ CREATE TRIGGER trg_notify_on_comment
     FOR EACH ROW
     EXECUTE FUNCTION notify_on_comment();
 -- ================================================================
--- [7] user_profiles 테이블 컬럼 추가 (점수)
+-- 7. 수정 요청 시 → 제보 작성자에게 'edit_request' 알림 자동 생성
+--    자기 자신의 글에 대한 수정 요청은 알림 제외
+-- ================================================================
+CREATE OR REPLACE FUNCTION notify_on_edit_request()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_obstacle_owner UUID;
+    v_requester_nick TEXT;
+    v_obstacle_type  TEXT;
+BEGIN
+    -- 제보 작성자 조회
+    SELECT reported_by::UUID, obstacle_type
+    INTO v_obstacle_owner, v_obstacle_type
+    FROM obstacles
+    WHERE id = NEW.obstacle_id;
+
+    IF v_obstacle_owner IS NULL THEN RETURN NEW; END IF;
+    IF v_obstacle_owner = NEW.requester_id THEN RETURN NEW; END IF;
+
+    -- 요청자 닉네임 조회
+    SELECT COALESCE(nickname, '누군가')
+    INTO v_requester_nick
+    FROM user_profiles
+    WHERE user_id = NEW.requester_id;
+
+    INSERT INTO notifications (user_id, title, content, type, deeplink_url)
+    VALUES (
+        v_obstacle_owner,
+        '내 제보에 수정 요청이 등록되었어요 📝',
+        v_requester_nick || '님이 ''' || COALESCE(v_obstacle_type, '제보') || ''' 글에 수정을 요청했습니다.',
+        'edit_request',
+        '/community/' || NEW.obstacle_id::TEXT
+    );
+
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_notify_on_edit_request ON edit_requests;
+CREATE TRIGGER trg_notify_on_edit_request
+    AFTER INSERT ON edit_requests
+    FOR EACH ROW
+    EXECUTE FUNCTION notify_on_edit_request();
+
+-- ================================================================
+-- [8] user_profiles 테이블 컬럼 추가 (점수)
 --     role 컬럼은 파일 상단 obstacles RLS 직전에 ADD 됨.
 -- ================================================================
 ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS score INTEGER DEFAULT 0;

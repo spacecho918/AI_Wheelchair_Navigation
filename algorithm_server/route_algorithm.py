@@ -6,7 +6,7 @@
 
 import heapq
 import networkx as nx
-from typing import Dict, List, Tuple, Optional, Literal
+from typing import Dict, List, Tuple, Optional, Literal, Any
 from dataclasses import dataclass
 import logging
 import math
@@ -430,17 +430,17 @@ class RouteCalculator:
         else:
             return "유턴"
 
-    def _generate_instructions(self, geometry: List[Tuple[float, float]]) -> List[Dict[str, str]]:
-        """geometry를 기반으로 턴바이턴 안내 메시지 생성"""
+    def _generate_instructions(self, geometry: List[Tuple[float, float]]) -> List[Dict[str, Any]]:
+        \"\"\"geometry를 기반으로 턴바이턴 안내 메시지 생성\"\"\"
         if len(geometry) < 2:
-            return [{"instruction": "도착지에 도달했습니다", "distance": "0m"}]
+            return [{"instruction": "도착지에 도달했습니다", "distance": "0m", "pointIndex": 0}]
 
         instructions = []
         current_distance = 0.0
         
         # 첫 번째 방향 (출발)
         bearing = self._calculate_bearing(geometry[0][0], geometry[0][1], geometry[1][0], geometry[1][1])
-        instructions.append({"instruction": "안내를 시작합니다", "distance": "0m"})
+        instructions.append({"instruction": "안내를 시작합니다", "distance": "0m", "pointIndex": 0})
 
         for i in range(1, len(geometry) - 1):
             p1 = geometry[i-1]
@@ -460,7 +460,8 @@ class RouteCalculator:
             if turn_dir != "직진":
                 instructions.append({
                     "instruction": turn_dir,
-                    "distance": f"{int(current_distance)}m"
+                    "distance": f"{int(current_distance)}m",
+                    "pointIndex": i
                 })
                 current_distance = 0.0 # 회전 후 누적 거리 초기화
                 
@@ -469,7 +470,8 @@ class RouteCalculator:
         current_distance += final_seg_dist
         instructions.append({
             "instruction": "목적지에 도착했습니다",
-            "distance": f"{int(current_distance)}m"
+            "distance": f"{int(current_distance)}m",
+            "pointIndex": len(geometry) - 1
         })
         
         return instructions    

@@ -531,6 +531,8 @@ class ApiService {
         'dislikes': dislikes,
         'comments': comments,
         'imageUrl': item['image_url'],
+        'latitude': item['latitude'],
+        'longitude': item['longitude'],
         if (reportedBy != null) 'reported_by': reportedBy,
       };
     } catch (e) {
@@ -768,6 +770,131 @@ class ApiService {
           .timeout(const Duration(seconds: 15));
     } catch (e) {
       debugPrint('알고리즘 서버 장애물 동기화 알림 실패(다음 주기에 반영될 수 있음): $e');
+    }
+  }
+
+  /// 제보 수정 요청 (edit_requests 테이블 삽입)
+  static Future<bool> submitEditRequest({
+    required String obstacleId,
+    required String reason, // 'resolved', 'obstacle_error', 'location_error', 'other'
+    String? description,
+    String? photoUrl,
+    double? newLat,
+    double? newLon,
+  }) async {
+    final user = AuthService.currentUser;
+    if (user == null) return false;
+
+    try {
+      await _supabase.from('edit_requests').insert({
+        'obstacle_id': obstacleId,
+        'requester_id': user.id,
+        'reason': reason,
+        if (description != null && description.isNotEmpty) 'description': description,
+        if (photoUrl != null && photoUrl.isNotEmpty) 'photo_url': photoUrl,
+        if (newLat != null) 'new_lat': newLat,
+        if (newLon != null) 'new_lon': newLon,
+        'status': 'pending',
+      });
+      return true;
+    } catch (e) {
+      debugPrint('submitEditRequest error: $e');
+      return false;
+    }
+  }
+
+  /// 특정 장애물의 대기 중인 수정 요청 목록 조회
+  static Future<List<Map<String, dynamic>>> getPendingEditRequests(String obstacleId) async {
+    try {
+      final data = await _supabase
+          .from('edit_requests')
+          .select('*')
+          .eq('obstacle_id', obstacleId)
+          .eq('status', 'pending')
+          .order('created_at', ascending: true);
+
+      final items = data as List;
+      final List<Map<String, dynamic>> results = [];
+
+      for (final item in items) {
+        String nickname = '누군가';
+        String? avatar;
+        if (item['requester_id'] != null) {
+          try {
+            final profile = await _supabase
+                .from('user_profiles')
+                .select('nickname, profile_image_url')
+                .eq('user_id', item['requester_id'])
+                .maybeSingle();
+            if (profile != null) {
+              nickname = profile['nickname'] ?? '누군가';
+              avatar = profile['profile_image_url'];
+            }
+          } catch (_) {}
+        }
+        
+        results.add({
+          'edit_request_id': item['edit_request_id'],
+          'reason': item['reason'],
+          'description': item['description'],
+          'photo_url': item['photo_url'],
+          'new_lat': item['new_lat'],
+          'new_lon': item['new_lon'],
+          'created_at': item['created_at'],
+          'requester_nickname': nickname,
+          'requester_avatar': avatar,
+        });
+      }
+      return results;
+    } catch (e) {
+      debugPrint('getPendingEditRequests error: $e');
+      return [];
+    }
+  }
+
+  /// 수정 요청 수락
+  static Future<bool> approveEditRequest(String editRequestId, Map<String, dynamic> requestData, String obstacleId) async {
+    try {
+      // 1. edit_requests 상태 업데이트
+      await _supabase.from('edit_requests').update({
+        'status': 'approved',
+        'reviewed_at': DateTime.now().toUtc().toIso8601String(),
+      }).eq('edit_request_id', editRequestId);
+
+      // 2. obstacles 테이블에 반영
+      final updates = <String, dynamic>{};
+      final reason = requestData['reason'];
+      
+      if (reason == 'resolved') {
+        updates['is_active'] = false;
+      } else if (reason == 'location_error') {
+        if (requestData['new_lat'] != null) updates['latitude'] = requestData['new_lat'];
+        if (requestData['new_lon'] != null) updates['longitude'] = requestData['new_lon'];
+      }
+      
+      if (updates.isNotEmpty) {
+        await _supabase.from('obstacles').update(updates).eq('id', obstacleId);
+        await _notifyAlgorithmServerObstaclesRefresh();
+      }
+
+      return true;
+    } catch (e) {
+      debugPrint('approveEditRequest error: $e');
+      return false;
+    }
+  }
+
+  /// 수정 요청 거절
+  static Future<bool> rejectEditRequest(String editRequestId) async {
+    try {
+      await _supabase.from('edit_requests').update({
+        'status': 'rejected',
+        'reviewed_at': DateTime.now().toUtc().toIso8601String(),
+      }).eq('edit_request_id', editRequestId);
+      return true;
+    } catch (e) {
+      debugPrint('rejectEditRequest error: $e');
+      return false;
     }
   }
 

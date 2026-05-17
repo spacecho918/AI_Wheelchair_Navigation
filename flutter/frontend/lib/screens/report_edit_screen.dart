@@ -6,6 +6,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:gilbeot/screens/camera_screen.dart';
 import 'package:gilbeot/widgets/common_toast.dart';
+import 'package:gilbeot/services/api_service.dart';
 
 class ReportEditScreen extends StatefulWidget {
   final Map<String, dynamic> report;
@@ -62,8 +63,7 @@ class _ReportEditScreenState extends State<ReportEditScreen> {
     super.dispose();
   }
 
-  void _submitRequest() {
-    // TODO: Implement submission logic (API call or mock)
+  Future<void> _submitRequest() async {
     // Validate inputs
     if ((_selectedReason == '해결됨' || _selectedReason == '장애물 오류') &&
         _imagePath == null) {
@@ -75,9 +75,52 @@ class _ReportEditScreenState extends State<ReportEditScreen> {
       return;
     }
 
-    // Success
-    CommonToast.show(context, '수정 요청이 접수되었습니다.');
-    Navigator.pop(context);
+    String reasonCode;
+    switch (_selectedReason) {
+      case '해결됨':
+        reasonCode = 'resolved';
+        break;
+      case '장애물 오류':
+        reasonCode = 'obstacle_error';
+        break;
+      case '위치 오류':
+        reasonCode = 'location_error';
+        break;
+      default:
+        reasonCode = 'other';
+        break;
+    }
+
+    // Show loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator(color: Color(0xFF00C853))),
+    );
+
+    String? photoUrl;
+    if (_imagePath != null && !_imagePath!.startsWith('assets/')) {
+      photoUrl = await ApiService.uploadImage(_imagePath!);
+    }
+
+    final success = await ApiService.submitEditRequest(
+      obstacleId: widget.report['id'],
+      reason: reasonCode,
+      description: _descriptionController.text,
+      photoUrl: photoUrl,
+      newLat: _newLocation?.latitude,
+      newLon: _newLocation?.longitude,
+    );
+
+    // Hide loading
+    if (mounted) Navigator.pop(context);
+
+    if (success) {
+      if (mounted) CommonToast.show(context, '수정 요청이 접수되었습니다.');
+      if (mounted) Navigator.pop(context);
+    } else {
+      if (mounted) CommonToast.show(context, '수정 요청에 실패했습니다. 다시 시도해주세요.');
+    }
   }
 
   Future<void> _pickImage() async {

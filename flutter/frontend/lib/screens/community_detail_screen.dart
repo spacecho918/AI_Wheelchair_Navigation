@@ -1,4 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:webview_flutter/webview_flutter.dart';
+import 'package:gilbeot/helpers/kakao_map_helper.dart';
+import 'package:gilbeot/config/kakao_config.dart';
+import 'package:latlong2/latlong.dart';
 
 import 'package:gilbeot/widgets/custom_back_button.dart';
 import 'package:gilbeot/widgets/common_toast.dart';
@@ -30,6 +35,9 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
   List<Map<String, dynamic>> comments = [];
   bool isLoadingComments = false;
 
+  List<Map<String, dynamic>> pendingEditRequests = [];
+  bool isLoadingEditRequests = false;
+
   bool _isAdmin = false;
   /// 관리자가 본문 수정 후 목록과 맞추기 위한 표시용 (원문 description 파싱 결과)
   String? _displayContentOverride;
@@ -53,7 +61,22 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
 
   Future<void> _loadAdminFlag() async {
     final v = await ApiService.isCurrentUserAdmin();
-    if (mounted) setState(() => _isAdmin = v);
+    if (mounted) {
+      setState(() => _isAdmin = v);
+      _fetchPendingEditRequests();
+    }
+  }
+
+  Future<void> _fetchPendingEditRequests() async {
+    if (!_isOwnReport && !_isAdmin) return;
+    setState(() => isLoadingEditRequests = true);
+    final data = await ApiService.getPendingEditRequests(widget.report['id']);
+    if (mounted) {
+      setState(() {
+        pendingEditRequests = data;
+        isLoadingEditRequests = false;
+      });
+    }
   }
 
   void _applyRawDescriptionToDisplayOverrides(String raw) {
@@ -108,6 +131,108 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
       });
     } else {
       CommonToast.show(context, '삭제에 실패했습니다.');
+    }
+  }
+
+  Future<void> _handleApproveEditRequest(Map<String, dynamic> requestData) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        bool isPopped = false;
+        return AlertDialog(
+          title: const Text('수정 요청 수락'),
+          content: const Text('이 요청을 수락하시겠습니까?'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                if (!isPopped) {
+                  isPopped = true;
+                  Navigator.pop(ctx, false);
+                }
+              },
+              child: const Text('취소', style: TextStyle(color: Colors.grey)),
+            ),
+            TextButton(
+              onPressed: () {
+                if (!isPopped) {
+                  isPopped = true;
+                  Navigator.pop(ctx, true);
+                }
+              },
+              child: const Text('수락', style: TextStyle(color: Color(0xFF00C853))),
+            ),
+          ],
+        );
+      }
+    );
+    if (ok != true || !mounted) return;
+
+    setState(() => isLoadingEditRequests = true);
+    final success = await ApiService.approveEditRequest(
+      requestData['edit_request_id'],
+      requestData,
+      widget.report['id'],
+    );
+    if (mounted) {
+      if (success) {
+        CommonToast.show(context, '요청을 수락했습니다.');
+        if (requestData['reason'] == 'resolved') {
+          Future.microtask(() {
+            if (mounted) Navigator.pop(context, {'deleted': true});
+          });
+          return;
+        }
+        await _fetchPendingEditRequests();
+      } else {
+        CommonToast.show(context, '처리 중 오류가 발생했습니다.');
+        setState(() => isLoadingEditRequests = false);
+      }
+    }
+  }
+
+  Future<void> _handleRejectEditRequest(String editRequestId) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        bool isPopped = false;
+        return AlertDialog(
+          title: const Text('수정 요청 거절'),
+          content: const Text('이 요청을 거절하시겠습니까?'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                if (!isPopped) {
+                  isPopped = true;
+                  Navigator.pop(ctx, false);
+                }
+              },
+              child: const Text('취소', style: TextStyle(color: Colors.grey)),
+            ),
+            TextButton(
+              onPressed: () {
+                if (!isPopped) {
+                  isPopped = true;
+                  Navigator.pop(ctx, true);
+                }
+              },
+              child: const Text('거절', style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        );
+      }
+    );
+    if (ok != true || !mounted) return;
+
+    setState(() => isLoadingEditRequests = true);
+    final success = await ApiService.rejectEditRequest(editRequestId);
+    if (mounted) {
+      if (success) {
+        CommonToast.show(context, '요청을 거절했습니다.');
+        await _fetchPendingEditRequests();
+      } else {
+        CommonToast.show(context, '처리 중 오류가 발생했습니다.');
+        setState(() => isLoadingEditRequests = false);
+      }
     }
   }
 
@@ -273,6 +398,379 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
       'isLiked': isLiked,
       'isDisliked': isDisliked,
     });
+  }
+
+  void _showLocationMapDialog(double oldLat, double oldLon, double newLat, double newLon) {
+    WebViewController? mapController;
+    bool isMapLoading = true;
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            if (mapController == null) {
+              mapController = WebViewController()
+                ..setJavaScriptMode(JavaScriptMode.unrestricted)
+                ..setBackgroundColor(const Color(0x00000000))
+                ..setNavigationDelegate(
+                  NavigationDelegate(
+                    onPageFinished: (String url) async {
+                      setState(() => isMapLoading = false);
+                      // StartEnd 마커를 통해 기존위치(빨간색), 제안위치(파란색) 시각화
+                      KakaoMapHelper.setStartEndMarkers(
+                        mapController,
+                        oldLat,
+                        oldLon,
+                        newLat,
+                        newLon,
+                      );
+                      // 두 위치 간 점선(경로) 연결
+                      KakaoMapHelper.drawRoute(
+                        mapController,
+                        [
+                          [oldLat, oldLon],
+                          [newLat, newLon]
+                        ],
+                        color: '#2979FF',
+                        showFullRoute: true,
+                      );
+                    },
+                  ),
+                );
+
+              // 지도를 로드
+              () async {
+                String fileText = await rootBundle.loadString('assets/kakao_map.html');
+                fileText = fileText.replaceAll('__KAKAO_KEY__', KakaoConfig.jsAppKey);
+
+                // 제안된 위치(newLat, newLon) 중심으로 초기 설정
+                fileText = fileText.replaceAll('37.5445', newLat.toString());
+                fileText = fileText.replaceAll('127.0560', newLon.toString());
+
+                await mapController!.loadHtmlString(
+                  fileText,
+                  baseUrl: 'https://gilbeot.app',
+                );
+              }();
+            }
+
+            return Dialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: SizedBox(
+                  height: 400,
+                  width: double.infinity,
+                  child: Stack(
+                    children: [
+                      if (mapController != null)
+                        WebViewWidget(controller: mapController!),
+                      if (isMapLoading)
+                        const Center(
+                          child: CircularProgressIndicator(
+                            color: Color(0xFF00C853),
+                          ),
+                        ),
+                      Positioned(
+                        bottom: 20,
+                        left: 20,
+                        right: 20,
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black12,
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              )
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.location_on, color: Colors.red, size: 16),
+                              const Text(' 기존 위치  ➡  ', style: TextStyle(color: Colors.black87, fontSize: 13)),
+                              const Icon(Icons.location_on, color: Colors.blue, size: 16),
+                              const Text(' 제안된 위치', style: TextStyle(color: Colors.black87, fontSize: 13, fontWeight: FontWeight.bold)),
+                            ],
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        top: 10,
+                        right: 10,
+                        child: IconButton(
+                          icon: const Icon(Icons.close, color: Colors.black, size: 28),
+                          onPressed: () => Navigator.pop(ctx),
+                          style: IconButton.styleFrom(backgroundColor: Colors.white70),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildPendingEditRequests() {
+    if (isLoadingEditRequests) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 20),
+        child: Center(child: CircularProgressIndicator(color: Color(0xFF00C853))),
+      );
+    }
+    if (pendingEditRequests.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.edit_note, color: Colors.orange.shade800, size: 24),
+            const SizedBox(width: 8),
+            Text(
+              '대기 중인 수정 요청 (${pendingEditRequests.length})',
+              style: TextStyle(
+                color: Theme.of(context).brightness == Brightness.dark ? Colors.white : textDark,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        ...pendingEditRequests.map((req) {
+          final isLocationError = req['reason'] == 'location_error';
+          final isResolved = req['reason'] == 'resolved';
+          final reasonText = {
+            'resolved': '해결됨',
+            'obstacle_error': '장애물 오류',
+            'location_error': '위치 오류',
+            'other': '기타',
+          }[req['reason']] ?? '기타';
+
+          final Distance distance = const Distance();
+          double? movedDist;
+          if (isLocationError && req['new_lat'] != null && req['new_lon'] != null && widget.report['latitude'] != null) {
+            movedDist = distance.as(
+              LengthUnit.Meter,
+              LatLng(widget.report['latitude'], widget.report['longitude']),
+              LatLng(req['new_lat'], req['new_lon']),
+            );
+          }
+
+          return Container(
+            margin: const EdgeInsets.only(bottom: 16),
+            decoration: BoxDecoration(
+              color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF1E1E1E) : Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.orange.withValues(alpha: 0.5), width: 1.5),
+              boxShadow: [
+                BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4)),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Header (Reason & User)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withValues(alpha: 0.1),
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: Colors.orange.shade600,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              reasonText,
+                              style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          CircleAvatar(
+                            radius: 12,
+                            backgroundColor: Colors.grey.shade300,
+                            backgroundImage: req['requester_avatar'] != null ? NetworkImage(req['requester_avatar']) : null,
+                            child: req['requester_avatar'] == null ? Icon(Icons.person, size: 16, color: Colors.grey.shade600) : null,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            req['requester_nickname'],
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              color: Theme.of(context).brightness == Brightness.dark ? Colors.white : textDark,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                
+                // Consequence Highlights
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF2A2A2A) : const Color(0xFFF9FAFB),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(isResolved ? Icons.delete_sweep : (isLocationError ? Icons.moving : Icons.info_outline), 
+                                 color: primaryGreen, size: 20),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                isResolved ? "수락 시 이 제보글은 지도에서 사라짐(해결됨) 처리됩니다." :
+                                (isLocationError ? "수락 시 제보 위치가 제안된 새로운 위치로 즉시 이동됩니다." :
+                                "수락 시 이 요청 내용이 관리자 및 시스템에 반영됩니다."),
+                                style: TextStyle(
+                                  color: Theme.of(context).brightness == Brightness.dark ? Colors.white : textDark,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      
+                      // Detailed Description
+                      const Text('제안된 상세 내용', style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 6),
+                      if (req['description'] != null && req['description'].toString().isNotEmpty)
+                        Text(
+                          req['description'],
+                          style: TextStyle(color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFFD1D5DB) : textDark, fontSize: 14),
+                        )
+                      else
+                        Text('설명 없음', style: TextStyle(color: Colors.grey.shade400, fontStyle: FontStyle.italic)),
+                      const SizedBox(height: 16),
+
+                      // Location Difference UI
+                      if (isLocationError && movedDist != null)
+                        Container(
+                          margin: const EdgeInsets.only(bottom: 16),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
+                            borderRadius: BorderRadius.circular(8),
+                            color: Colors.blue.withValues(alpha: 0.05),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('기존 위치에서', style: TextStyle(fontSize: 12, color: Theme.of(context).brightness == Brightness.dark ? Colors.grey.shade400 : Colors.grey.shade700)),
+                                  Text('약 ${movedDist.toStringAsFixed(0)}m 이동됨', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blue, fontSize: 15)),
+                                ],
+                              ),
+                              ElevatedButton.icon(
+                                onPressed: () {
+                                  _showLocationMapDialog(
+                                    widget.report['latitude'], widget.report['longitude'],
+                                    req['new_lat'], req['new_lon']
+                                  );
+                                },
+                                icon: const Icon(Icons.map, size: 16),
+                                label: const Text('지도로 보기'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.blue,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                      // Attached Photo
+                      if (req['photo_url'] != null) ...[
+                        const Text('증빙 사진', style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 6),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.network(
+                            req['photo_url'].toString().startsWith('http') ? req['photo_url'] : '${ApiService.baseUrl}${req['photo_url']}',
+                            height: 180,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => Container(
+                              height: 180,
+                              color: Colors.grey.shade200,
+                              child: const Center(child: Icon(Icons.broken_image, color: Colors.grey)),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+
+                      // Action Buttons
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () => _handleRejectEditRequest(req['edit_request_id']),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                side: BorderSide(color: Colors.grey.shade300),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                              child: Text('거절하기', style: TextStyle(color: Theme.of(context).brightness == Brightness.dark ? Colors.white : textDark, fontWeight: FontWeight.w600)),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: () => _handleApproveEditRequest(req),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: primaryGreen,
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                elevation: 0,
+                              ),
+                              child: const Text('수락하기', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        }),
+        const SizedBox(height: 12),
+      ],
+    );
   }
 
   @override
@@ -777,6 +1275,10 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                         ),
                       ),
                       const SizedBox(height: 24),
+
+                      // 6.5 Pending Edit Requests Section
+                      if ((_isOwnReport || _isAdmin) && (pendingEditRequests.isNotEmpty || isLoadingEditRequests))
+                        _buildPendingEditRequests(),
 
                       // 7. Comments Section
                       Row(

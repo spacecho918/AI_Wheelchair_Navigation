@@ -24,7 +24,7 @@ class NavigationScreen extends StatefulWidget {
   final LatLng? startLocation;
   final LatLng? endLocation;
   final List<List<double>>? routeGeometry;
-  final List<Map<String, String>>? instructions;
+  final List<Map<String, dynamic>>? instructions;
   final int avoidedObstacles;
   final String startLocationName;
   final String endLocationName;
@@ -58,7 +58,7 @@ class _NavigationScreenState extends State<NavigationScreen> with RouteAware {
 
   // 재탐색 시 갱신 가능한 경로 데이터 (초기값은 widget에서 복사)
   late List<List<double>>? _routeGeometry;
-  late List<Map<String, String>>? _instructions;
+  late List<Map<String, dynamic>>? _instructions;
   late String _estimatedTime;
   late String _totalDistance;
   late int _avoidedObstacles;
@@ -423,7 +423,7 @@ class _NavigationScreenState extends State<NavigationScreen> with RouteAware {
             .map((e) => (e as List).map((c) => (c as num).toDouble()).toList())
             .toList();
         final newInstructions = (routeData['instructions'] as List?)
-                ?.map((e) => Map<String, String>.from(e as Map))
+                ?.map((e) => Map<String, dynamic>.from(e as Map))
                 .toList() ??
             [];
 
@@ -511,9 +511,8 @@ class _NavigationScreenState extends State<NavigationScreen> with RouteAware {
 
     // 단순 시뮬레이션: 안내 메시지에 남은 거리가 있다면, 여기서 실제 GPS로 거리를 재계산
     if (_routeGeometry != null && _routeGeometry!.isNotEmpty) {
-      // 다음 주요 회전 구간을 찾기 위해 현재 인덱스에 매칭되는 대략적인 좌표를 가져옵니다.
-      // 실제로는 API에서 회전 노드의 정확한 인덱스를 줘야 하지만 임시 계산합니다.
-      int targetIndex =
+      // 백엔드에서 제공한 정확한 노드 인덱스 사용 (하위 호환을 위해 없으면 비율 계산 유지)
+      int targetIndex = _instructions![_currentInstructionIndex]['pointIndex'] as int? ??
           (_currentInstructionIndex *
                   (_routeGeometry!.length / _instructions!.length))
               .round();
