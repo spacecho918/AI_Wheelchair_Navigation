@@ -23,16 +23,14 @@ class _CommunityScreenState extends State<CommunityScreen> {
   // State
   final List<String> filters = [
     '전체',
-    '높은 턱',
-    '좁은 통로',
     '계단',
     '라바콘',
     '볼라드',
-    '경사로',
+    '나무',
     '턱',
+    '기타',
   ];
-  /// 선택된 필터들 (빈 집합이거나 '전체' 포함 시 전체 표시)
-  Set<String> selectedFilters = {'전체'};
+  String selectedFilter = '전체';
   bool isFilterVisible = false;
   String sortOption = 'latest'; // 'latest' or 'popular'
 
@@ -65,12 +63,10 @@ class _CommunityScreenState extends State<CommunityScreen> {
 
   List<Map<String, dynamic>> getFilteredAndSortedReports() {
     // 1. Filter
-    final showAll = selectedFilters.isEmpty || selectedFilters.contains('전체');
     List<Map<String, dynamic>> filtered = _reports.where((report) {
-      if (showAll) return true;
+      if (selectedFilter == '전체') return true;
       final reportTags = _parseTags(report['tag']);
-      // 선택된 필터 중 하나라도 게시물 태그에 있으면 표시 (OR)
-      return reportTags.any((tag) => selectedFilters.contains(tag));
+      return reportTags.contains(selectedFilter);
     }).toList();
 
     // 2. Sort
@@ -176,7 +172,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: Row(
                         children: filters.map((filter) {
-                          final isSelected = selectedFilters.contains(filter);
+                          final isSelected = selectedFilter == filter;
                           return Padding(
                             padding: const EdgeInsets.only(
                               right: 8,
@@ -208,24 +204,8 @@ class _CommunityScreenState extends State<CommunityScreen> {
                                       : Colors.grey.shade300,
                                 ),
                               ),
-                              onSelected: (selected) {
-                                setState(() {
-                                  if (filter == '전체') {
-                                    selectedFilters = selected ? {'전체'} : {};
-                                  } else {
-                                    if (selected) {
-                                      selectedFilters = Set.from(selectedFilters)
-                                        ..remove('전체')
-                                        ..add(filter);
-                                    } else {
-                                      selectedFilters = Set.from(selectedFilters)
-                                        ..remove(filter);
-                                    }
-                                    if (selectedFilters.isEmpty) {
-                                      selectedFilters = {'전체'};
-                                    }
-                                  }
-                                });
+                              onSelected: (_) {
+                                setState(() => selectedFilter = filter);
                               },
                               showCheckmark: false,
                             ),

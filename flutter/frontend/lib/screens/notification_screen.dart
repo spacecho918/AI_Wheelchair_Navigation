@@ -18,6 +18,14 @@ class _NotificationScreenState extends State<NotificationScreen> {
   List<Map<String, dynamic>> _notifications = [];
   bool _isLoading = true;
   supabase.RealtimeChannel? _channel;
+  String _selectedFilter = '전체';
+
+  List<Map<String, dynamic>> get _filteredNotifications {
+    if (_selectedFilter == '안읽음') {
+      return _notifications.where((n) => n['is_read'] != true).toList();
+    }
+    return _notifications;
+  }
 
   @override
   void initState() {
@@ -281,6 +289,48 @@ class _NotificationScreenState extends State<NotificationScreen> {
             ),
             Container(color: const Color(0xFFF0F2F5), height: 1.0),
 
+            // Filter Chips
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              child: Row(
+                children: ['전체', '안읽음'].map((label) {
+                  final isSelected = _selectedFilter == label;
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: GestureDetector(
+                      onTap: () => setState(() => _selectedFilter = label),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 7,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? const Color(0xFF00C853)
+                              : (isDark
+                                    ? const Color(0xFF2A2A2A)
+                                    : const Color(0xFFF0F2F5)),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          label,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: isSelected
+                                ? Colors.white
+                                : (isDark
+                                      ? const Color(0xFF9CA3AF)
+                                      : const Color(0xFF6B7280)),
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+
             // Body
             Expanded(
               child: _isLoading
@@ -289,16 +339,16 @@ class _NotificationScreenState extends State<NotificationScreen> {
                         color: Color(0xFF00C853),
                       ),
                     )
-                  : _notifications.isEmpty
+                  : _filteredNotifications.isEmpty
                   ? _buildEmpty()
                   : RefreshIndicator(
                       color: const Color(0xFF00C853),
                       onRefresh: _loadNotifications,
                       child: ListView.builder(
-                        padding: const EdgeInsets.all(20),
-                        itemCount: _notifications.length,
+                        padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                        itemCount: _filteredNotifications.length,
                         itemBuilder: (context, index) {
-                          final item = _notifications[index];
+                          final item = _filteredNotifications[index];
                           return _buildNotificationItem(item);
                         },
                       ),
