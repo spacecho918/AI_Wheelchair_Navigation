@@ -1037,7 +1037,7 @@ class _RouteSearchScreenState extends State<RouteSearchScreen> {
 
         final instructions =
             (routeData['instructions'] as List?)
-                ?.map((e) => Map<String, String>.from(e as Map))
+                ?.map((e) => Map<String, dynamic>.from(e as Map))
                 .toList() ??
             [];
 
