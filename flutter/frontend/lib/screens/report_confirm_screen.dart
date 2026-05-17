@@ -102,12 +102,22 @@ class _ReportConfirmScreenState extends State<ReportConfirmScreen> {
     await _loadMap();
   }
 
+  void _applyMapCenter() {
+    final lat = _currentLocation.latitude;
+    final lng = _currentLocation.longitude;
+    debugPrint('ReportConfirm map center: $lat, $lng');
+    KakaoMapHelper.setCenter(_mapController, lat, lng);
+    KakaoMapHelper.setMarker(_mapController, lat, lng);
+    KakaoMapHelper.setStaticMode(_mapController, true);
+  }
+
   Future<void> _loadMap() async {
     if (_mapController == null) return;
 
+    final lat = _currentLocation.latitude;
+    final lng = _currentLocation.longitude;
+
     if (kIsWeb) {
-      final lat = _currentLocation.latitude;
-      final lng = _currentLocation.longitude;
       final jsKey = KakaoConfig.jsAppKey;
       await _mapController!.loadRequest(
         Uri.parse(
@@ -115,35 +125,33 @@ class _ReportConfirmScreenState extends State<ReportConfirmScreen> {
         ),
       );
       Future.delayed(const Duration(milliseconds: 1000), () {
-        KakaoMapHelper.setStaticMode(_mapController, true);
+        _applyMapCenter();
       });
     } else {
+      // delegate는 loadHtmlString보다 먼저 등록해야 onPageFinished가 누락되지 않음
+      await _mapController!.setNavigationDelegate(
+        NavigationDelegate(
+          onPageFinished: (String url) {
+            debugPrint('ReportConfirm Kakao Map Loaded: $url');
+            _applyMapCenter();
+          },
+          onWebResourceError: (WebResourceError error) {
+            debugPrint('ReportConfirm WebResourceError: ${error.description}');
+          },
+        ),
+      );
+
       String fileText = await rootBundle.loadString('assets/kakao_map.html');
       fileText = fileText.replaceAll('__KAKAO_KEY__', KakaoConfig.jsAppKey);
       await _mapController!.loadHtmlString(
         fileText,
-        baseUrl: 'https://gilbeot.app',
+        baseUrl:
+            'https://gilbeot.app/?lat=$lat&lng=$lng&marker=true&v=${DateTime.now().millisecondsSinceEpoch}',
       );
-    }
 
-    if (!kIsWeb) {
-      _mapController!.setNavigationDelegate(
-        NavigationDelegate(
-          onPageFinished: (String url) {
-            KakaoMapHelper.setCenter(
-              _mapController,
-              _currentLocation.latitude,
-              _currentLocation.longitude,
-            );
-            KakaoMapHelper.setMarker(
-              _mapController,
-              _currentLocation.latitude,
-              _currentLocation.longitude,
-            );
-            KakaoMapHelper.setStaticMode(_mapController, true);
-          },
-        ),
-      );
+      // Kakao SDK 비동기 로드 대비 백업
+      Future.delayed(const Duration(milliseconds: 800), _applyMapCenter);
+      Future.delayed(const Duration(milliseconds: 1800), _applyMapCenter);
     }
   }
 
