@@ -51,8 +51,10 @@ class _NavigationScreenState extends State<NavigationScreen> with RouteAware {
   WebViewController? _mapController;
   bool _isEndNavPressed = false;
   LatLng? _currentLiveLocation;
-  Timer? _locationTimer;
+  StreamSubscription<Position>? _positionStream;
   bool _isRerouting = false;
+  bool _isFollowingUser = true; // 현위치 추적 모드 (초기: 활성)
+  dynamic _mapEventSubscription; // 지도 이벤트 리스너 구독
 
   // 재탐색 시 갱신 가능한 경로 데이터 (초기값은 widget에서 복사)
   late List<List<double>>? _routeGeometry;
@@ -113,7 +115,8 @@ class _NavigationScreenState extends State<NavigationScreen> with RouteAware {
 
   @override
   void dispose() {
-    _locationTimer?.cancel();
+    _positionStream?.cancel();
+    _mapEventSubscription?.cancel();
     if (_routeObserverSubscribed) {
       routeObserver.unsubscribe(this);
     }
@@ -141,13 +144,14 @@ class _NavigationScreenState extends State<NavigationScreen> with RouteAware {
   }
 
   void _startLocationTracking() {
-    // 3초마다 현재 위치를 확인하여 지도 업데이트
-    _locationTimer = Timer.periodic(const Duration(seconds: 3), (timer) async {
+    // 실시간 스트림 방식으로 현재 위치를 확인하여 지도 업데이트
+    // distanceFilter 없이 GPS 센서 갱신 시마다(통상 1초) 즉각 반영
+    _positionStream = Geolocator.getPositionStream(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.high,
+      ),
+    ).listen((Position position) {
       try {
-        Position position = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.high,
-        );
-
         if (!mounted) return;
 
         final newLocation = LatLng(position.latitude, position.longitude);
@@ -167,7 +171,16 @@ class _NavigationScreenState extends State<NavigationScreen> with RouteAware {
             position.longitude,
             mapId: 'navigation',
           );
-          // NOTE: 지도 중심 이동(setCenter)은 사용자가 전체 경로를 볼 수 있도록 제거함
+
+          // 추적 모드 활성 시 지도 중심도 현재 위치로 이동
+          if (_isFollowingUser) {
+            KakaoMapHelper.setCenter(
+              _mapController,
+              position.latitude,
+              position.longitude,
+              mapId: 'navigation',
+            );
+          }
         }
       } catch (e) {
         debugPrint("Location tracking error: $e");
@@ -536,7 +549,10 @@ class _NavigationScreenState extends State<NavigationScreen> with RouteAware {
             try {
               final data = json.decode(message.message);
               if (data['type'] == 'dragend') {
-                // Handle map drag if needed
+                // 모바일: 사용자가 지도를 드래그하면 추적 모드 해제
+                if (_isFollowingUser) {
+                  setState(() => _isFollowingUser = false);
+                }
               }
             } catch (e) {
               debugPrint("Error parsing map message: $e");
@@ -551,6 +567,15 @@ class _NavigationScreenState extends State<NavigationScreen> with RouteAware {
               _onMapReady();
             },
           ),
+        );
+      } else {
+        // 웹: postMessage로 드래그 이벤트 수신하여 추적 모드 해제
+        _mapEventSubscription = KakaoMapHelper.listenForMapEvents(
+          (String type, double lat, double lng) {
+            if (type == 'dragend' && _isFollowingUser) {
+              setState(() => _isFollowingUser = false);
+            }
+          },
         );
       }
 
@@ -685,6 +710,8 @@ class _NavigationScreenState extends State<NavigationScreen> with RouteAware {
         position.longitude,
         mapId: 'navigation',
       );
+      // 추적 모드 활성화
+      setState(() => _isFollowingUser = true);
     } catch (e) {
       debugPrint("Error getting location: $e");
     }
@@ -949,7 +976,9 @@ class _NavigationScreenState extends State<NavigationScreen> with RouteAware {
                           width: 50,
                           height: 50,
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: _isFollowingUser
+                                ? const Color(0xFF00C853)
+                                : Colors.white,
                             shape: BoxShape.circle,
                             boxShadow: [
                               BoxShadow(
@@ -969,8 +998,10 @@ class _NavigationScreenState extends State<NavigationScreen> with RouteAware {
                                   'assets/target_icon.svg',
                                   width: 18,
                                   height: 18,
-                                  colorFilter: const ColorFilter.mode(
-                                    Color(0xFF354152),
+                                  colorFilter: ColorFilter.mode(
+                                    _isFollowingUser
+                                        ? Colors.white
+                                        : const Color(0xFF354152),
                                     BlendMode.srcIn,
                                   ),
                                 ),
