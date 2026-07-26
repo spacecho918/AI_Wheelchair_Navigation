@@ -3,7 +3,7 @@
 OSM 기반 경로 탐색 + 실시간 장애물 반영
 """
 # 실행 방법:
-# ngrok http 8000
+# .env -> NGROK_AUTHTOKEN 입력 (ngrok 사용시)
 # python -m uvicorn main_server:app --host 0.0.0.0 --port 8000 --reload
 # 그래프 확인용 
 # http://localhost:8000/graph
